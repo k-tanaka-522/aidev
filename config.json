@@ -1,0 +1,6 @@
+{
+    "AWS_REGION":  "ap-northeast-1",
+    "BEDROCK_MODEL_ID":  "anthropic.claude-3-sonnet-20240229-v1:0",
+    "API_ENDPOINT":  "https://ykwncsow4g.execute-api.ap-northeast-1.amazonaws.com/dev",
+    "KNOWLEDGE_BASE_ID":  "your-knowledge-base-id"
+}

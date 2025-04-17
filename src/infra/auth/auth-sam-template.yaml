@@ -1,0 +1,354 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: aiDev 認証機能サーバーレスアプリケーション
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: nodejs18.x
+    Environment:
+      Variables:
+        USER_POOL_ID: !Ref CognitoUserPool
+        CLIENT_ID: !Ref CognitoUserPoolClient
+        USER_PROFILES_TABLE: !Ref UserProfilesTable
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - stage
+      - prod
+    Description: デプロイ環境の指定
+
+  UserPoolName:
+    Type: String
+    Default: aiDev-UserPool
+    Description: Cognitoユーザープール名
+
+  AppClientName:
+    Type: String
+    Default: aiDev-AppClient
+    Description: Cognitoアプリクライアント名
+
+Resources:
+  # =========================================================================
+  # Cognito User Pool
+  # =========================================================================
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${UserPoolName}-${Environment}
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+        EmailSubject: 'aiDev - メールアドレス確認コード'
+        EmailMessage: 'aiDevをご利用いただきありがとうございます。確認コード: {####}'
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: custom:company
+          AttributeDataType: String
+          Mutable: true
+          Required: false
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: true
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+
+  # ユーザープールのクライアント設定
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub ${AppClientName}-${Environment}
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+      PreventUserExistenceErrors: ENABLED
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      CallbackURLs:
+        - http://localhost:3000/callback
+        - !Sub https://${AWS::StackName}-${Environment}.s3-website-${AWS::Region}.amazonaws.com/callback
+      LogoutURLs:
+        - http://localhost:3000/logout
+        - !Sub https://${AWS::StackName}-${Environment}.s3-website-${AWS::Region}.amazonaws.com/logout
+      SupportedIdentityProviders:
+        - COGNITO
+
+  # ドメイン設定
+  CognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub aidev-auth-${Environment}-${AWS::AccountId}
+      UserPoolId: !Ref CognitoUserPool
+
+  # =========================================================================
+  # DynamoDB
+  # =========================================================================
+  UserProfilesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub aiDev-${Environment}-UserProfiles
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+
+  # =========================================================================
+  # Lambda Functions
+  # =========================================================================
+  # サインアップ後のカスタム処理
+  PostSignupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub aiDev-${Environment}-PostSignup
+      Handler: auth-handler.postSignup
+      CodeUri: ../../../lambda/auth/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserProfilesTable
+      Events:
+        CognitoTrigger:
+          Type: Cognito
+          Properties:
+            UserPool: !Ref CognitoUserPool
+            Trigger: PostConfirmation
+
+  # サインアップ
+  SignUpFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub aiDev-${Environment}-SignUp
+      Handler: auth-handler.signUp
+      CodeUri: ../../../lambda/auth/
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /auth/signup
+            Method: post
+            RestApiId: !Ref AuthApi
+
+  # サインアップ確認
+  ConfirmSignUpFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub aiDev-${Environment}-ConfirmSignUp
+      Handler: auth-handler.confirmSignUp
+      CodeUri: ../../../lambda/auth/
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /auth/confirm-signup
+            Method: post
+            RestApiId: !Ref AuthApi
+
+  # ログイン
+  LoginFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub aiDev-${Environment}-Login
+      Handler: auth-handler.login
+      CodeUri: ../../../lambda/auth/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserProfilesTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /auth/login
+            Method: post
+            RestApiId: !Ref AuthApi
+
+  # パスワードリセットリクエスト
+  ForgotPasswordFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub aiDev-${Environment}-ForgotPassword
+      Handler: auth-handler.forgotPassword
+      CodeUri: ../../../lambda/auth/
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /auth/forgot-password
+            Method: post
+            RestApiId: !Ref AuthApi
+
+  # パスワードリセット確認
+  ConfirmForgotPasswordFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub aiDev-${Environment}-ConfirmForgotPassword
+      Handler: auth-handler.confirmForgotPassword
+      CodeUri: ../../../lambda/auth/
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /auth/confirm-forgot-password
+            Method: post
+            RestApiId: !Ref AuthApi
+
+  # ユーザー情報取得
+  GetUserInfoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub aiDev-${Environment}-GetUserInfo
+      Handler: auth-handler.getUserInfo
+      CodeUri: ../../../lambda/auth/
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /auth/me
+            Method: get
+            RestApiId: !Ref AuthApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  # ユーザープロファイル保存
+  SaveUserProfileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub aiDev-${Environment}-SaveUserProfile
+      Handler: auth-handler.saveUserProfile
+      CodeUri: ../../../lambda/auth/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserProfilesTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /users/profile
+            Method: post
+            RestApiId: !Ref AuthApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  # ユーザープロファイル取得
+  GetUserProfileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub aiDev-${Environment}-GetUserProfile
+      Handler: auth-handler.getUserProfile
+      CodeUri: ../../../lambda/auth/
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UserProfilesTable
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /users/profile
+            Method: get
+            RestApiId: !Ref AuthApi
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  # =========================================================================
+  # API Gateway
+  # =========================================================================
+  AuthApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub aiDev-Auth-API-${Environment}
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET, POST, OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt CognitoUserPool.Arn
+            Identity:
+              Header: Authorization
+
+  # =========================================================================
+  # CORS設定とデプロイメント
+  # =========================================================================
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - SignUpFunction
+      - ConfirmSignUpFunction
+      - LoginFunction
+      - ForgotPasswordFunction
+      - ConfirmForgotPasswordFunction
+      - GetUserInfoFunction
+      - SaveUserProfileFunction
+      - GetUserProfileFunction
+    Properties:
+      RestApiId: !Ref AuthApi
+      StageName: !Ref Environment
+
+Outputs:
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref CognitoUserPool
+    Export:
+      Name: !Sub ${AWS::StackName}-UserPoolId
+
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref CognitoUserPoolClient
+    Export:
+      Name: !Sub ${AWS::StackName}-UserPoolClientId
+
+  UserPoolDomain:
+    Description: Cognito User Pool Domain
+    Value: !Sub https://${CognitoUserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
+    Export:
+      Name: !Sub ${AWS::StackName}-UserPoolDomain
+
+  AuthApiEndpoint:
+    Description: API Gateway URL
+    Value: !Sub https://${AuthApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+    Export:
+      Name: !Sub ${AWS::StackName}-AuthApiEndpoint
+
+  UserProfilesTableName:
+    Description: DynamoDB User Profiles Table Name
+    Value: !Ref UserProfilesTable
+    Export:
+      Name: !Sub ${AWS::StackName}-UserProfilesTableName

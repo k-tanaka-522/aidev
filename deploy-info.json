@@ -1,0 +1,8 @@
+{
+    "ApiEndpoint":  "https://ykwncsow4g.execute-api.ap-northeast-1.amazonaws.com/dev",
+    "FrontendUrl":  "https://d3nbe0w9axb9qt.cloudfront.net",
+    "FrontendBucket":  null,
+    "DeploymentTime":  "2025-04-11 20:48:20",
+    "StackName":  "aidev-stack-2504112037",
+    "DistributionId":  null
+}
