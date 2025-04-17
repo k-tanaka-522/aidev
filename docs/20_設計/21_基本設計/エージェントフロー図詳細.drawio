@@ -1,0 +1,262 @@
+<mxfile host="app.diagrams.net" modified="2023-04-18T12:00:00.000Z" agent="Mozilla/5.0" version="21.0.0" type="device">
+  <diagram name="エージェント連携フロー" id="agent-flow-diagram">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <\!-- エージェントグループの背景 -->
+        <mxCell id="ps-group-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="300" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="it-group-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="300" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="sa-group-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="400" y="280" width="300" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="pm-group-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="400" y="40" width="300" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="dev-group-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="40" y="520" width="300" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="qa-group-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="400" y="520" width="300" height="200" as="geometry" />
+        </mxCell>
+        
+        <\!-- エージェントグループのラベル -->
+        <mxCell id="ps-group-label" value="プリセールスエージェント群" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="80" y="50" width="220" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="it-group-label" value="ITコンサルタントエージェント群" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="80" y="290" width="220" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="sa-group-label" value="システムアーキテクトエージェント群" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="440" y="290" width="220" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="pm-group-label" value="プロジェクトマネージャーエージェント群" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="440" y="50" width="220" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="dev-group-label" value="開発エンジニアエージェント群" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="80" y="530" width="220" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="qa-group-label" value="QAエンジニアエージェント群" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="440" y="530" width="220" height="30" as="geometry" />
+        </mxCell>
+        
+        <\!-- フェーズ1エージェント（MVP） -->
+        <mxCell id="ps01-node" value="PS01&#xa;プリセールスリード" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="140" y="90" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="it01-node" value="IT01&#xa;IT戦略リード" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="140" y="330" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sa01-node" value="SA01&#xa;アーキテクチャリード" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=3;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="490" y="330" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <\!-- フェーズ2エージェント -->
+        <mxCell id="ps02-node" value="PS02&#xa;AWSソリューション提案" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ps03-node" value="PS03&#xa;コスト最適化専門" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="200" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="pm01-node" value="PM01&#xa;プロジェクトリード" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="490" y="90" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sa02-node" value="SA02&#xa;セキュリティアーキテクト" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="490" y="400" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="dev03-node" value="DEV03&#xa;インフラ開発" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="140" y="570" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <\!-- フェーズ3エージェント（一部） -->
+        <mxCell id="it02-node" value="IT02&#xa;DXコンサルタント" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=60;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="400" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="it03-node" value="IT03&#xa;業界特化コンサルタント" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=60;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="200" y="400" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="pm02-node" value="PM02&#xa;アジャイルコーチ" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;opacity=60;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="440" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="pm03-node" value="PM03&#xa;リスク管理" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;opacity=60;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="560" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sa03-node" value="SA03&#xa;データアーキテクト" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;opacity=60;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="410" y="360" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="dev01-node" value="DEV01&#xa;フロントエンド開発" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=60;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="80" y="640" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="dev02-node" value="DEV02&#xa;バックエンド開発" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=60;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="200" y="640" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="qa01-node" value="QA01&#xa;テストリード" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=60;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="490" y="570" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="qa02-node" value="QA02&#xa;自動化テスト" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=60;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="440" y="640" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="qa03-node" value="QA03&#xa;セキュリティテスト" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=60;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="560" y="640" width="120" height="60" as="geometry" />
+        </mxCell>
+        
+        <\!-- ユーザーノード -->
+        <mxCell id="user-node" value="ユーザー" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="340" y="90" width="30" height="60" as="geometry" />
+        </mxCell>
+        
+        <\!-- フェーズ1の連携（太線） -->
+        <mxCell id="link-ps01-it01" value="リレー型連携" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=3;fillColor=#dae8fc;strokeColor=#6c8ebf;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="ps01-node" target="it01-node">
+          <mxGeometry x="-0.2" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="link-ps01-sa01" value="リレー型連携" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=3;fillColor=#dae8fc;strokeColor=#6c8ebf;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="ps01-node" target="sa01-node">
+          <mxGeometry x="-0.0057" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="link-ps01-user" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=3;fillColor=#dae8fc;strokeColor=#6c8ebf;" edge="1" parent="1" source="ps01-node" target="user-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-it01-sa01" value="並行型連携" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=3;fillColor=#d5e8d4;strokeColor=#82b366;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="it01-node" target="sa01-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <\!-- フェーズ2の連携（中線） -->
+        <mxCell id="link-ps01-ps02" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;" edge="1" parent="1" source="ps02-node" target="ps01-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-ps01-ps03" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;" edge="1" parent="1" source="ps03-node" target="ps01-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-ps02-ps03" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;" edge="1" parent="1" source="ps02-node" target="ps03-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-sa01-sa02" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;fillColor=#ffe6cc;strokeColor=#d79b00;" edge="1" parent="1" source="sa01-node" target="sa02-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-ps01-pm01" value="階層型連携" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fillColor=#fff2cc;strokeColor=#d6b656;labelBackgroundColor=#ffffff;dashed=1;" edge="1" parent="1" source="ps01-node" target="pm01-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-sa01-pm01" value="階層型連携" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;fillColor=#fff2cc;strokeColor=#d6b656;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="sa01-node" target="pm01-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-sa01-dev03" value="タスク委任" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fillColor=#ffe6cc;strokeColor=#d79b00;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="sa01-node" target="dev03-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <\!-- フェーズ3の連携（細線・点線） -->
+        <mxCell id="link-it01-it02" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=60;" edge="1" parent="1" source="it01-node" target="it02-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-it01-it03" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=60;" edge="1" parent="1" source="it01-node" target="it03-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-pm01-pm02" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=1;fillColor=#fff2cc;strokeColor=#d6b656;opacity=60;" edge="1" parent="1" source="pm01-node" target="pm02-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-pm01-pm03" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=1;fillColor=#fff2cc;strokeColor=#d6b656;opacity=60;" edge="1" parent="1" source="pm01-node" target="pm03-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-sa01-sa03" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=1;fillColor=#ffe6cc;strokeColor=#d79b00;opacity=60;" edge="1" parent="1" source="sa01-node" target="sa03-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-dev03-dev01" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=60;" edge="1" parent="1" source="dev03-node" target="dev01-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-dev03-dev02" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=60;" edge="1" parent="1" source="dev03-node" target="dev02-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-pm01-qa01" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=1;fillColor=#fff2cc;strokeColor=#d6b656;opacity=60;" edge="1" parent="1" source="pm01-node" target="qa01-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-qa01-qa02" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=60;" edge="1" parent="1" source="qa01-node" target="qa02-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-qa01-qa03" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=60;" edge="1" parent="1" source="qa01-node" target="qa03-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="link-dev01-dev02" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=60;" edge="1" parent="1" source="dev01-node" target="dev02-node">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <\!-- レジェンド -->
+        <mxCell id="legend-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;opacity=70;" vertex="1" parent="1">
+          <mxGeometry x="760" y="40" width="200" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-title" value="凡例" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="760" y="50" width="200" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-phase1" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="780" y="90" width="30" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-phase1-label" value="フェーズ1（MVP）" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="820" y="85" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-phase2" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="780" y="120" width="30" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-phase2-label" value="フェーズ2" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="820" y="115" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-phase3" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;opacity=60;" vertex="1" parent="1">
+          <mxGeometry x="780" y="150" width="30" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-phase3-label" value="フェーズ3" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="820" y="145" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-relay" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="780" y="190" as="sourcePoint" />
+            <mxPoint x="810" y="190" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend-relay-label" value="リレー型連携" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="820" y="175" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-hierarchy" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="780" y="210" as="sourcePoint" />
+            <mxPoint x="810" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend-hierarchy-label" value="階層型連携" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="820" y="195" width="120" height="30" as="geometry" />
+        </mxCell>
+        
+        <\!-- メインワークフローパターン説明 -->
+        <mxCell id="workflow-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;opacity=70;" vertex="1" parent="1">
+          <mxGeometry x="760" y="280" width="200" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="workflow-title" value="主要ワークフロー" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="760" y="290" width="200" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="workflow-1" value="1. 初期相談 - 要件定義" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="780" y="320" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="workflow-1-desc" value="ユーザー → PS01 → IT01 → PS01" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="780" y="340" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="workflow-2" value="2. アーキテクチャ設計" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="780" y="360" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="workflow-2-desc" value="PS01 → SA01 → SA02/SA03" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="780" y="380" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="workflow-3" value="3. 実装・テスト" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="780" y="400" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="workflow-3-desc" value="SA01 → DEV03 → QA01" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="780" y="420" width="160" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+EOF < /dev/null
