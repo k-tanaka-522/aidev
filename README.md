@@ -48,12 +48,14 @@ aiDevは、Chatbot UI と AWS Bedrock を連携し、ナレッジベースを活
 │   │   │   └── chat_handler/ # チャット処理ハンドラー
 │   │   └── api/            # API定義
 │   │
-│   └── infra/              # インフラストラクチャコード
-│       ├── terraform/      # Terraformコード
-│       └── sam/            # AWS SAMテンプレート
+│   ├── infra/              # インフラストラクチャコード
+│   │   ├── terraform/      # Terraformコード
+│   │   └── sam/            # AWS SAMテンプレート
+│   │
+│   └── infra-init/         # プロジェクト初期化・CI/CD環境構築
 │
 ├── tests/                  # テストコード
-└── deploy-scripts/         # デプロイスクリプト
+└── deploy-scripts/         # 旧デプロイスクリプト（非推奨）
 ```
 
 ## セットアップ手順
@@ -128,12 +130,34 @@ sam deploy --guided
 - AWS Bedrockを利用したAI応答生成
 - シンプルなAPIによるフロントエンドとバックエンドの連携
 
+## 開発フェーズ計画
+
+aiDevプロジェクトは、以下の段階的なフェーズで開発を進めます：
+
+### フェーズ1：プリセールス特化（3ヶ月）
+- 質問応答機能の実装
+- ナレッジベースの基本構築
+- 簡易設計提案機能
+- 判断基準：月間対話数100件達成、商談化率15%以上
+
+### フェーズ2：実装支援機能追加（+3ヶ月）
+- 環境構築自動化機能の本格実装
+- より詳細な設計支援機能
+- テンプレートライブラリの拡充
+- 判断基準：自動化機能利用率30%以上、提案満足度4.0/5.0以上
+
+### フェーズ3：持続的関係構築（+6ヶ月）
+- 環境発行機能の実装
+- 運用監視提案機能
+- 最適化提案機能の追加
+- 判断基準：リピート率70%以上、SES展開率20%以上
+
 ## 将来の拡張予定
 
-- AWS Bedrock Agentの本格的な活用
+- さらなるAWS Bedrock Agentの本格的な活用
 - ナレッジベースの充実と専門知識の拡充
-- ユーザーのAWS環境へのアクセスと自動構築機能
-- 複数エージェントの連携と特化型支援
+- ユーザーのAWS環境へのアクセスと自動構築機能の強化
+- 複数エージェントの連携と特化型支援の高度化
 
 ## CI/CD環境のセットアップ
 
@@ -144,11 +168,11 @@ CI/CD環境を構築することで、継続的インテグレーションと継
 ```bash
 # スクリプトを実行して開発環境のCI/CD環境を構築
 cd /mnt/c/dev2/aiDev
-./deploy-scripts/deploy-cicd.sh --environment dev
+./src/infra-init/deploy-cicd.sh --environment dev
 
 # または特定の環境を指定
-./deploy-scripts/deploy-cicd.sh --environment staging
-./deploy-scripts/deploy-cicd.sh --environment prod
+./src/infra-init/deploy-cicd.sh --environment staging
+./src/infra-init/deploy-cicd.sh --environment prod
 ```
 
 スクリプトは以下のリソースを作成します：
