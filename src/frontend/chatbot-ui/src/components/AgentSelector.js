@@ -36,6 +36,7 @@ const AgentSelector = ({ currentAgent, onAgentChange }) => {
       <Description>
         質問内容に応じて最適なエージェントを選択してください。
         エージェントの種類によって、回答の専門性や詳細さが変わります。
+        それぞれの特徴を理解して、最適なエージェントをお選びください。
       </Description>
       
       <AgentList>

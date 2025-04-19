@@ -1,0 +1,11 @@
+{
+  "name": "aidev-backend",
+  "version": "1.0.0",
+  "description": "aiDev Backend Lambda Functions",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'No build required for initial setup'"
+  },
+  "author": "",
+  "license": "ISC"
+}

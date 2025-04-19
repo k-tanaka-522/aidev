@@ -1,0 +1,87 @@
+========== aiDev CI/CD環境セットアップログ ==========
+開始時刻: Sat Apr 19 18:51:07 JST 2025
+========== aiDev CI/CD環境セットアップ ==========
+環境: dev
+リージョン: ap-northeast-1
+スタック名: aidev-cicd-resources
+テンプレートディレクトリ: /mnt/c/dev2/aiDev/src/infra-init
+GitHub所有者: k-tanaka-522
+GitHubリポジトリ: aidev
+GitHubブランチ: main
+==============================================
+上記の設定で続行しますか？ (y/n): 
+新しいスタック 'aidev-cicd-resources' を作成します...
+テンプレート用バケット 'aidev-cfn-templates-ap-northeast-1-dev' が確認されました
+テンプレートをS3にアップロードしています...
+Completed 8.7 KiB/8.7 KiB (64.9 KiB/s) with 1 file(s) remainingupload: ./ci-cd-resources.yml to s3://aidev-cfn-templates-ap-northeast-1-dev/ci-cd-resources.yml
+Completed 3.9 KiB/3.9 KiB (26.8 KiB/s) with 1 file(s) remainingupload: ./codebuild-projects.yml to s3://aidev-cfn-templates-ap-northeast-1-dev/codebuild-projects.yml
+Completed 5.9 KiB/5.9 KiB (45.3 KiB/s) with 1 file(s) remainingupload: ./codepipeline.yml to s3://aidev-cfn-templates-ap-northeast-1-dev/codepipeline.yml
+基本CI/CDリソースをデプロイしています...
+{
+    "StackId": "arn:aws:cloudformation:ap-northeast-1:897167645238:stack/aidev-cicd-resources/d4d28840-1d03-11f0-a29e-0644bd1d54d9"
+}
+CloudFormationスタックのデプロイを待機中...
+スタックの出力を取得中...
+GitHub接続ARN: arn:aws:codestar-connections:ap-northeast-1:897167645238:connection/4ff559af-a783-4063-89cc-acc294c7d588
+GitHub接続ステータス: PENDING
+アーティファクトバケット: aidev-artifacts-897167645238-dev
+CodeBuild IAM Role ARN: arn:aws:iam::897167645238:role/aidev-cicd-resources-CodeBuildServiceRole-FkddkqqskW4e
+CodePipeline IAM Role ARN: arn:aws:iam::897167645238:role/aidev-cicd-resources-CodePipelineServiceRole-DAAE8jVY16lk
+CodeBuildプロジェクトをデプロイしています...
+
+usage: aws [options] <command> <subcommand> [<subcommand> ...] [parameters]
+To see help text, you can run:
+
+  aws help
+  aws <command> help
+  aws <command> <subcommand> help
+
+aws: error: argument operation: Invalid choice, valid choices are:
+
+activate-organizations-access            | activate-type                           
+batch-describe-type-configurations       | cancel-update-stack                     
+continue-update-rollback                 | create-change-set                       
+create-generated-template                | create-stack                            
+create-stack-instances                   | create-stack-refactor                   
+create-stack-set                         | deactivate-organizations-access         
+deactivate-type                          | delete-change-set                       
+delete-generated-template                | delete-stack                            
+delete-stack-instances                   | delete-stack-set                        
+deregister-type                          | describe-account-limits                 
+describe-change-set                      | describe-change-set-hooks               
+describe-generated-template              | describe-organizations-access           
+describe-publisher                       | describe-resource-scan                  
+describe-stack-drift-detection-status    | describe-stack-events                   
+describe-stack-instance                  | describe-stack-refactor                 
+describe-stack-resource                  | describe-stack-resource-drifts          
+describe-stack-resources                 | describe-stack-set                      
+describe-stack-set-operation             | describe-stacks                         
+describe-type                            | describe-type-registration              
+detect-stack-drift                       | detect-stack-resource-drift             
+detect-stack-set-drift                   | estimate-template-cost                  
+execute-change-set                       | execute-stack-refactor                  
+get-generated-template                   | get-stack-policy                        
+get-template                             | get-template-summary                    
+import-stacks-to-stack-set               | list-change-sets                        
+list-exports                             | list-generated-templates                
+list-hook-results                        | list-imports                            
+list-resource-scan-related-resources     | list-resource-scan-resources            
+list-resource-scans                      | list-stack-instance-resource-drifts     
+list-stack-instances                     | list-stack-refactor-actions             
+list-stack-refactors                     | list-stack-resources                    
+list-stack-set-auto-deployment-targets   | list-stack-set-operation-results        
+list-stack-set-operations                | list-stack-sets                         
+list-stacks                              | list-type-registrations                 
+list-type-versions                       | list-types                              
+publish-type                             | record-handler-progress                 
+register-publisher                       | register-type                           
+rollback-stack                           | set-stack-policy                        
+set-type-configuration                   | set-type-default-version                
+signal-resource                          | start-resource-scan                     
+stop-stack-set-operation                 | test-type                               
+update-generated-template                | update-stack                            
+update-stack-instances                   | update-stack-set                        
+update-termination-protection            | validate-template                       
+package                                  | deploy                                  
+wait                                     | help                                    
+

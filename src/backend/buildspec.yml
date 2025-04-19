@@ -1,0 +1,27 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 16
+    commands:
+      - echo Installing dependencies...
+      - cd src/backend/lambda
+      - npm install || echo "No package.json found, skipping install"
+
+  build:
+    commands:
+      - echo Building the backend...
+      - npm run build || echo "No build script found, skipping build"
+
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - mkdir -p dist
+      - cp -r . dist/ || echo "Creating empty dist directory"
+
+artifacts:
+  base-directory: src/backend/lambda/dist
+  files:
+    - "**/*"
+  discard-paths: no

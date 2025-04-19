@@ -1,0 +1,40 @@
+========== aiDev CI/CD環境セットアップログ ==========
+開始時刻: Sat Apr 19 20:10:18 JST 2025
+========== aiDev CI/CD環境セットアップ ==========
+環境: dev
+リージョン: ap-northeast-1
+スタック名: aidev-cicd-resources
+テンプレートディレクトリ: /mnt/c/dev2/aiDev/src/infra-init
+GitHub所有者: k-tanaka-522
+GitHubリポジトリ: aidev
+GitHubブランチ: main
+==============================================
+上記の設定で続行しますか？ (y/n): 
+新しいスタック 'aidev-cicd-resources' を作成します...
+{
+    "BucketRegion": "ap-northeast-1",
+    "AccessPointAlias": false
+}
+テンプレート用バケット 'aidev-cfn-templates-ap-northeast-1-dev' が確認されました
+テンプレートをS3にアップロードしています...
+Completed 8.7 KiB/8.7 KiB (22.5 KiB/s) with 1 file(s) remainingupload: ./ci-cd-resources.yml to s3://aidev-cfn-templates-ap-northeast-1-dev/ci-cd-resources.yml
+Completed 3.9 KiB/3.9 KiB (16.2 KiB/s) with 1 file(s) remainingupload: ./codebuild-projects.yml to s3://aidev-cfn-templates-ap-northeast-1-dev/codebuild-projects.yml
+Completed 5.9 KiB/5.9 KiB (17.9 KiB/s) with 1 file(s) remainingupload: ./codepipeline.yml to s3://aidev-cfn-templates-ap-northeast-1-dev/codepipeline.yml
+基本CI/CDリソースをデプロイしています...
+{
+    "StackId": "arn:aws:cloudformation:ap-northeast-1:897167645238:stack/aidev-cicd-resources/e77c0e20-1d0e-11f0-b364-0ac503bcc4ab"
+}
+CloudFormationスタックのデプロイを待機中...
+スタックの出力を取得中...
+GitHub接続ARN: arn:aws:codestar-connections:ap-northeast-1:897167645238:connection/81b84f19-9b3e-4ee4-bd35-57418d27ce41
+GitHub接続ステータス: PENDING
+アーティファクトバケット: aidev-artifacts-897167645238-dev
+CodeBuild IAM Role ARN: arn:aws:iam::897167645238:role/aidev-cicd-resources-CodeBuildServiceRole-KyAoAke8JkHn
+CodePipeline IAM Role ARN: arn:aws:iam::897167645238:role/aidev-cicd-resources-CodePipelineServiceRole-ep0ARfD3H1Qz
+CodeBuildプロジェクトをデプロイしています...
+{
+    "StackId": "arn:aws:cloudformation:ap-northeast-1:897167645238:stack/aidev-cicd-resources-codebuild/10645090-1d0f-11f0-a88f-0ec6a293c777"
+}
+CodeBuildスタックのデプロイを待機中...
+
+Waiter StackCreateComplete failed: Waiter encountered a terminal failure state: For expression "Stacks[].StackStatus" we matched expected path: "ROLLBACK_COMPLETE" at least once
