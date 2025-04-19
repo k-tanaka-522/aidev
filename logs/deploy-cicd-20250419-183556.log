@@ -1,0 +1,21 @@
+========== aiDev CI/CD環境セットアップログ ==========
+開始時刻: Sat Apr 19 18:35:56 JST 2025
+========== aiDev CI/CD環境セットアップ ==========
+環境: dev
+リージョン: ap-northeast-1
+スタック名: aidev-cicd-resources
+テンプレートディレクトリ: /mnt/c/dev2/aiDev/src/infra-init
+GitHub所有者: k-tanaka-522
+GitHubリポジトリ: aidev
+GitHubブランチ: main
+==============================================
+上記の設定で続行しますか？ (y/n): 
+既存のスタック 'aidev-cicd-resources' を更新します...
+テンプレート用バケット 'aidev-cfn-templates-ap-northeast-1-dev' が確認されました
+テンプレートをS3にアップロードしています...
+Completed 8.7 KiB/8.7 KiB (49.8 KiB/s) with 1 file(s) remainingupload: ./ci-cd-resources.yml to s3://aidev-cfn-templates-ap-northeast-1-dev/ci-cd-resources.yml
+Completed 3.9 KiB/3.9 KiB (27.4 KiB/s) with 1 file(s) remainingupload: ./codebuild-projects.yml to s3://aidev-cfn-templates-ap-northeast-1-dev/codebuild-projects.yml
+Completed 5.9 KiB/5.9 KiB (41.9 KiB/s) with 1 file(s) remainingupload: ./codepipeline.yml to s3://aidev-cfn-templates-ap-northeast-1-dev/codepipeline.yml
+基本CI/CDリソースをデプロイしています...
+
+An error occurred (ValidationError) when calling the UpdateStack operation: Stack:arn:aws:cloudformation:ap-northeast-1:897167645238:stack/aidev-cicd-resources/da8eaee0-1cf3-11f0-8f11-0acc604e21d7 is in ROLLBACK_COMPLETE state and can not be updated.
