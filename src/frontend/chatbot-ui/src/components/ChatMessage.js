@@ -3,9 +3,7 @@ import styled from 'styled-components';
 import { FiUser } from 'react-icons/fi';
 import { VscRobot } from 'react-icons/vsc';
 import { VscWand } from 'react-icons/vsc';
-import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import AiMessageParser from './AiMessageParser';
 
 const ChatMessage = ({ message }) => {
   const { role, content, timestamp } = message;
@@ -61,29 +59,8 @@ const ChatMessage = ({ message }) => {
         </IconContainer>
         
         <ContentContainer>
-          <ReactMarkdown
-            components={{
-              code({ node, inline, className, children, ...props }) {
-                const match = /language-(\w+)/.exec(className || '');
-                return !inline && match ? (
-                  <SyntaxHighlighter
-                    style={vscDarkPlus}
-                    language={match[1]}
-                    PreTag="div"
-                    {...props}
-                  >
-                    {String(children).replace(/\n$/, '')}
-                  </SyntaxHighlighter>
-                ) : (
-                  <code className={className} {...props}>
-                    {children}
-                  </code>
-                );
-              }
-            }}
-          >
-            {content}
-          </ReactMarkdown>
+          {/* すべてのメッセージでAiMessageParserを使用 */}
+          <AiMessageParser content={content} />
         </ContentContainer>
         
         <Timestamp>{formatTime(timestamp)}</Timestamp>

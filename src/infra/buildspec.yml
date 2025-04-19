@@ -1,0 +1,31 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.9
+    commands:
+      - echo Installing dependencies...
+      - pip install --upgrade pip
+      - pip install --upgrade awscli aws-sam-cli
+
+  build:
+    commands:
+      - echo Building SAM template...
+      - cd src/infra/sam
+      - sam build
+      - sam package --s3-bucket ${ARTIFACT_BUCKET} --output-template-file packaged-template.yaml
+
+  post_build:
+    commands:
+      - echo SAM packaging completed on `date`
+      - mkdir -p output
+      - cp packaged-template.yaml output/
+      - cp config.json output/ || echo "{}" > output/config.json
+
+artifacts:
+  base-directory: src/infra/sam/output
+  files:
+    - packaged-template.yaml
+    - config.json
+  discard-paths: yes
