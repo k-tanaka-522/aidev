@@ -1,0 +1,17 @@
+========== aiDev CI/CD環境セットアップログ ==========
+開始時刻: Sat Apr 19 18:33:03 JST 2025
+エラー: GitHubのユーザー名/組織名(-o)とリポジトリ名(-g)を指定する必要があります。
+aiDev CI/CD環境構築スクリプト
+
+Usage: ./deploy-cicd.sh [options]
+
+Options:
+  -h, --help               このヘルプを表示
+  -e, --environment ENV    環境名を指定 (dev, staging, prod) [デフォルト: dev]
+  -r, --region REGION      AWSリージョンを指定 [デフォルト: AWSプロファイルから取得]
+  -s, --stack-name NAME    CloudFormationスタック名 [デフォルト: aidev-cicd-resources]
+  -o, --github-owner OWNER GitHubのユーザー名/組織名 [必須]
+  -g, --github-repo REPO   GitHubのリポジトリ名 [必須]
+  -b, --github-branch BRANCH GitHubのブランチ名 [デフォルト: main]
+  -c, --cloudfront-id ID   CloudFrontディストリビューションID [オプション]
+

@@ -15,9 +15,22 @@ Parameters:
     Type: String
     Description: ARN of the CodePipeline service role
   
-  CodeCommitRepositoryName:
+  GitHubConnectionArn:
     Type: String
-    Description: Name of the CodeCommit repository
+    Description: ARN of the GitHub CodeStar connection
+  
+  GitHubOwner:
+    Type: String
+    Description: GitHub repository owner (username or organization)
+  
+  GitHubRepo:
+    Type: String
+    Description: GitHub repository name
+  
+  GitHubBranch:
+    Type: String
+    Default: main
+    Description: GitHub repository branch to deploy
   
   ArtifactBucketName:
     Type: String
@@ -34,6 +47,10 @@ Parameters:
   InfrastructureBuildProjectName:
     Type: String
     Description: Name of the infrastructure build project
+    
+  CloudFrontDistributionId:
+    Type: String
+    Description: ID of the CloudFront distribution to invalidate after frontend deployment
 
 Resources:
   # CodePipeline
@@ -53,12 +70,13 @@ Resources:
               ActionTypeId:
                 Category: Source
                 Owner: AWS
-                Provider: CodeCommit
+                Provider: CodeStarSourceConnection
                 Version: 1
               Configuration:
-                RepositoryName: !Ref CodeCommitRepositoryName
-                BranchName: !Sub ${EnvironmentName}
-                PollForSourceChanges: false
+                ConnectionArn: !Ref GitHubConnectionArn
+                FullRepositoryId: !Sub ${GitHubOwner}/${GitHubRepo}
+                BranchName: !Ref GitHubBranch
+                DetectChanges: true
               OutputArtifacts:
                 - Name: SourceCode
         
@@ -144,60 +162,29 @@ Resources:
               InputArtifacts:
                 - Name: FrontendBuildOutput
               RunOrder: 2
+            
+            # Invalidate CloudFront cache after frontend deployment
+            - Name: InvalidateCloudFrontCache
+              ActionTypeId:
+                Category: Invoke
+                Owner: AWS
+                Provider: Lambda
+                Version: 1
+              Configuration:
+                FunctionName: !Sub aiDev-${EnvironmentName}-cf-invalidation
+                UserParameters: !Sub |
+                  {
+                    "distributionId": "${CloudFrontDistributionId}",
+                    "paths": ["/*"]
+                  }
+              InputArtifacts: []
+              RunOrder: 3
       
       Tags:
         - Key: Project
           Value: aiDev
         - Key: Environment
           Value: !Ref EnvironmentName
-
-# Create CloudWatch Event for CodeCommit Repository
-  CloudWatchEventRule:
-    Type: AWS::Events::Rule
-    Properties:
-      Name: !Sub aiDev-${EnvironmentName}-codecommit-event
-      Description: Rule for CodeCommit repository changes
-      EventPattern:
-        source:
-          - aws.codecommit
-        detail-type:
-          - 'CodeCommit Repository State Change'
-        resources:
-          - !Sub arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:${CodeCommitRepositoryName}
-        detail:
-          event:
-            - referenceCreated
-            - referenceUpdated
-          referenceType:
-            - branch
-          referenceName:
-            - !Sub ${EnvironmentName}
-      State: ENABLED
-      Targets:
-        - Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
-          Id: CodePipelineTarget
-          RoleArn: !GetAtt CloudWatchEventRole.Arn
-
-  # IAM Role for CloudWatch Events
-  CloudWatchEventRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: events.amazonaws.com
-            Action: sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: cwe-pipeline-execution
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: codepipeline:StartPipelineExecution
-                Resource: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
 
 Outputs:
   PipelineName:

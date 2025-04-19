@@ -15,10 +15,6 @@ Parameters:
     Type: String
     Description: ARN of the CodeBuild service role
   
-  CodeCommitRepositoryName:
-    Type: String
-    Description: Name of the CodeCommit repository
-  
   ArtifactBucketName:
     Type: String
     Description: Name of the S3 bucket for artifacts
@@ -48,8 +44,7 @@ Resources:
           - Name: NODE_OPTIONS
             Value: --max-old-space-size=4096
       Source:
-        Type: CODECOMMIT
-        Location: !Sub https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${CodeCommitRepositoryName}
+        Type: CODEPIPELINE
         BuildSpec: src/frontend/buildspec.yml
       TimeoutInMinutes: 15
       Tags:
@@ -82,8 +77,7 @@ Resources:
           - Name: ENVIRONMENT
             Value: !Ref EnvironmentName
       Source:
-        Type: CODECOMMIT
-        Location: !Sub https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${CodeCommitRepositoryName}
+        Type: CODEPIPELINE
         BuildSpec: src/backend/buildspec.yml
       TimeoutInMinutes: 15
       Tags:
@@ -116,8 +110,7 @@ Resources:
           - Name: ENVIRONMENT
             Value: !Ref EnvironmentName
       Source:
-        Type: CODECOMMIT
-        Location: !Sub https://git-codecommit.${AWS::Region}.amazonaws.com/v1/repos/${CodeCommitRepositoryName}
+        Type: CODEPIPELINE
         BuildSpec: src/infra/buildspec.yml
       TimeoutInMinutes: 15
       Tags:

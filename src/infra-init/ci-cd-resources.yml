@@ -10,14 +10,22 @@ Parameters:
       - dev
       - staging
       - prod
+  
+  GitHubOwner:
+    Type: String
+    Description: GitHub repository owner (username or organization)
+  
+  GitHubRepo:
+    Type: String
+    Description: GitHub repository name
 
 Resources:
-  # CodeCommit Repository
-  CodeCommitRepository:
-    Type: AWS::CodeCommit::Repository
+  # GitHub Connection using CodeStar
+  GitHubConnection:
+    Type: AWS::CodeStarConnections::Connection
     Properties:
-      RepositoryName: !Sub aiDev-${EnvironmentName}-repository
-      RepositoryDescription: 'aiDev project repository'
+      ConnectionName: !Sub aiDev-${EnvironmentName}-github-connection
+      ProviderType: GitHub
       Tags:
         - Key: Project
           Value: aiDev
@@ -78,10 +86,6 @@ Resources:
                 Resource:
                   - !Sub arn:aws:s3:::${ArtifactBucket}
                   - !Sub arn:aws:s3:::${ArtifactBucket}/*
-              - Effect: Allow
-                Action:
-                  - codecommit:GitPull
-                Resource: !GetAtt CodeCommitRepository.Arn
       Tags:
         - Key: Project
           Value: aiDev
@@ -117,12 +121,8 @@ Resources:
                   - !Sub arn:aws:s3:::${ArtifactBucket}/*
               - Effect: Allow
                 Action:
-                  - codecommit:GetBranch
-                  - codecommit:GetCommit
-                  - codecommit:UploadArchive
-                  - codecommit:GetUploadArchiveStatus
-                  - codecommit:CancelUploadArchive
-                Resource: !GetAtt CodeCommitRepository.Arn
+                  - codestar-connections:UseConnection
+                Resource: !Ref GitHubConnection
               - Effect: Allow
                 Action:
                   - cloudformation:CreateStack
@@ -140,25 +140,134 @@ Resources:
                 Action:
                   - iam:PassRole
                 Resource: '*'
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt CloudFrontInvalidationLambda.Arn
       Tags:
         - Key: Project
           Value: aiDev
         - Key: Environment
           Value: !Ref EnvironmentName
 
+# CloudFront Invalidation Lambda Function
+  CloudFrontInvalidationLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CloudFrontInvalidationPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudfront:CreateInvalidation
+                Resource: '*'
+      Tags:
+        - Key: Project
+          Value: aiDev
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  CloudFrontInvalidationLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub aiDev-${EnvironmentName}-cf-invalidation
+      Description: Lambda function to invalidate CloudFront cache after S3 deployment
+      Runtime: nodejs16.x
+      Handler: index.handler
+      Role: !GetAtt CloudFrontInvalidationLambdaRole.Arn
+      Timeout: 60
+      MemorySize: 128
+      Code:
+        ZipFile: |
+          const AWS = require('aws-sdk');
+          
+          exports.handler = async (event, context) => {
+            console.log('Received event:', JSON.stringify(event, null, 2));
+            
+            try {
+              // Parse user parameters
+              const userParams = JSON.parse(event.UserParameters);
+              const distributionId = userParams.distributionId;
+              const paths = userParams.paths || ['/*'];
+              
+              if (!distributionId) {
+                throw new Error('distributionId is required in UserParameters');
+              }
+              
+              // Create CloudFront invalidation
+              const cloudfront = new AWS.CloudFront();
+              const params = {
+                DistributionId: distributionId,
+                InvalidationBatch: {
+                  CallerReference: `aidev-invalidation-${Date.now()}`,
+                  Paths: {
+                    Quantity: paths.length,
+                    Items: paths
+                  }
+                }
+              };
+              
+              console.log('Creating CloudFront invalidation with params:', JSON.stringify(params, null, 2));
+              const response = await cloudfront.createInvalidation(params).promise();
+              console.log('CloudFront invalidation created:', JSON.stringify(response, null, 2));
+              
+              return {
+                status: 'SUCCESS',
+                message: `CloudFront invalidation created for distribution ${distributionId}`,
+                invalidationId: response.Invalidation.Id
+              };
+            } catch (error) {
+              console.error('Error creating CloudFront invalidation:', error);
+              throw error;
+            }
+          };
+      Tags:
+        - Key: Project
+          Value: aiDev
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # Grant CodePipeline permission to invoke the Lambda function
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref CloudFrontInvalidationLambda
+      Principal: codepipeline.amazonaws.com
+
 Outputs:
-  CodeCommitRepositoryName:
-    Description: Name of the CodeCommit repository
-    Value: !GetAtt CodeCommitRepository.Name
+  GitHubConnectionArn:
+    Description: ARN of the GitHub CodeStar connection
+    Value: !Ref GitHubConnection
   
-  CodeCommitRepositoryCloneUrlHttp:
-    Description: URL to clone the repository with HTTPS
-    Value: !GetAtt CodeCommitRepository.CloneUrlHttp
-  
-  CodeCommitRepositoryCloneUrlSsh:
-    Description: URL to clone the repository with SSH
-    Value: !GetAtt CodeCommitRepository.CloneUrlSsh
+  GitHubConnectionStatus:
+    Description: Status of the GitHub connection (needs to be manually completed in AWS Console)
+    Value: !GetAtt GitHubConnection.ConnectionStatus
   
   ArtifactBucketName:
     Description: Name of the S3 bucket for build artifacts
     Value: !Ref ArtifactBucket
+  
+  CodeBuildServiceRoleArn:
+    Description: ARN of the CodeBuild service role
+    Value: !GetAtt CodeBuildServiceRole.Arn
+  
+  CodePipelineServiceRoleArn:
+    Description: ARN of the CodePipeline service role
+    Value: !GetAtt CodePipelineServiceRole.Arn
+  
+  CloudFrontInvalidationLambdaArn:
+    Description: ARN of the CloudFront invalidation Lambda function
+    Value: !GetAtt CloudFrontInvalidationLambda.Arn
