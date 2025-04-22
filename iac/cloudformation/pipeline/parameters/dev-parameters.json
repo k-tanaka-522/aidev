@@ -13,7 +13,7 @@
   },
   {
     "ParameterKey": "GitHubBranch",
-    "ParameterValue": "develop"
+    "ParameterValue": "main"
   },
   {
     "ParameterKey": "ApprovalRequired",
