@@ -1,0 +1,26 @@
+version: 0.0
+Resources:
+  - HelloWorldFunction:
+      Type: AWS::Lambda::Function
+      Properties:
+        Name: !Ref HelloWorldFunction
+        Alias: live
+        CurrentVersion: !GetAtt HelloWorldFunction.Version
+        TargetVersion: !Ref HelloWorldFunctionVersionNumber
+  - KnowledgeSearchFunction:
+      Type: AWS::Lambda::Function
+      Properties:
+        Name: !Ref KnowledgeSearchFunction
+        Alias: live
+        CurrentVersion: !GetAtt KnowledgeSearchFunction.Version
+        TargetVersion: !Ref KnowledgeSearchFunctionVersionNumber
+  - EnvironmentBuilderFunction:
+      Type: AWS::Lambda::Function
+      Properties:
+        Name: !Ref EnvironmentBuilderFunction
+        Alias: live
+        CurrentVersion: !GetAtt EnvironmentBuilderFunction.Version
+        TargetVersion: !Ref EnvironmentBuilderFunctionVersionNumber
+Hooks:
+  - BeforeAllowTraffic: !Ref BeforeAllowTrafficHook
+  - AfterAllowTraffic: !Ref AfterAllowTrafficHook

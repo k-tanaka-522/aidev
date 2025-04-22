@@ -1,6 +1,5 @@
 {
   "Parameters": {
-    "EnvironmentName": "dev",
-    "ProjectName": "aiDev"
+    "Environment": "dev"
   }
 }

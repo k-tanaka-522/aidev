@@ -1,0 +1,30 @@
+# aiDev 共通パラメーター定義
+AWSTemplateFormatVersion: '2010-09-09'
+
+# 環境パラメーター
+Environment:
+  dev:
+    StackPrefix: "aidev-dev"
+    DeployBranch: "develop"
+  staging:
+    StackPrefix: "aidev-staging"
+    DeployBranch: "staging"
+  prod:
+    StackPrefix: "aidev-prod"
+    DeployBranch: "main"
+
+# リソース命名パターン
+ResourceNames:
+  GitHubConnection: "{StackPrefix}-github-connection"
+  ArtifactBucket: "aidev-artifacts-{AccountId}-{EnvironmentName}"
+  Pipeline: "{StackPrefix}-pipeline"
+  LambdaFunction: "aiDev-{EnvironmentName}-cf-invalidation"
+  FrontendBuildProject: "{StackPrefix}-frontend-build"
+  BackendBuildProject: "{StackPrefix}-backend-build"
+  InfrastructureBuildProject: "{StackPrefix}-infrastructure-build"
+
+# スタック名
+StackNames:
+  BaseResources: "aidev-cicd-resources"
+  CodeBuild: "aidev-cicd-resources-codebuild"
+  CodePipeline: "aidev-cicd-resources-codepipeline"

@@ -1,0 +1,14 @@
+{
+  "name": "aidev-environment-builder",
+  "version": "1.0.0",
+  "description": "aiDev Environment Builder Lambda Function",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "aiDev Team",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.1144.0"
+  }
+}

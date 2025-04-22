@@ -131,6 +131,32 @@ GitHub接続に問題がある場合は、以下を確認してください：
 - 必要な依存関係がインストールされているか確認
 - 権限関連のエラーはIAMロールの設定を確認
 
+#### 4.2.1 パス指定の問題（ディレクトリパスの重複）
+
+次のようなエラーが発生した場合、buildspec.ymlファイルのパス指定に問題がある可能性があります：
+- `stat /codebuild/output/src*/src/src/xxx/buildspec.yml: no such file or directory`（パスの重複）
+- `npm run build` 実行エラー - 指定したディレクトリが存在しない
+- `Unable to upload artifact ... referenced by ...` - テンプレートの参照ファイルが存在しない
+
+**解決策：**
+1. buildspec.ymlファイル内のパス指定を修正する：
+   - フロントエンド（/src/frontend/buildspec.yml）：
+     - `cd frontend/chatbot-ui` → `cd chatbot-ui`
+     - `base-directory: frontend/chatbot-ui/build` → `base-directory: chatbot-ui/build`
+   - バックエンド（/src/backend/buildspec.yml）：
+     - `cd backend/lambda` → `cd lambda`
+     - `base-directory: backend/lambda/dist` → `base-directory: lambda/dist`
+   - インフラ（/src/infra/buildspec.yml）：
+     - `cd infra/sam` → `cd sam`
+     - `base-directory: infra/sam/output` → `base-directory: sam/output`
+
+2. 各ディレクトリ構造が存在することを確認：
+   - /src/frontend/chatbot-ui/
+   - /src/backend/lambda/
+   - /src/infra/sam/
+
+3. 修正後、GitHubリポジトリに変更をプッシュしてパイプラインを再実行
+
 ### 4.3 デプロイエラー
 
 デプロイエラーが発生した場合は、以下を確認してください：

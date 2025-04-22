@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "ApiGatewayStageName",
+    "ParameterValue": "api"
+  },
+  {
+    "ParameterKey": "LogRetentionInDays",
+    "ParameterValue": "7"
+  }
+]

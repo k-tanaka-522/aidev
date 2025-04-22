@@ -6,7 +6,7 @@ phases:
       nodejs: 16
     commands:
       - echo Installing dependencies...
-      - cd src/backend/lambda
+      - cd backend/lambda
       - npm install || echo "No package.json found, skipping install"
 
   build:
@@ -21,7 +21,7 @@ phases:
       - cp -r . dist/ || echo "Creating empty dist directory"
 
 artifacts:
-  base-directory: src/backend/lambda/dist
+  base-directory: backend/lambda/dist
   files:
     - "**/*"
   discard-paths: no

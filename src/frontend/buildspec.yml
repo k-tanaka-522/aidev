@@ -6,7 +6,7 @@ phases:
       nodejs: 16
     commands:
       - echo Installing dependencies...
-      - cd src/frontend/chatbot-ui
+      - cd frontend/chatbot-ui
       - npm install
 
   build:
@@ -19,7 +19,7 @@ phases:
       - echo Build completed on `date`
 
 artifacts:
-  base-directory: src/frontend/chatbot-ui/build
+  base-directory: frontend/chatbot-ui/build
   files:
     - "**/*"
   discard-paths: no

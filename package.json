@@ -1,0 +1,35 @@
+{
+  "name": "aidev",
+  "version": "1.0.0",
+  "description": "aiDev - 対話型AIを活用した開発支援プラットフォーム",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint src/**/*.js",
+    "test": "jest",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "echo 'Building backend...'",
+    "build:frontend": "echo 'Building frontend...'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aidev-organization/aidev.git"
+  },
+  "keywords": [
+    "ai",
+    "aws",
+    "bedrock",
+    "cloud",
+    "automation"
+  ],
+  "author": "aiDev Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/aidev-organization/aidev/issues"
+  },
+  "homepage": "https://github.com/aidev-organization/aidev#readme",
+  "devDependencies": {
+    "eslint": "^8.38.0",
+    "jest": "^29.5.0"
+  },
+  "dependencies": {}
+}

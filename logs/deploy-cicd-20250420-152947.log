@@ -1,0 +1,12 @@
+========== aiDev CI/CD環境セットアップログ ==========
+開始時刻: Sun Apr 20 15:29:47 JST 2025
+========== aiDev CI/CD環境セットアップ ==========
+環境: dev
+リージョン: ap-northeast-1
+スタック名: aidev-cicd-resources
+テンプレートディレクトリ: /mnt/c/dev2/aiDev/src/infra-init
+GitHub所有者: k-tanaka-522
+GitHubリポジトリ: aidev
+GitHubブランチ: main
+CloudFrontディストリビューションID: EPP3CNKICJ8BK
+==============================================

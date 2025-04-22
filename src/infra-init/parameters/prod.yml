@@ -1,0 +1,17 @@
+# aiDev 本番環境パラメーター
+Environment: "prod"
+Region: "ap-northeast-1"
+
+# GitHub設定
+GitHub:
+  Owner: "k-tanaka-522"
+  Repo: "aidev"
+  Branch: "main"  # 本番用ブランチ
+
+# CloudFront
+CloudFront:
+  DistributionId: "DUMMY_PROD_ID"  # 本番環境のCloudFrontディストリビューションID
+
+# 本番環境固有の設定
+Production:
+  ManualApproval: true  # デプロイ前の手動承認ステップを追加

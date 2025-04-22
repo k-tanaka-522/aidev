@@ -1,0 +1,22 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "GitHubOwner",
+    "ParameterValue": "aidev-organization"
+  },
+  {
+    "ParameterKey": "GitHubRepo",
+    "ParameterValue": "aidev"
+  },
+  {
+    "ParameterKey": "GitHubBranch",
+    "ParameterValue": "develop"
+  },
+  {
+    "ParameterKey": "ApprovalRequired",
+    "ParameterValue": "false"
+  }
+]
