@@ -1,34 +1,44 @@
 # aiDevプロジェクト 引継ぎ状況
 
-## 2025年4月23日 第十次追記
+## 2025年4月23日 第十二次追記
 
 ### 実施済み
-- CI/CDパイプラインのCloudFormationスタックを再構築
-  - ROLLBACKの状態だったスタックを削除
-  - 修正したテンプレートを使用して再デプロイ
-  - デプロイが成功し、スタックは正常に作成された
-  - GitHubリポジトリとの連携に必要なCodeStarConnectionが作成された
+- CodeBuildのビルド失敗を修正
+  - エラー分析：`node: /lib64/libm.so.6: version 'GLIBC_2.27' not found (required by node)` エラーを確認
+  - 根本原因：amazonlinux2-x86_64-standard:4.0イメージが古いGLIBCバージョンを持ち、Node.js 18をサポートしていない
+  - 解決策：buildspec.ymlを修正し、runtime-versionsでのNode.js 18指定を削除
+  - 代替アプローチ：`n`コマンドを使用してNode.js 16をインストールするように変更
+  - 変更内容：`iac/cloudformation/buildspecs/pipeline-buildspec.yml`を更新
 
 ### 次のアクション
-1. **GitHub接続の手動認証（必須）**
-   - AWSコンソールでCodeStarConnectionsの手動認証設定が必要
-     1. Developer Tools > Settings > Connectionsに移動
-     2. dev-aidev-github-connectionを選択
-     3. 「保留中の接続を更新」ボタンをクリック
-     4. GitHubにログインして認証を完了
+1. **buildspec変更のプッシュとビルド確認**
+   - ローカルでコミットした変更をGithubリポジトリにプッシュ
+   - パイプラインの再実行をトリガー
+   - Buildステージが正常に完了することを確認
 
-2. **パイプラインの動作確認**
-   - GitHubへの認証が完了したら、テスト用のコードコミットでパイプラインを検証
-   ```bash
-   # テスト用のコミットとプッシュ
-   cd /mnt/c/dev2/aiDev
-   echo "// テスト用コメント追加" >> src/lambda/hello-world/index.js
-   git add src/lambda/hello-world/index.js
-   git commit -m "test: パイプラインの動作確認用コミット"
-   git push origin develop  # GitHubブランチ名は設定に合わせる
-   ```
+## 2025年4月23日 第十一次追記
 
-3. **追加コンポーネントの構築（パイプライン動作確認後）**
+### 実施済み
+- CI/CDパイプラインのGitHubリポジトリ設定を修正
+  - GitHubオーナー情報を「aidev-organization」から「k-tanaka-522」に修正
+  - 監視ブランチを「main」から「develop」に変更
+  - パイプラインの手動実行を開始
+  - Source ステージが正常に完了
+  - Build ステージで失敗（npm install -g aws-cdk でエラー発生）
+
+### 次のアクション
+1. **ビルド失敗の修正** ✅
+   - エラー内容: `Build terminated with state: FAILED. Phase: INSTALL, Code: COMMAND_EXECUTION_ERROR, Message: Error while executing command: npm install -g aws-cdk. Reason: exit status 1`
+   - buildspec.ymlファイルの見直し：npm権限の問題またはNodeJSのバージョンの問題の可能性
+   - buildspec.ymlで`sudo npm install -g aws-cdk`を試すか、グローバルインストールを避けて`npm install aws-cdk`を使用
+   - CodeBuildプロジェクトの環境設定を確認（Node.js バージョンなど）
+
+2. **パイプラインの完了を確認**
+   - ビルド問題修正後、パイプラインを再実行
+   - すべてのステージが正常に完了することを確認
+   - デプロイされたリソースが想定通りに機能するか検証
+
+3. **追加コンポーネントの構築**
    - フロントエンド用のビルド・デプロイ設定の詳細化
    - バックエンド用のビルド・デプロイ設定の詳細化
    - テスト自動化の組み込み
