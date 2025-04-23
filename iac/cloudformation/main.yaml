@@ -36,19 +36,35 @@ Globals:
         ENVIRONMENT: !Ref Environment
 
 Resources:
+  # API Gateway CloudWatch Logsロール
+  ApiGatewayCloudWatchLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs'
+      Path: "/"
+      RoleName: "APIGatewayCloudWatchLogsRole"
+
   # API Gateway
   ApiGateway:
     Type: AWS::Serverless::Api
+    DependsOn: ApiGatewayCloudWatchLogsRole
     Properties:
       StageName: !Ref ApiGatewayStageName
       EndpointConfiguration:
         Type: REGIONAL
       TracingEnabled: true
       OpenApiVersion: 3.0.0
-      # 一時的にアクセスログ設定を無効化（CloudWatch Logsロール設定の問題解決後に再有効化）
-      # AccessLogSetting:
-      #   DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
-      #   Format: '{\"requestId\":\"$context.requestId\",\"ip\":\"$context.identity.sourceIp\",\"requestTime\":\"$context.requestTime\",\"httpMethod\":\"$context.httpMethod\",\"routeKey\":\"$context.routeKey\",\"status\":\"$context.status\",\"protocol\":\"$context.protocol\",\"responseLength\":\"$context.responseLength\",\"integrationError\":\"$context.integrationErrorMessage\"}'
+      AccessLogSetting:
+        DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
+        Format: '{\"requestId\":\"$context.requestId\",\"ip\":\"$context.identity.sourceIp\",\"requestTime\":\"$context.requestTime\",\"httpMethod\":\"$context.httpMethod\",\"routeKey\":\"$context.routeKey\",\"status\":\"$context.status\",\"protocol\":\"$context.protocol\",\"responseLength\":\"$context.responseLength\",\"integrationError\":\"$context.integrationErrorMessage\"}'
 
   # API Gateway用ロググループ
   ApiGatewayAccessLogGroup:
