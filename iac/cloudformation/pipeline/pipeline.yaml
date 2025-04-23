@@ -24,7 +24,7 @@ Parameters:
     Default: develop
     Description: GitHub repository branch to monitor
   
-  # GitHubTokenSecretNameパラメータは不要になりました（CodeStarConnectionsに移行）
+  # GitHubTokenSecretNameパラメータは不要になりましたdd（CodeStarConnectionsに移行）
   
   ApprovalRequired:
     Type: String
