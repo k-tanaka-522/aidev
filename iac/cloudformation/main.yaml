@@ -45,7 +45,7 @@ Resources:
         Type: REGIONAL
       TracingEnabled: true
       OpenApiVersion: 3.0.0
-      # アクセスログは一時的に無効化（IAMロール設定が必要）
+      # 一時的にアクセスログ設定を無効化（CloudWatch Logsロール設定の問題解決後に再有効化）
       # AccessLogSetting:
       #   DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
       #   Format: '{\"requestId\":\"$context.requestId\",\"ip\":\"$context.identity.sourceIp\",\"requestTime\":\"$context.requestTime\",\"httpMethod\":\"$context.httpMethod\",\"routeKey\":\"$context.routeKey\",\"status\":\"$context.status\",\"protocol\":\"$context.protocol\",\"responseLength\":\"$context.responseLength\",\"integrationError\":\"$context.integrationErrorMessage\"}'
