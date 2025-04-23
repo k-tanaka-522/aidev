@@ -1,5 +1,20 @@
 # aiDevプロジェクト 引継ぎ状況
 
+## 2025年4月23日 第十三次追記
+
+### 実施済み
+- CloudFormationテンプレートのLambda関数パス参照を修正
+  - エラー分析：`Unable to upload artifact ../src/lambda/hello-world/ referenced by CodeUri parameter of HelloWorldFunction resource.`
+  - 根本原因：ディレクトリ構造の変更により、古いパス参照が無効になっていた
+  - 解決策：`iac/cloudformation/main.yaml`内の各Lambda関数のCodeUriパスを修正
+  - 変更内容：`../src/lambda/` から `../../src/lambda/` に修正（相対パス）
+
+### 次のアクション
+1. **修正後のパイプライン実行確認**
+   - 修正をリモートリポジトリにプッシュ
+   - パイプラインの再実行トリガー
+   - ビルドおよびデプロイステージが正常に完了することを確認
+
 ## 2025年4月23日 第十二次追記
 
 ### 実施済み
