@@ -1,5 +1,32 @@
 # aiDevプロジェクト 引継ぎ状況
 
+## 2025年4月23日 第十四次追記
+
+### 実施済み
+- パイプラインの実行確認とトラブルシューティング
+  - パイプラインのデプロイ失敗：`CAPABILITY_AUTO_EXPAND`の追加
+  - CloudFormationスタックの問題特定：API Gatewayのアクセスログ設定エラー
+  - 根本原因：`CloudWatch Logs role ARN must be set in account settings to enable logging`
+  - 解決策：`iac/cloudformation/main.yaml`内のAPI GatewayのAccessLogSettingを一時的に無効化
+  - 成功条件：スタックの問題（ROLLBACK_COMPLETE）が解消されること
+
+### 次のアクション
+1. **修正済みコードのプッシュと再実行**
+   - 修正済みのCloudFormationテンプレート（main.yaml）をGitHubにプッシュ
+   - パイプラインの再実行をトリガー（コンソールから手動実行でも可）
+   - すべてのステージが正常に完了することを確認
+
+2. **API Gatewayログ設定の恒久的な解決策**
+   - API Gatewayのアカウント設定でCloudWatchログロールを設定する
+   - コマンド例: `aws apigateway update-account --patch-operations op='replace',path='/cloudwatchRoleArn',value='IAMロールARN'`
+   - 必要なIAMロールの作成とアタッチ
+
+3. **追加コンポーネントの構築**
+   - フロントエンド用のビルド・デプロイ設定の詳細化
+   - バックエンド用のビルド・デプロイ設定の詳細化
+   - テスト自動化の組み込み
+   - 通知設定の詳細化
+
 ## 2025年4月23日 第十三次追記
 
 ### 実施済み
@@ -8,12 +35,6 @@
   - 根本原因：ディレクトリ構造の変更により、古いパス参照が無効になっていた
   - 解決策：`iac/cloudformation/main.yaml`内の各Lambda関数のCodeUriパスを修正
   - 変更内容：`../src/lambda/` から `../../src/lambda/` に修正（相対パス）
-
-### 次のアクション
-1. **修正後のパイプライン実行確認**
-   - 修正をリモートリポジトリにプッシュ
-   - パイプラインの再実行トリガー
-   - ビルドおよびデプロイステージが正常に完了することを確認
 
 ## 2025年4月23日 第十二次追記
 
