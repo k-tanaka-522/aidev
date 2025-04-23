@@ -83,7 +83,7 @@ Resources:
   HelloWorldFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../src/lambda/hello-world/
+      CodeUri: ../../src/lambda/hello-world/
       Handler: index.handler
       Description: 基本的な挨拶を返すHello World関数
       Events:
@@ -98,7 +98,7 @@ Resources:
   KnowledgeSearchFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../src/lambda/knowledge-search/
+      CodeUri: ../../src/lambda/knowledge-search/
       Handler: index.handler
       Description: ナレッジベースを検索する関数
       Events:
@@ -119,7 +119,7 @@ Resources:
   EnvironmentBuilderFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../src/lambda/environment-builder/
+      CodeUri: ../../src/lambda/environment-builder/
       Handler: index.handler
       Description: 環境構築を自動化する関数
       Timeout: 300  # 長時間実行が必要なため、タイムアウトを5分に設定
