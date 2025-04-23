@@ -45,9 +45,10 @@ Resources:
         Type: REGIONAL
       TracingEnabled: true
       OpenApiVersion: 3.0.0
-      AccessLogSetting:
-        DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
-        Format: '{\"requestId\":\"$context.requestId\",\"ip\":\"$context.identity.sourceIp\",\"requestTime\":\"$context.requestTime\",\"httpMethod\":\"$context.httpMethod\",\"routeKey\":\"$context.routeKey\",\"status\":\"$context.status\",\"protocol\":\"$context.protocol\",\"responseLength\":\"$context.responseLength\",\"integrationError\":\"$context.integrationErrorMessage\"}'
+      # アクセスログは一時的に無効化（IAMロール設定が必要）
+      # AccessLogSetting:
+      #   DestinationArn: !GetAtt ApiGatewayAccessLogGroup.Arn
+      #   Format: '{\"requestId\":\"$context.requestId\",\"ip\":\"$context.identity.sourceIp\",\"requestTime\":\"$context.requestTime\",\"httpMethod\":\"$context.httpMethod\",\"routeKey\":\"$context.routeKey\",\"status\":\"$context.status\",\"protocol\":\"$context.protocol\",\"responseLength\":\"$context.responseLength\",\"integrationError\":\"$context.integrationErrorMessage\"}'
 
   # API Gateway用ロググループ
   ApiGatewayAccessLogGroup:
