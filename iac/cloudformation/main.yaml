@@ -36,6 +36,89 @@ Globals:
         ENVIRONMENT: !Ref Environment
 
 Resources:
+  # DynamoDB Tables
+  SessionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Environment}-aidev-sessions
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: sessionId
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: sessionId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserIdIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  MessagesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Environment}-aidev-messages
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: sessionId
+          AttributeType: S
+        - AttributeName: messageId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: sessionId
+          KeyType: HASH
+        - AttributeName: messageId
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: MessageIdIndex
+          KeySchema:
+            - AttributeName: messageId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  ProjectsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${Environment}-aidev-projects
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: projectId
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: projectId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserIdIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
   # API Gateway CloudWatch Logsロール
   ApiGatewayCloudWatchLogsRole:
     Type: AWS::IAM::Role
@@ -118,6 +201,59 @@ Resources:
             RestApiId: !Ref ApiGateway
             Path: /hello
             Method: get
+            
+  # チャット処理関数
+  ChatHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../src/lambda/chat_handler/
+      Handler: index.handler
+      Description: ユーザーとのチャット対話を処理する関数
+      MemorySize: 512
+      Timeout: 60
+      Events:
+        CreateSession:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /chat/sessions
+            Method: post
+        GetSession:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /chat/sessions/{sessionId}
+            Method: get
+        SendMessage:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /chat/sessions/{sessionId}/messages
+            Method: post
+        GetMessages:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /chat/sessions/{sessionId}/messages
+            Method: get
+      Environment:
+        Variables:
+          SESSIONS_TABLE: !Ref SessionsTable
+          MESSAGES_TABLE: !Ref MessagesTable
+          BEDROCK_MODEL_ID: "anthropic.claude-3-sonnet-20240229-v1:0"
+          CONTENT_BUCKET: !Ref ContentBucket
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MessagesTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: "*"
+        - S3ReadPolicy:
+            BucketName: !Ref ContentBucket
 
   # ナレッジベース検索関数
   KnowledgeSearchFunction:
@@ -136,9 +272,15 @@ Resources:
       Environment:
         Variables:
           CONTENT_BUCKET: !Ref ContentBucket
+          SESSIONS_TABLE: !Ref SessionsTable
+          MESSAGES_TABLE: !Ref MessagesTable
       Policies:
         - S3ReadPolicy:
             BucketName: !Ref ContentBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MessagesTable
 
   # 環境構築エージェント関数
   EnvironmentBuilderFunction:
@@ -158,9 +300,15 @@ Resources:
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
+          SESSIONS_TABLE: !Ref SessionsTable
+          PROJECTS_TABLE: !Ref ProjectsTable
       # 実際の環境では適切な権限設定が必要
       Policies:
         - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProjectsTable
         - Statement:
             - Effect: Allow
               Action:
@@ -178,6 +326,10 @@ Outputs:
     Description: "Hello World Lambda Function ARN"
     Value: !GetAtt HelloWorldFunction.Arn
 
+  ChatHandlerFunction:
+    Description: "Chat Handler Lambda Function ARN"
+    Value: !GetAtt ChatHandlerFunction.Arn
+
   KnowledgeSearchFunction:
     Description: "Knowledge Search Lambda Function ARN"
     Value: !GetAtt KnowledgeSearchFunction.Arn
@@ -189,3 +341,15 @@ Outputs:
   ContentBucketName:
     Description: "コンテンツ保存用S3バケット名"
     Value: !Ref ContentBucket
+
+  SessionsTableName:
+    Description: "セッション管理用DynamoDBテーブル名"
+    Value: !Ref SessionsTable
+
+  MessagesTableName:
+    Description: "メッセージ保存用DynamoDBテーブル名"
+    Value: !Ref MessagesTable
+
+  ProjectsTableName:
+    Description: "プロジェクト管理用DynamoDBテーブル名"
+    Value: !Ref ProjectsTable

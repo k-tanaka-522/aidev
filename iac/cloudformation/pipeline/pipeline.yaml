@@ -118,7 +118,9 @@ Resources:
                 Action:
                   - codebuild:BatchGetBuilds
                   - codebuild:StartBuild
-                Resource: !GetAtt CodeBuildProject.Arn
+                Resource:
+                  - !GetAtt CodeBuildProject.Arn
+                  - !GetAtt KnowledgeUploaderProject.Arn
               - Effect: Allow
                 Action:
                   - cloudformation:DescribeStacks
@@ -184,6 +186,95 @@ Resources:
         CloudWatchLogs:
           Status: ENABLED
           GroupName: !Sub "/aws/codebuild/${Environment}-aidev-build"
+          
+  # ナレッジベースアップロード用CodeBuildプロジェクト
+  KnowledgeUploaderProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${Environment}-aidev-knowledge-uploader"
+      ServiceRole: !GetAtt KnowledgeUploaderServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:4.0
+        EnvironmentVariables:
+          - Name: ENVIRONMENT
+            Value: !Ref Environment
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: !Sub |
+          version: 0.2
+          phases:
+            install:
+              runtime-versions:
+                python: 3.9
+              commands:
+                - echo "Installing dependencies..."
+                - python -m pip install --upgrade pip
+                - python -m pip install --upgrade awscli
+            
+            build:
+              commands:
+                - echo "Getting S3 bucket name from CloudFormation stack..."
+                - STACK_NAME="${Environment}-aidev-stack"
+                - CONTENT_BUCKET=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='ContentBucketName'].OutputValue" --output text)
+                - echo "Content bucket is $CONTENT_BUCKET"
+                
+                - echo "Uploading knowledge base initial data..."
+                - if [ -d "init/knowledge" ]; then
+                -   aws s3 cp --recursive init/knowledge/ s3://$CONTENT_BUCKET/knowledge/
+                -   echo "Knowledge base data uploaded successfully"
+                - else
+                -   echo "Warning: Knowledge base directory not found in artifacts"
+                - fi
+            
+            post_build:
+              commands:
+                - echo "Upload completed on $(date)"
+      TimeoutInMinutes: 15
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Sub "/aws/codebuild/${Environment}-aidev-knowledge-uploader"
+          
+  # ナレッジベースアップロード用IAMロール
+  KnowledgeUploaderServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub "${Environment}-aidev-knowledge-uploader-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub "arn:aws:s3:::${Environment}-aidev-content"
+                  - !Sub "arn:aws:s3:::${Environment}-aidev-content/*"
+                  - !GetAtt ArtifactBucket.Arn
+                  - !Sub "${ArtifactBucket.Arn}/*"
+              - Effect: Allow
+                Action:
+                  - cloudformation:DescribeStacks
+                Resource: !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${Environment}-aidev-*/*"
 
   # 通知用SNSトピック
   PipelineNotificationTopic:
@@ -271,6 +362,18 @@ Resources:
                 ParameterOverrides: !Sub '{"Environment": "${Environment}"}'
               InputArtifacts:
                 - Name: BuildOutput
+                
+            - Name: UploadInitialKnowledge
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref KnowledgeUploaderProject
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 2
 
 # Webhookは不要なため削除（CodeStarConnectionsでは自動的に処理されます）
 

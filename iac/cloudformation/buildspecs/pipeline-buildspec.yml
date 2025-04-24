@@ -36,6 +36,200 @@ phases:
       - echo "Build completed on `date`"
       - echo "Moving files to correct locations for artifacts..."
       - cp packaged-template.yaml ../../packaged-template.yaml
+      
+      # ナレッジベースの初期データを準備
+      - echo "ナレッジベース初期データを準備しています..."
+      - mkdir -p $CODEBUILD_SRC_DIR/init/knowledge/aws/services/ec2
+      - mkdir -p $CODEBUILD_SRC_DIR/init/knowledge/aws/architectures/web-hosting
+      - mkdir -p $CODEBUILD_SRC_DIR/init/knowledge/aws/security
+      - mkdir -p $CODEBUILD_SRC_DIR/init/knowledge/metadata
+      
+      # EC2概要ファイル
+      - |
+        cat > $CODEBUILD_SRC_DIR/init/knowledge/aws/services/ec2/overview.json << 'EOF'
+        {
+          "id": "aws-ec2-overview",
+          "title": "Amazon EC2の概要",
+          "description": "Amazon Elastic Compute Cloud (EC2)はAWSの主力コンピューティングサービスで、クラウド上で仮想サーバーを提供します。",
+          "category": "aws-services",
+          "service": "ec2",
+          "content": {
+            "definition": "Amazon EC2はクラウド環境で拡張性の高いコンピューティング容量を提供するサービスです。ハードウェアに事前投資する必要がなく、アプリケーションの迅速な開発とデプロイが可能になります。",
+            "key_features": [
+              {
+                "name": "インスタンスタイプ",
+                "description": "用途に合わせた様々なインスタンスタイプ（コンピューティング最適化、メモリ最適化など）を提供し、コストとパフォーマンスのバランスを調整できます。"
+              },
+              {
+                "name": "Auto Scaling",
+                "description": "需要に応じて自動的にEC2インスタンスの数を調整し、パフォーマンスを維持しながらコストを最適化します。"
+              }
+            ],
+            "use_cases": [
+              {
+                "name": "Webアプリケーションホスティング",
+                "description": "負荷に応じて自動的にスケールするWebアプリケーションの実行環境として最適です。"
+              },
+              {
+                "name": "バッチ処理",
+                "description": "大規模なデータ処理の実行やバックグラウンドジョブの処理に適しています。"
+              }
+            ],
+            "relation_to_other_services": [
+              {
+                "service": "ELB",
+                "relationship": "ELBはEC2インスタンス間の負荷分散を行い、高可用性とスケーラビリティを提供します。"
+              },
+              {
+                "service": "EBS",
+                "relationship": "EBSはEC2インスタンスに接続できる永続的なストレージボリュームを提供します。"
+              }
+            ]
+          },
+          "last_updated": "2025-03-15T10:30:00Z",
+          "metadata": {
+            "technical_level": "beginner",
+            "relevance": [
+              "infrastructure",
+              "compute"
+            ]
+          }
+        }
+        EOF
+      
+      # EC2ベストプラクティスファイル
+      - |
+        cat > $CODEBUILD_SRC_DIR/init/knowledge/aws/services/ec2/best-practices.json << 'EOF'
+        {
+          "id": "aws-ec2-best-practices",
+          "title": "Amazon EC2のベストプラクティス",
+          "description": "Amazon EC2を効率的に運用するためのベストプラクティス集",
+          "category": "best-practices",
+          "service": "ec2",
+          "content": {
+            "security": [
+              {
+                "title": "セキュリティグループの適切な設定",
+                "description": "EC2インスタンスには必要最小限のアクセス権限を持つセキュリティグループを設定します。",
+                "impact": "high",
+                "example": "例: Webサーバーには80/443ポートのみを許可し、SSHは特定IPからのみ許可するよう設定。"
+              }
+            ],
+            "cost_optimization": [
+              {
+                "title": "インスタンスタイプの適切な選択",
+                "description": "ワークロードに合ったインスタンスタイプを選択し、過剰なリソースを避けることでコストを削減します。",
+                "impact": "high",
+                "example": "例: CloudWatchメトリクスを使用し、CPUとメモリ使用率に基づき適切なインスタンス選択。"
+              }
+            ]
+          },
+          "last_updated": "2025-03-10T14:20:00Z",
+          "metadata": {
+            "technical_level": "intermediate",
+            "relevance": [
+              "infrastructure",
+              "security",
+              "cost"
+            ]
+          }
+        }
+        EOF
+      
+      # Webホスティングアーキテクチャファイル
+      - |
+        cat > $CODEBUILD_SRC_DIR/init/knowledge/aws/architectures/web-hosting/basic-web-hosting.json << 'EOF'
+        {
+          "id": "arch-web-hosting-basic",
+          "title": "基本的なWebホスティングアーキテクチャ",
+          "description": "AWSにおける基本的なWebアプリケーションホスティングの参照アーキテクチャ",
+          "category": "architecture-patterns",
+          "pattern_type": "web-hosting",
+          "content": {
+            "overview": "複数のAZにまたがる高可用性Web環境の基本的なアーキテクチャです。",
+            "components": [
+              {
+                "name": "Virtual Private Cloud (VPC)",
+                "description": "安全に分離されたネットワーク環境",
+                "aws_services": ["Amazon VPC"],
+                "configuration": {
+                  "cidr_block": "10.0.0.0/16",
+                  "subnets": [
+                    {
+                      "type": "public",
+                      "count": 2,
+                      "description": "ELBとNATゲートウェイ用のパブリックサブネット"
+                    },
+                    {
+                      "type": "private",
+                      "count": 2,
+                      "description": "EC2インスタンス用のプライベートサブネット"
+                    }
+                  ]
+                }
+              }
+            ],
+            "considerations": {
+              "security": ["セキュリティグループで必要最小限のトラフィックを許可"],
+              "reliability": ["複数AZにまたがるリソース配置"],
+              "cost": ["初期段階ではリザーブドインスタンス不要"]
+            },
+            "estimated_cost": {
+              "monthly_base": 450,
+              "currency": "USD",
+              "calculation_basis": "t3.medium EC2 2台、ALB 1台、db.t3.large RDS Multi-AZ 1台を想定"
+            }
+          },
+          "last_updated": "2025-03-05T09:15:00Z",
+          "metadata": {
+            "technical_level": "intermediate",
+            "relevance": [
+              "web",
+              "high-availability",
+              "scalability"
+            ],
+            "complexity": "medium"
+          }
+        }
+        EOF
+      
+      # メタデータインデックスファイル
+      - |
+        cat > $CODEBUILD_SRC_DIR/init/knowledge/metadata/index.json << 'EOF'
+        {
+          "version": "1.0.0",
+          "last_updated": "2025-04-25T08:00:00Z",
+          "categories": [
+            {
+              "id": "aws-services",
+              "name": "AWSサービス",
+              "description": "AWS各サービスの概要、機能、ベストプラクティス"
+            },
+            {
+              "id": "architecture-patterns",
+              "name": "アーキテクチャパターン",
+              "description": "一般的なアーキテクチャパターンとリファレンス実装"
+            }
+          ],
+          "services": [
+            {
+              "id": "ec2",
+              "name": "Amazon EC2",
+              "description": "仮想サーバーサービス",
+              "category": "compute"
+            },
+            {
+              "id": "s3",
+              "name": "Amazon S3",
+              "description": "オブジェクトストレージサービス",
+              "category": "storage"
+            }
+          ]
+        }
+        EOF
+      
+      # 初期データを成果物に含める
+      - cp -r $CODEBUILD_SRC_DIR/init ../../init
 
 artifacts:
   files:
@@ -44,6 +238,7 @@ artifacts:
     - iac/cloudformation/**/*
     - dist/**/*
     - node_modules/**/*
+    - init/**/*
   discard-paths: no
 
 cache:
