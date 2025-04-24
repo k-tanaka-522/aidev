@@ -50,12 +50,20 @@ Resources:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs'
       Path: "/"
-      RoleName: "APIGatewayCloudWatchLogsRole"
+      RoleName: !Sub "${Environment}-aidev-ApiGatewayCloudWatchLogsRole"
+
+  # API Gateway CloudWatch設定
+  ApiGatewayAccount:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn: !GetAtt ApiGatewayCloudWatchLogsRole.Arn
 
   # API Gateway
   ApiGateway:
     Type: AWS::Serverless::Api
-    DependsOn: ApiGatewayCloudWatchLogsRole
+    DependsOn: 
+      - ApiGatewayCloudWatchLogsRole
+      - ApiGatewayAccount
     Properties:
       StageName: !Ref ApiGatewayStageName
       EndpointConfiguration:
