@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { FiUser } from 'react-icons/fi';
-import { VscRobot } from 'react-icons/vsc';
+import { VscHubot } from 'react-icons/vsc';
 import { VscWand } from 'react-icons/vsc';
 import AiMessageParser from './AiMessageParser';
 
@@ -27,7 +27,7 @@ const ChatMessage = ({ message }) => {
         };
       case 'assistant':
         return {
-          icon: <VscRobot size={20} />,
+          icon: <VscHubot size={20} />,
           bgColor: '#f7f7f7',
           align: 'flex-start',
           iconBgColor: '#5c5c5c'

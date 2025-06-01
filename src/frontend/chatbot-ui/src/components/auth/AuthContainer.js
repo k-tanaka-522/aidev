@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
-import { VscRobot } from 'react-icons/vsc';
+import { VscHubot } from 'react-icons/vsc';
 
 const AuthContainer = ({ onLogin }) => {
   const [showLogin, setShowLogin] = useState(true);
@@ -25,7 +25,7 @@ const AuthContainer = ({ onLogin }) => {
   return (
     <Container>
       <LogoContainer>
-        <VscRobot size={40} />
+        <VscHubot size={40} />
         <LogoText>aiDev</LogoText>
       </LogoContainer>
       

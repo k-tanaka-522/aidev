@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
 import { FiSend, FiUser, FiSettings, FiLogOut } from 'react-icons/fi';
-import { VscRobot } from 'react-icons/vsc';
+import { VscHubot } from 'react-icons/vsc';
 import ChatMessage from './components/ChatMessage';
 import AgentSelector from './components/AgentSelector';
 import AuthContainer from './components/auth/AuthContainer';
@@ -189,7 +189,7 @@ const App = () => {
         <AppContainer>
           <Header>
             <Title>
-              <VscRobot size={24} style={{ marginRight: '10px' }} />
+              <VscHubot size={24} style={{ marginRight: '10px' }} />
               aiDev チャット
             </Title>
             <HeaderButtons>
@@ -220,7 +220,7 @@ const App = () => {
             <MessageList>
               {messages.length === 0 && (
                 <WelcomeMessage>
-                  <VscRobot size={50} style={{ marginBottom: '20px' }} />
+                  <VscHubot size={50} style={{ marginBottom: '20px' }} />
                   <h2>aiDevアシスタントへようこそ！</h2>
                   <p>AWS環境構築や開発に関するご質問にお答えします。</p>
                   <p>質問を入力してください。</p>
@@ -426,6 +426,40 @@ const LogoutButton = styled.button`
   
   &:hover {
     background-color: rgba(255, 255, 255, 0.2);
+  }
+`;
+
+const LoadingIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #007ACC;
+    margin: 0 4px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  
+  .dot:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  .dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  
+  @keyframes pulse {
+    0%, 80%, 100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+    40% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
   }
 `;
 

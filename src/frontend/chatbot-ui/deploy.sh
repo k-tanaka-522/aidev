@@ -19,9 +19,8 @@ npm install
 echo "プロダクションビルドを作成します..."
 npm run build
 
-# deploy-info.jsonからバケット名を取得
-ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
-BUCKET_NAME="aidev-dev-frontend-${ACCOUNT_ID}"
+# CloudFormationスタックからバケット名を取得
+BUCKET_NAME="dev-aidev-content"
 
 # S3へのアップロード
 echo "ビルド成果物をS3バケット ${BUCKET_NAME} にアップロードします..."

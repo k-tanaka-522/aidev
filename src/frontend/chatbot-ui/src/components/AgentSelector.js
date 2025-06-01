@@ -1,13 +1,13 @@
 import React from 'react';
 import styled from 'styled-components';
-import { VscRobot, VscPerson, VscTools, VscServer } from 'react-icons/vsc';
+import { VscHubot, VscPerson, VscTools, VscServer } from 'react-icons/vsc';
 
 const agentTypes = [
   {
     id: 'default',
     name: 'デフォルトアシスタント',
     description: 'AWS環境構築や開発に関する一般的な質問に回答します',
-    icon: <VscRobot size={24} />
+    icon: <VscHubot size={24} />
   },
   {
     id: 'preSales',
