@@ -34,8 +34,7 @@ phases:
   post_build:
     commands:
       - echo "Build completed on `date`"
-      - echo "Moving files to correct locations for artifacts..."
-      - cp packaged-template.yaml ../../packaged-template.yaml
+      - echo "Packaged template created at: $PWD/packaged-template.yaml"
       
       # ナレッジベースの初期データを準備
       - echo "ナレッジベース初期データを準備しています..."
@@ -229,7 +228,7 @@ phases:
         EOF
       
       # 初期データを成果物に含める
-      - cp -r $CODEBUILD_SRC_DIR/init ../../init
+      - echo "Initial data prepared in $CODEBUILD_SRC_DIR/init"
 
 artifacts:
   files:
