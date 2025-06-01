@@ -34,7 +34,7 @@ phases:
   post_build:
     commands:
       - echo "Build completed on `date`"
-      - echo "Packaged template created at: $PWD/packaged-template.yaml"
+      - echo "Packaged template created in current directory"
       
       # ナレッジベースの初期データを準備
       - echo "ナレッジベース初期データを準備しています..."
