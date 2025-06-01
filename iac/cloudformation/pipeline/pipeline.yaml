@@ -356,7 +356,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 StackName: !Sub "${Environment}-aidev-stack"
-                TemplatePath: BuildOutput::packaged-template.yaml
+                TemplatePath: BuildOutput::iac/cloudformation/packaged-template.yaml
                 Capabilities: CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
                 RoleArn: !GetAtt CloudFormationServiceRole.Arn
                 ParameterOverrides: !Sub '{"Environment": "${Environment}"}'
