@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { FiMail, FiLock, FiUser, FiUserPlus } from 'react-icons/fi';
-import axios from 'axios';
-
-const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:3001/api';
+import { AuthService } from '../../services/authService';
 
 const SignupForm = ({ onSignupSuccess, onSwitchToLogin }) => {
   const [email, setEmail] = useState('');
@@ -32,35 +30,40 @@ const SignupForm = ({ onSignupSuccess, onSwitchToLogin }) => {
     setSuccessMessage('');
     
     try {
-      // サインアップAPIの呼び出し
-      const response = await axios.post(`${API_ENDPOINT}/auth/signup`, {
-        email,
-        password,
-        name
-      });
+      // Cognitoでサインアップ
+      await AuthService.signUp(email, password, name);
       
-      // サインアップ成功
-      if (response.data && response.data.success) {
-        setSuccessMessage('サインアップが完了しました。メールの確認後、ログインしてください。');
-        // 親コンポーネントに通知
-        onSignupSuccess();
-        
-        // フォームをクリア
-        setEmail('');
-        setPassword('');
-        setName('');
-      } else {
-        setError('サインアップに失敗しました');
-      }
+      setSuccessMessage('サインアップが完了しました。メールに確認コードが送信されました。確認後、ログインしてください。');
+      // 親コンポーネントに通知
+      onSignupSuccess();
+      
+      // フォームをクリア
+      setEmail('');
+      setPassword('');
+      setName('');
     } catch (error) {
       console.error('Signup error:', error);
       
-      // エラーメッセージの設定
-      if (error.response && error.response.data && error.response.data.message) {
-        setError(error.response.data.message);
-      } else {
-        setError('サインアップ処理中にエラーが発生しました。');
+      // Cognitoエラーメッセージの処理
+      let errorMessage = 'サインアップ処理中にエラーが発生しました。';
+      
+      if (error.code) {
+        switch (error.code) {
+          case 'UsernameExistsException':
+            errorMessage = 'このメールアドレスは既に登録されています。';
+            break;
+          case 'InvalidPasswordException':
+            errorMessage = 'パスワードが条件を満たしていません。数字を含む8文字以上で入力してください。';
+            break;
+          case 'InvalidParameterException':
+            errorMessage = '入力内容に問題があります。メールアドレスの形式を確認してください。';
+            break;
+          default:
+            errorMessage = error.message || errorMessage;
+        }
       }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

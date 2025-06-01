@@ -28,18 +28,18 @@ const App = () => {
     checkAuthState();
   }, []);
   
-  // 認証状態の確認（ローカルストレージからトークンの取得）
-  const checkAuthState = () => {
-    const storedTokens = localStorage.getItem('aidev_tokens');
-    const storedUser = localStorage.getItem('aidev_user');
-    const storedSessionId = localStorage.getItem('aidev_session_id');
-    
-    if (storedTokens && storedUser) {
-      try {
-        const tokens = JSON.parse(storedTokens);
+  // 認証状態の確認（Cognitoセッションの確認）
+  const checkAuthState = async () => {
+    try {
+      const storedUser = localStorage.getItem('aidev_user');
+      
+      if (storedUser) {
         const user = JSON.parse(storedUser);
         
-        // トークンが有効かチェック（簡易的な実装）
+        // Cognitoセッションの確認（トークンの有効性チェック）
+        const { AuthService } = await import('./services/authService');
+        await AuthService.getCurrentSession();
+        
         setIsAuthenticated(true);
         setUser(user);
         setUserId(user.userId);
@@ -52,10 +52,10 @@ const App = () => {
         };
         
         setMessages([welcomeMessage]);
-      } catch (error) {
-        console.error('Auth state parsing error:', error);
-        handleLogout();
       }
+    } catch (error) {
+      console.error('Auth state check error:', error);
+      handleLogout();
     }
   };
   

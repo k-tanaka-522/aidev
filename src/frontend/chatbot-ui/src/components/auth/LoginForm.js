@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { FiMail, FiLock, FiLogIn } from 'react-icons/fi';
-import axios from 'axios';
-
-const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT || 'http://localhost:3001/api';
+import { AuthService } from '../../services/authService';
 
 const LoginForm = ({ onLogin, onSwitchToSignup }) => {
   const [email, setEmail] = useState('');
@@ -23,33 +21,37 @@ const LoginForm = ({ onLogin, onSwitchToSignup }) => {
     setError('');
     
     try {
-      // ログインAPIの呼び出し
-      const response = await axios.post(`${API_ENDPOINT}/auth/login`, {
-        email,
-        password
-      });
+      // Cognitoでログイン
+      const authData = await AuthService.signIn(email, password);
       
-      // ログイン成功
-      if (response.data && response.data.success) {
-        // ローカルストレージにトークンを保存
-        localStorage.setItem('aidev_tokens', JSON.stringify(response.data.tokens));
-        localStorage.setItem('aidev_user', JSON.stringify(response.data.user));
-        localStorage.setItem('aidev_session_id', response.data.sessionId);
-        
-        // 親コンポーネントに通知
-        onLogin(response.data);
-      } else {
-        setError('ログインに失敗しました');
-      }
+      // 親コンポーネントに通知
+      onLogin(authData);
     } catch (error) {
       console.error('Login error:', error);
       
-      // エラーメッセージの設定
-      if (error.response && error.response.data && error.response.data.message) {
-        setError(error.response.data.message);
-      } else {
-        setError('ログイン処理中にエラーが発生しました。');
+      // Cognitoエラーメッセージの処理
+      let errorMessage = 'ログイン処理中にエラーが発生しました。';
+      
+      if (error.code) {
+        switch (error.code) {
+          case 'NotAuthorizedException':
+            errorMessage = 'メールアドレスまたはパスワードが正しくありません。';
+            break;
+          case 'UserNotConfirmedException':
+            errorMessage = 'メールアドレスが確認されていません。確認メールをご確認ください。';
+            break;
+          case 'UserNotFoundException':
+            errorMessage = 'ユーザーが見つかりません。';
+            break;
+          case 'TooManyRequestsException':
+            errorMessage = 'リクエストが多すぎます。しばらく時間をおいてから再試行してください。';
+            break;
+          default:
+            errorMessage = error.message || errorMessage;
+        }
       }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
