@@ -232,12 +232,13 @@ phases:
 
 artifacts:
   files:
-    - packaged-template.yaml
+    - iac/cloudformation/packaged-template.yaml
     - appspec.yml
     - iac/cloudformation/**/*
     - dist/**/*
     - node_modules/**/*
     - init/**/*
+  name: BuildOutput
   discard-paths: no
 
 cache:
