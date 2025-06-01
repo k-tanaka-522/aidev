@@ -3,6 +3,7 @@ const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, PutCommand, GetCommand, QueryCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
 const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
 const { v4: uuidv4 } = require('uuid');
+const { requireAuth } = require('./cognitoAuth');
 
 // DynamoDBクライアントの初期化
 const ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION });
@@ -50,20 +51,28 @@ exports.handler = async (event) => {
  * ユーザーからのメッセージを処理する
  */
 async function handleUserMessage(event) {
-  // リクエストボディのパース
-  const body = JSON.parse(event.body || '{}');
-  const { userId, chatId, message, agentType, sessionId } = body;
-  
-  if (!userId || !message) {
-    return formatResponse(400, { 
-      error: 'Bad Request', 
-      message: 'userIdとmessageは必須パラメータです' 
-    });
-  }
+  try {
+    // Cognito認証チェック
+    const authenticatedUser = await requireAuth(event);
+    console.log('認証済みユーザー:', authenticatedUser);
 
-  // チャットIDとセッションIDの取得または生成
-  const chatIdToUse = chatId || generateChatId();
-  const sessionIdToUse = sessionId || await createOrGetSessionId(userId, chatIdToUse);
+    // リクエストボディのパース
+    const body = JSON.parse(event.body || '{}');
+    const { chatId, message, agentType, sessionId } = body;
+    
+    // 認証済みユーザーIDを使用
+    const userId = authenticatedUser.userId;
+    
+    if (!message) {
+      return formatResponse(400, { 
+        error: 'Bad Request', 
+        message: 'messageは必須パラメータです' 
+      });
+    }
+
+    // チャットIDとセッションIDの取得または生成
+    const chatIdToUse = chatId || generateChatId();
+    const sessionIdToUse = sessionId || await createOrGetSessionId(userId, chatIdToUse);
   
   // セッション情報の取得
   const sessionInfo = await getSessionInfo(sessionIdToUse);
@@ -223,15 +232,28 @@ ${currentAgentType}エージェントの回答: ${response.substring(0, 300)}...
     }
   });
   
-  // 応答を返す
-  return formatResponse(200, {
-    userId,
-    chatId: chatIdToUse,
-    sessionId: sessionIdToUse,
-    message: response,
-    currentAgent: currentAgentType,
-    suggestedAgent: nextAgent
-  });
+    // 応答を返す
+    return formatResponse(200, {
+      userId,
+      chatId: chatIdToUse,
+      sessionId: sessionIdToUse,
+      message: response,
+      currentAgent: currentAgentType,
+      suggestedAgent: nextAgent
+    });
+  } catch (authError) {
+    console.error('認証エラー:', authError);
+    return formatResponse(401, { 
+      error: 'Unauthorized', 
+      message: authError.message 
+    });
+  } catch (error) {
+    console.error('処理エラー:', error);
+    return formatResponse(500, { 
+      error: 'Internal Server Error', 
+      message: error.message 
+    });
+  }
 }
 
 /**
