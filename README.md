@@ -23,18 +23,40 @@
 
 ## クイックスタート
 
-### 1. インストール
+### パターンA: 新規プロジェクトとして開始
 
 ```bash
-git clone https://github.com/k-tanaka-522/aidev.git
-cd aidev
+git clone https://github.com/k-tanaka-522/aidev.git my-project
+cd my-project
+code .
 ```
-
-### 2. Claude Codeで開く
 
 VSCode + Claude Code拡張機能でこのディレクトリを開くだけで、自動的に`.claude`設定が読み込まれます。
 
-### 3. 開発を開始
+### パターンB: 既存プロジェクトに追加
+
+既存のプロジェクトに `.claude/` 設定のみを追加する場合：
+
+```bash
+cd your-existing-project
+
+# 一時的にclone
+git clone https://github.com/k-tanaka-522/aidev.git .aidev-temp
+
+# .claude/ ディレクトリをコピー
+cp -r .aidev-temp/.claude .
+
+# .gitignore をマージ（既存の.gitignoreがある場合は手動で調整）
+cat .aidev-temp/.gitignore >> .gitignore
+
+# 一時ディレクトリを削除
+rm -rf .aidev-temp
+
+# VSCodeで開く（既に開いている場合は再読み込み）
+code .
+```
+
+### 開発を開始
 
 Claude Codeとの会話を始めてください：
 
