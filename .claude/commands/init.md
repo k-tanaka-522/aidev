@@ -16,10 +16,24 @@
 
 以下のファイルを**必ず**読み込んでください：
 
+#### コア原則・ファシリテーション
 ```
-.claude/docs/00_core-principles.md     # 基本原則（最重要）
-.claude/docs/10_facilitation/11_decision-items.md   # 決定事項定義
-.claude/docs/40_standards/41_common.md  # 共通技術標準
+.claude/docs/00_core-principles.md                              # 基本原則（最重要）
+.claude/docs/10_facilitation/11_decision-items.md               # 決定事項定義
+.claude/docs/10_facilitation/17_secrets-management-flow.md      # シークレット管理フロー
+.claude/docs/10_facilitation/18_best-practice-research-flow.md  # ベストプラクティス調査フロー
+```
+
+#### ヘルパー
+```
+.claude/helpers/state-manager.md                # 状態管理方法
+.claude/helpers/review-task-generator.md        # レビュータスク生成方法
+```
+
+#### 技術標準
+```
+.claude/docs/40_standards/41_common.md          # 共通技術標準
+.claude/docs/40_standards/45_secrets-management.md  # シークレット管理標準
 ```
 
 ### 2. プロジェクト状態の確認
