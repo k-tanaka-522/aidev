@@ -14,6 +14,8 @@
 2. **`.claude-state/project-state.json`** - プロジェクトの現在の状態
 3. **`.claude/helpers/state-manager.md`** - 状態管理の方法
 4. **`.claude/helpers/review-task-generator.md`** - レビュータスク生成方法
+5. **`.claude/docs/10_facilitation/17_secrets-management-flow.md`** - シークレット管理タスク生成フロー
+6. **`.claude/docs/40_standards/45_secrets-management.md`** - シークレット管理標準
 
 **これらを読まずに会話を始めることは禁止です。**
 
