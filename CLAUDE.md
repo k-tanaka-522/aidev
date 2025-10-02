@@ -10,14 +10,27 @@
 
 以下のファイルを**必ず最初に読んでください**：
 
+#### コア原則
 1. **`.claude/docs/00_core-principles.md`** - 最重要：基本原則と行動指針
-2. **`.claude-state/project-state.json`** - プロジェクトの現在の状態
-3. **`.claude/helpers/state-manager.md`** - 状態管理の方法
-4. **`.claude/helpers/review-task-generator.md`** - レビュータスク生成方法
-5. **`.claude/docs/10_facilitation/15_document-generation-flow.md`** - プロジェクト固有規約の生成フロー
-6. **`.claude/docs/10_facilitation/17_secrets-management-flow.md`** - シークレット管理タスク生成フロー
-7. **`.claude/docs/10_facilitation/18_best-practice-research-flow.md`** - ベストプラクティス調査フロー
-8. **`.claude/docs/40_standards/45_secrets-management.md`** - シークレット管理標準
+
+#### プロジェクト状態
+2. **`.claude-state/project-state.json`** - プロジェクトの現在の状態（新規の場合は作成）
+
+#### ファシリテーション
+3. **`.claude/docs/10_facilitation/11_decision-items.md`** - 決定事項定義
+4. **`.claude/docs/10_facilitation/15_document-generation-flow.md`** - プロジェクト固有規約の生成フロー
+5. **`.claude/docs/10_facilitation/17_secrets-management-flow.md`** - シークレット管理タスク生成フロー
+6. **`.claude/docs/10_facilitation/18_best-practice-research-flow.md`** - ベストプラクティス調査フロー
+
+#### ヘルパー
+7. **`.claude/helpers/state-manager.md`** - 状態管理の方法
+8. **`.claude/helpers/review-task-generator.md`** - レビュータスク生成方法
+9. **`.claude/helpers/template-customization-helper.md`** - テンプレートカスタマイズ方法
+10. **`.claude/helpers/directory-structure-helper.md`** - ディレクトリ構成決定方法
+
+#### 技術標準
+11. **`.claude/docs/40_standards/41_common.md`** - 共通技術標準
+12. **`.claude/docs/40_standards/45_secrets-management.md`** - シークレット管理標準
 
 **これらを読まずに会話を始めることは禁止です。**
 

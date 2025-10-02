@@ -96,4 +96,6 @@
 ## 関連ドキュメント
 
 - [15_document-generation-flow.md](../10_facilitation/15_document-generation-flow.md) - ドキュメント生成フロー
+- [template-customization-helper.md](../../helpers/template-customization-helper.md) - テンプレートカスタマイズヘルパー
+- [directory-structure-helper.md](../../helpers/directory-structure-helper.md) - ディレクトリ構成決定ヘルパー
 - [00_core-principles.md](../00_core-principles.md) - 基本原則

@@ -104,15 +104,26 @@ AIが自動的に以下を行います：
 │   │   ├── init.md           # /init - プロジェクト初期化（最初に実行）
 │   │   ├── status.md         # /status - プロジェクト状況確認
 │   │   └── next.md           # /next - 次のアクション提案
+│   ├── helpers/               # ヘルパードキュメント
+│   │   ├── state-manager.md               # 状態管理方法
+│   │   ├── review-task-generator.md       # レビュータスク生成
+│   │   ├── template-customization-helper.md  # テンプレートカスタマイズ
+│   │   └── directory-structure-helper.md  # ディレクトリ構成決定
 │   └── docs/
 │       ├── 00_core-principles.md          # 核となる行動原則
 │       ├── 10_facilitation/
 │       │   ├── 11_decision-items.md      # フェーズごとの決定項目
-│       │   ├── 12_phase-transition.md    # フェーズ遷移ルール
-│       │   └── 13_context-management.md  # コンテキスト管理戦略
+│       │   ├── 15_document-generation-flow.md  # ドキュメント生成フロー
+│       │   ├── 17_secrets-management-flow.md   # シークレット管理フロー
+│       │   └── 18_best-practice-research-flow.md  # ベストプラクティス調査
+│       ├── 30_templates/              # ドキュメントテンプレート
+│       │   ├── 01_planning/          # 企画書テンプレート
+│       │   ├── 02_requirements/      # 要件定義書テンプレート
+│       │   └── 03_design/            # 設計書テンプレート
 │       └── 40_standards/
 │           ├── 41_common.md              # 共通技術標準
-│           └── 42_infrastructure.md      # インフラ技術標準
+│           ├── 42_infrastructure.md      # インフラ技術標準
+│           └── 45_secrets-management.md  # シークレット管理標準
 │
 ├── .claude-state/              # プロジェクト状態（.gitignoreで除外）
 │   ├── project-state.json     # プロジェクト状態
@@ -334,6 +345,13 @@ AIが自動的に以下を行います：
 ### 改善7: 開発プロセス規約の網羅
 - `.claude/docs/10_facilitation/16_required-standards-checklist.md`で必要な規約を網羅的にリスト化
 - 単体テスト、結合テスト、システムテスト、障害テスト、可用性テスト等を明確化
+
+### 改善8: ドキュメントテンプレートの充実化
+- `.claude/docs/30_templates/`にフェーズ別テンプレートを追加
+- 受託開発納品レベルを基準に、プロジェクト規模に応じて調整可能に
+- テンプレートカスタマイズヘルパー追加（`.claude/helpers/template-customization-helper.md`）
+- ディレクトリ構成決定ヘルパー追加（`.claude/helpers/directory-structure-helper.md`）
+- 画一的な構成を押し付けず、都度ベストプラクティスを調査
 
 ---
 
