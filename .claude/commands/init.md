@@ -20,6 +20,7 @@
 ```
 .claude/docs/00_core-principles.md                              # 基本原則（最重要）
 .claude/docs/10_facilitation/11_decision-items.md               # 決定事項定義
+.claude/docs/10_facilitation/15_document-generation-flow.md     # プロジェクト固有規約の生成フロー
 .claude/docs/10_facilitation/17_secrets-management-flow.md      # シークレット管理フロー
 .claude/docs/10_facilitation/18_best-practice-research-flow.md  # ベストプラクティス調査フロー
 ```
