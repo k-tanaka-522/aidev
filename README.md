@@ -30,15 +30,22 @@
 git clone https://github.com/k-tanaka-522/aidev.git my-project
 cd my-project
 
-# 2. VSCodeで開く
+# 2. 新規プロジェクト初期化スクリプトを実行（重要！）
+# Windows
+scripts\init-new-project.bat
+
+# Mac/Linux
+./scripts/init-new-project.sh
+
+# 3. VSCodeで開く
 code .
 
-# 3. Claude Codeで /init コマンドを実行（重要！）
+# 4. Claude Codeで /init コマンドを実行
 /init
 ```
 
-**重要**: ダウンロード後、必ず `/init` コマンドを実行してください。
-これにより、必要な設定ファイルが読み込まれ、プロジェクト状態管理が開始されます。
+**重要**: ダウンロード後、必ず `init-new-project` スクリプトを実行してください。
+これにより、aiDev自体のドキュメントが削除され、git履歴がクリーンになり、新規プロジェクトとして開始できます。
 
 ### パターンB: 既存プロジェクトに追加
 
@@ -297,12 +304,47 @@ AIが自動的に以下を行います：
 - `.claude/docs/00_core-principles.md`を確認して行動原則を理解
 - 具体的に「〇〇について確認してください」と指示
 
+## 実運用フィードバックからの改善
+
+### 改善1: 新規プロジェクト初期化問題の解決
+- `scripts/init-new-project.sh`（Mac/Linux）と `scripts/init-new-project.bat`（Windows）を追加
+- aiDev自体のドキュメント削除、git履歴クリーン、状態リセットを自動化
+
+### 改善2: CloudFormation構造の明確化
+- ネストスタック構造の標準化（`stack.yaml` + `nested/`）
+- デプロイスクリプト提供（S3バケット自動作成、テンプレートアップロード）
+- `.claude/docs/40_standards/42_infrastructure.md`に詳細を追記
+
+### 改善3: 状態管理の自動化
+- `.claude/helpers/state-manager.md`でプロジェクト状態の自動記録方法を定義
+- フェーズ遷移、重要な決定、タスク発生時に自動更新
+
+### 改善4: レビュータスク自動生成
+- `.claude/helpers/review-task-generator.md`でドキュメント・コード生成後のレビュータスク自動生成方法を定義
+- チェックリスト、承認フロー、修正フローを明確化
+
+### 改善5: 必読ドキュメントの強制化
+- `CLAUDE.md`冒頭に「会話開始時の必読事項」セクションを追加
+- `.claude/docs/00_core-principles.md`等の読み込みを必須化
+
+### 改善6: ドキュメント生成フローの体系化
+- `.claude/docs/10_facilitation/15_document-generation-flow.md`でプロジェクト固有規約の生成フローを定義
+- 要件→基本設計規約→詳細設計規約→コード規約→テスト設計規約の流れで一貫性確保
+
+### 改善7: 開発プロセス規約の網羅
+- `.claude/docs/10_facilitation/16_required-standards-checklist.md`で必要な規約を網羅的にリスト化
+- 単体テスト、結合テスト、システムテスト、障害テスト、可用性テスト等を明確化
+
+---
+
 ## ロードマップ
 
 ### Phase 1（現在）✅
 - ローカルClaude Code環境での動作
 - AWS IaC構築サポート
 - 基本的な開発フェーズ管理
+- プロジェクト固有規約の自動生成
+- レビュータスク自動生成
 
 ### Phase 2（計画中）
 - MCP Server統合
