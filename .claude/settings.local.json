@@ -4,7 +4,11 @@
       "Bash(done)",
       "Bash(git checkout -b phase2.0-integration)",
       "Bash(git checkout main)",
-      "Bash(git merge phase2.0-integration --no-edit)"
+      "Bash(git merge phase2.0-integration --no-edit)",
+      "Bash(find .claude/docs/10_facilitation -name \"*.md\" -type f -exec sed -i 's/Notion技術標準/技術標準（`.claude\\/docs\\/40_standards\\/`）/g' {} ;)",
+      "Bash(find .claude/docs/10_facilitation -name \"*.md\" -type f -exec sed -i 's/WebSearch + Notion で/WebSearch + 技術標準で/g' {} ;)",
+      "Bash(find .claude/docs/10_facilitation -name \"*.md\" -type f -exec sed -i 's/Notion で/`.claude\\/docs\\/40_standards\\/` で/g' {} ;)",
+      "Bash(find .claude/docs/10_facilitation -name \"*.md\" -type f -exec sed -i 's/Notion（社内標準）/技術標準（`.claude\\/docs\\/40_standards\\/`）/g' {} ;)"
     ],
     "deny": [],
     "ask": []

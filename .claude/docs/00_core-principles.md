@@ -269,19 +269,28 @@ AI: わかりました。要件定義フェーズに戻りますね。
 ### 6.1 技術標準の適用
 
 **原則：**
-コード・ドキュメント生成時は、必ず **Notion の技術標準**を参照し、適用する。
+コード・ドキュメント生成時は、必ず **`.claude/docs/40_standards/` の技術標準**を参照し、適用する。
 
 **参照方法：**
-1. `.claude/docs/NOTION_INDEX.md` を開く
-2. 現在のフェーズ・技術に該当するページを確認
-3. Notion ページで以下を確認：
+1. `.claude/docs/40_standards/` から該当する技術標準ファイルを確認
+   - Python: `41_python.md`
+   - TypeScript: `42_typescript.md`
+   - C#: `43_csharp.md`
+   - Go: `44_go.md`
+   - CloudFormation: `45_cloudformation.md`
+   - Terraform: `46_terraform.md`
+   - Security: `49_security.md`
+
+2. 技術標準ファイルで以下を確認：
    - 規約・パターン
+   - プロジェクト構成
    - ✅ Good Example
    - ❌ Bad Example
-   - 反パターン注意点
+   - ベストプラクティス
 
-**Notion がない場合：**
-一般的なベストプラクティスを適用
+**補足情報が必要な場合：**
+- `.claude/docs/NOTION_INDEX.md` からNotionワークスペースを参照（オプション）
+- または一般的なベストプラクティスを適用
 
 **4つの基本方針：**
 1. 品質確保
@@ -292,19 +301,16 @@ AI: わかりました。要件定義フェーズに戻りますね。
 ### 6.2 コード・ドキュメント生成の流れ
 
 **原則：**
-1. **Notion 技術標準の参照**（重要！）
-   - コード・ドキュメント生成直前に **Notion の技術標準を必ず参照**
-   - `.claude/docs/NOTION_INDEX.md` から該当ページを確認
+1. **技術標準の参照**（重要！）
+   - コード・ドキュメント生成直前に **`.claude/docs/40_standards/` の技術標準を必ず参照**
    - 理由：長い会話で制約を忘れないため、最新のベストプラクティスを適用するため
 
 2. **事前説明**
    - 「これからコード/ドキュメントを生成します」
-   - 「Notion の技術標準（モジュール分割、環境差分管理等）を適用します」
-   - 「Notion がない場合は一般的なベストプラクティスを適用します」
+   - 「`.claude/docs/40_standards/` の技術標準（モジュール分割、環境差分管理等）を適用します」
 
 3. **コード・ドキュメント生成**
-   - Notion 技術標準に従って自動生成
-   - Notion がない場合は一般的なベストプラクティスで生成
+   - 技術標準に従って自動生成
 
 4. **事後説明**（学習機会）
    - なぜこう書いたか
@@ -318,26 +324,25 @@ AI: わかりました。要件定義フェーズに戻りますね。
 **必須手順：**
 
 ```
-ステップ1: Notion 技術標準の参照
+ステップ1: 技術標準の参照
   ↓
-  1. .claude/docs/NOTION_INDEX.md を開く
-  2. 「設計フェーズ」→「Infrastructure as Code」→「CloudFormation Patterns」を確認
-  3. Notion ページで以下を確認：
-     - コーディング規約
+  1. `.claude/docs/40_standards/45_cloudformation.md` を開く
+  2. 以下を確認：
+     - スタック設計パターン
      - 命名規則
      - ✅ Good Example
      - ❌ Bad Example
-     - 日本語制約（論理IDは英数字のみ、コメントは日本語OK等）
+     - Change Sets必須（dry-run）
 
 ステップ2: ユーザーに事前説明
   ↓
   「CloudFormation コードを生成します。
-   Notion の技術標準に従って、論理IDは英数字のみ、
-   日本語はコメントとTagsのValueのみ使用します。」
+   `.claude/docs/40_standards/45_cloudformation.md` の技術標準に従って、
+   Change Setsによるdry-run必須、Well-Architected Framework準拠で実装します。」
 
 ステップ3: コード生成
   ↓
-  Notion で確認した制約を守ってコード生成
+  技術標準で確認した制約を守ってコード生成
 
 ステップ4: 事後説明
   ↓
