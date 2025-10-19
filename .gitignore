@@ -8,6 +8,10 @@
 .env.local
 .env.*.local
 
+# MCP設定（API キーを含む）
+.mcp.json
+.claude/mcp.json
+
 # 依存関係
 node_modules/
 venv/
