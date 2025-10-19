@@ -127,7 +127,7 @@
   - アサーション（assert）の基本
   - フィクスチャ（fixture）の使い方
   - パラメータ化テスト（`@pytest.mark.parametrize`）
-  - **Notion参照**: `4.5 Python規約` のテストセクション
+  - **技術標準参照**: `4.5 Python規約` のテストセクション
   - Good/Bad Example
 
 #### 2.5.3.1.2_モッキング（unittest.mock）.md
@@ -156,21 +156,21 @@
 
 ### 2.5.3.2_TypeScript単体テスト/
 - **構成**: Python単体テストと同様（4ファイル）
-- **Notion参照**: `4.6 TypeScript規約`
+- **技術標準参照**: `4.6 TypeScript規約`
 - **重点**: Jest、モッキング、カバレッジ
 
 ---
 
 ### 2.5.3.3_C#単体テスト/
 - **構成**: Python単体テストと同様（4ファイル）
-- **Notion参照**: `4.7 C# .NET Core規約`
+- **技術標準参照**: `4.7 C# .NET Core規約`
 - **重点**: xUnit、Moq、coverlet
 
 ---
 
 ### 2.5.3.4_Go単体テスト/
 - **構成**: Python単体テストと同様（4ファイル）
-- **Notion参照**: `4.8 Go言語規約`
+- **技術標準参照**: `4.8 Go言語規約`
 - **重点**: testing、testify、go test -cover
 
 ---
