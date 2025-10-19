@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(done)",
-      "Bash(git checkout -b phase2.0-integration)"
+      "Bash(git checkout -b phase2.0-integration)",
+      "Bash(git checkout main)",
+      "Bash(git merge phase2.0-integration --no-edit)"
     ],
     "deny": [],
     "ask": []
