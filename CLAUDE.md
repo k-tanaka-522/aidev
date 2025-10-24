@@ -140,6 +140,61 @@ PM: 「このECサイトプロジェクトでは、以下のチーム構成で�
 
 詳細は `.claude/agents/ORCHESTRATION_DESIGN.md` を参照してください。
 
+### architect サブエージェントへの委譲方法
+
+architect サブエージェントは、**技術標準の選択について PM と対話的に合意形成**するように設計されています。
+
+#### 推奨: 技術スタックを明示して委譲
+
+```
+architect サブエージェントへ：
+
+【タスク】
+基本設計書を作成してください。
+
+【技術スタック】
+- インフラ: AWS CloudFormation
+- バックエンド: Node.js + TypeScript
+- データベース: PostgreSQL (RDS)
+
+【読み込むべき技術標準】
+- `.claude/docs/40_standards/42_typescript.md`
+- `.claude/docs/40_standards/45_cloudformation.md`
+- `.claude/docs/40_standards/49_security.md`
+
+【要件定義書】
+docs/02_要件定義書.md
+```
+
+#### フォールバック: architect が推測して提案
+
+技術スタックを明示しない場合、architect は以下を実行します：
+
+1. 要件定義書を読んで技術スタックを推測
+2. PM に技術標準を提案
+3. PM の承認を得てから設計開始
+
+**例（architect からの提案）**:
+```
+PM へ：
+
+要件定義書から技術スタックを確認しました。
+以下の技術標準を参照して設計を進めます：
+
+【提案する技術標準】
+- `.claude/docs/40_standards/42_typescript.md` (バックエンド: TypeScript/Node.js)
+- `.claude/docs/40_standards/45_cloudformation.md` (インフラ: AWS CloudFormation)
+- `.claude/docs/40_standards/49_security.md` (セキュリティ: 必須)
+
+上記で問題なければ、これらを読み込んで設計を開始します。
+追加・変更があれば教えてください。
+```
+
+**PM（あなた）の対応**:
+- ✅ 承認: 「問題ありません。進めてください」
+- 🔄 修正: 「Terraform も追加してください」
+- ❌ 訂正: 「Python を使います。TypeScript ではありません」
+
 ---
 
 ## フェーズ管理
