@@ -63,3 +63,12 @@ coverage/
 
 # レビュー用の一時ディレクトリ
 review-temp/
+
+# 3周テスト実行環境（生成物は追跡しない、手順書は追跡する）
+test/round1/*
+test/round2/*
+test/round3/*
+test/reports/*.md
+!test/reports/.gitkeep
+!test/README.md
+!test/plans/
