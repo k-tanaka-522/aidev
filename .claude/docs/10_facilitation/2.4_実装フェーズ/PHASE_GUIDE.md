@@ -405,15 +405,40 @@ tests/
 
 **CloudFormation/Terraformだけでなく、デプロイスクリプトも生成**
 
-✅ Good:
+**⭐⭐⭐ 最重要: CloudFormation の場合は Change Set スクリプト必須**
+
+✅ Good（CloudFormation）:
 ```
 infra/cloudformation/
   stacks/
     network/
       main.yaml
 scripts/
-  deploy.sh  # 必ずデプロイスクリプトを生成
-  validate.sh
+  create-changeset.sh      # Change Set 作成（dry-run）⭐必須
+  describe-changeset.sh    # Change Set 内容確認 ⭐必須
+  execute-changeset.sh     # ユーザー承認後に実行 ⭐必須
+  rollback.sh              # ロールバック処理 ⭐必須
+```
+
+**禁止事項**:
+❌ Bad: `aws cloudformation deploy` による直接デプロイは禁止
+- 本番環境での安全性が確保できない
+- dry-run（変更内容の事前確認）ができない
+
+**必ず Change Set を使う理由**:
+1. 本番環境への影響を事前に確認できる（dry-run）
+2. ユーザーが変更内容を承認してから実行できる
+3. ロールバックが容易
+
+**参照**: `.claude/docs/40_standards/45_cloudformation.md` の「デプロイ手順（Change Sets必須）」セクション
+
+✅ Good（Terraform）:
+```
+infra/terraform/
+  main.tf
+scripts/
+  plan.sh      # terraform plan（dry-run）
+  apply.sh     # terraform apply
   rollback.sh
 ```
 

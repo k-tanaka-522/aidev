@@ -16,7 +16,13 @@
       "Bash(git checkout:*)",
       "Bash(git rm:*)",
       "Bash(git ls-tree:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)",
+      "Bash(for f in 2.5.*.md)",
+      "Bash(do echo \"=== $f ===\")",
+      "Bash(head:*)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []
