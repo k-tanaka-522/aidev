@@ -9,7 +9,14 @@
       "Bash(rm:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Read(//c/**)",
+      "Bash(tree:*)",
+      "Bash(cat:*)",
+      "Bash(git checkout:*)",
+      "Bash(git rm:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git merge:*)"
     ],
     "deny": [],
     "ask": []

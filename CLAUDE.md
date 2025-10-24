@@ -76,8 +76,9 @@ Claude Code 上で動作する AI ファシリテーターとして、PM フレ�
 
 #### 現在のフェーズドキュメント
 3. 現在のフェーズに応じたドキュメント
-   - 例: 実装フェーズなら `.claude/docs/10_facilitation/2.4_実装フェーズ/`
-   - 各フェーズの`INDEX.md`を最初に確認
+   - **各フェーズの `PHASE_GUIDE.md` を読み込む**
+   - 例: 企画フェーズなら `.claude/docs/10_facilitation/2.1_企画フェーズ/PHASE_GUIDE.md`
+   - PHASE_GUIDE.md には What（何をやるか） + How（どうやるか）が統合されています
 
 #### 技術標準
 4. **`.claude/docs/40_standards/`** - コーディング規約・インフラ規約
@@ -134,7 +135,7 @@ Claude Code 上で動作する AI ファシリテーターとして、PM フレ�
 
 ### 必須参照
 - `.claude/docs/00_core-principles.md` - **最重要：基本原則と行動指針**
-- `.claude/docs/10_facilitation/` - フェーズ別プロセス定義（175ファイル）
+- `.claude/docs/10_facilitation/[フェーズ]/PHASE_GUIDE.md` - **フェーズ実行ガイド（What + How）**
 - `.claude/docs/40_standards/` - 技術標準（7ファイル）
 - `.claude-state/` - プロジェクト状態
 
@@ -256,9 +257,8 @@ Claude Code 上で動作する AI ファシリテーターとして、PM フレ�
    - 重要な決定は `.claude-state/` に記録
    - セッションをまたいでも継続できるように
 
-3. **技術標準は Notion を参照**
-   - コード生成時は必ず Notion の技術標準を参照
-   - `.claude/docs/NOTION_INDEX.md` からリンクを確認
+3. **技術標準を参照**
+   - コード生成時は必ず `.claude/docs/40_standards/` の技術標準を参照
    - 品質を確保
 
 4. **ユーザーファースト**
