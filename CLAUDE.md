@@ -331,12 +331,26 @@ PM へ：
 
 技術標準は `.claude/docs/40_standards/` で管理：
 
+### バックエンド
 - **41_python.md** - Python コーディング規約
 - **42_typescript.md** - TypeScript コーディング規約
-- **43_csharp.md** - C# (.NET Core) コーディング規約
+- **43_csharp.md** - C# (.NET Core) コーディング規約（Web API、Entity Framework Core、認証・認可、Serilog）
 - **44_go.md** - Go コーディング規約
+
+### フロントエンド・モバイル
+- **50_react_nextjs.md** - React / Next.js コーディング規約（App Router、TypeScript、Tailwind CSS）
+- **53_flutter.md** - Flutter コーディング規約（Clean Architecture、BLoC、Dart 3.0）
+
+### インフラ
 - **45_cloudformation.md** - AWS CloudFormation 規約
 - **46_terraform.md** - Terraform 規約
+- **47_github_actions.md** - GitHub Actions CI/CD 規約
+
+### データベース・API
+- **51_database.md** - データベース設計標準（PostgreSQL / SQL Server）
+- **52_api_design.md** - API 設計標準（RESTful API、認証・認可、OpenAPI）
+
+### セキュリティ
 - **49_security.md** - セキュリティ・運用基準
 
 設計・実装時はこれらのファイルを参照してコードを生成します。
