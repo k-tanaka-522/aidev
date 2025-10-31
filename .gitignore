@@ -3,6 +3,9 @@
 # 状態ファイル（セッション情報）
 .claude-state/
 
+# Claude Code 個人設定
+.claude/settings.local.json
+
 # 環境変数
 .env
 .env.local

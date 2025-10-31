@@ -43,7 +43,37 @@
 .claude/docs/40_standards/45_secrets-management.md      # シークレット管理標準
 ```
 
-### 2. プロジェクト状態の確認
+### 2. CLAUDE.md の確認とセットアップ
+
+プロジェクトルートの `CLAUDE.md` の存在を確認：
+
+**存在しない場合:**
+- テンプレートからのコピーを提案:
+  ```
+  ⚠️ CLAUDE.md が見つかりません。
+
+  CLAUDE.mdはプロジェクトメモリのエントリーポイントです。
+  テンプレートからコピーしますか？
+
+  【Windowsの場合】
+  copy .claude\templates\CLAUDE.md.template CLAUDE.md
+
+  【Mac/Linuxの場合】
+  cp .claude/templates/CLAUDE.md.template CLAUDE.md
+
+  コピー後、以下を編集してください：
+  1. {PROJECT_NAME} を実際のプロジェクト名に置換
+  2. プロジェクトの目的と背景を記述
+  3. 必要に応じて技術スタック情報を追加
+  ```
+
+**存在する場合:**
+- 確認メッセージのみ表示:
+  ```
+  ✅ CLAUDE.md を確認しました
+  ```
+
+### 3. プロジェクト状態の確認
 
 `.claude-state/project-state.json` の存在を確認：
 
