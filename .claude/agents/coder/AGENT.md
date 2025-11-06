@@ -173,6 +173,253 @@ src/
 
 ---
 
+## 💬 コメント規約（全言語共通）
+
+### 原則
+
+> **AIとの協業を前提に、コードの意図とコンテキストを明確にする**
+
+すべての関数/メソッド/クラスに、以下3点を日本語でコメントする:
+
+1. **目的・理由**（なぜ）- この処理が必要な理由
+2. **影響範囲**（どこに）- この処理がどこに影響するか
+3. **前提条件・制約**（何が必要）- 実行条件、制約事項
+
+---
+
+### コメント記載箇所
+
+#### 必須
+- ✅ すべての関数/メソッド
+- ✅ すべてのクラス/インターフェース
+- ✅ 複雑なロジック（3行以上の条件分岐、ループなど）
+- ✅ 外部システムとの連携箇所
+- ✅ セキュリティに関わる処理
+- ✅ パフォーマンスに影響する処理
+
+#### 推奨
+- 重要な定数・変数の定義
+- ビジネスロジックの意図
+- トレードオフがあった設計判断
+
+---
+
+### 言語別コメント形式
+
+#### TypeScript / JavaScript
+
+```typescript
+// 目的: ユーザー認証トークンの検証（セキュリティ要件: 認証必須API用）
+// 影響: すべての認証必須APIエンドポイントで実行される
+// 前提: JWT形式のトークンが必要、JWTシークレットが環境変数に設定済み
+async function validateToken(token: string): Promise<User> {
+  // JWTトークンのデコードと検証
+  // 影響: 検証失敗時は401エラーを返し、後続処理は実行されない
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+  // ユーザー情報の取得
+  // 影響: DBアクセスが発生（キャッシュ未実装）
+  const user = await db.findOne(User, { where: { id: decoded.userId } });
+
+  if (!user) {
+    throw new UnauthorizedError('User not found');
+  }
+
+  return user;
+}
+```
+
+#### Python
+
+```python
+def validate_token(token: str) -> User:
+    """
+    目的: ユーザー認証トークンの検証（セキュリティ要件: 認証必須API用）
+    影響: すべての認証必須APIエンドポイントで実行される
+    前提: JWT形式のトークンが必要、JWTシークレットが環境変数に設定済み
+
+    Args:
+        token: JWT形式の認証トークン
+
+    Returns:
+        User: 検証済みユーザーオブジェクト
+
+    Raises:
+        UnauthorizedError: トークンが無効、またはユーザーが見つからない場合
+    """
+    # JWTトークンのデコードと検証
+    # 影響: 検証失敗時は401エラーを返し、後続処理は実行されない
+    decoded = jwt.decode(token, os.getenv('JWT_SECRET'), algorithms=['HS256'])
+
+    # ユーザー情報の取得
+    # 影響: DBアクセスが発生（キャッシュ未実装）
+    user = db.query(User).filter_by(id=decoded['user_id']).first()
+
+    if not user:
+        raise UnauthorizedError('User not found')
+
+    return user
+```
+
+#### Go
+
+```go
+// ValidateToken はユーザー認証トークンを検証します
+// 目的: ユーザー認証トークンの検証（セキュリティ要件: 認証必須API用）
+// 影響: すべての認証必須APIエンドポイントで実行される
+// 前提: JWT形式のトークンが必要、JWTシークレットが環境変数に設定済み
+func ValidateToken(token string) (*User, error) {
+    // JWTトークンのデコードと検証
+    // 影響: 検証失敗時はエラーを返し、後続処理は実行されない
+    claims := &Claims{}
+    tkn, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
+        return []byte(os.Getenv("JWT_SECRET")), nil
+    })
+
+    if err != nil || !tkn.Valid {
+        return nil, ErrUnauthorized
+    }
+
+    // ユーザー情報の取得
+    // 影響: DBアクセスが発生（キャッシュ未実装）
+    user, err := db.FindUserByID(claims.UserID)
+    if err != nil {
+        return nil, err
+    }
+
+    return user, nil
+}
+```
+
+#### C#
+
+```csharp
+/// <summary>
+/// ユーザー認証トークンを検証します
+/// </summary>
+/// <remarks>
+/// 目的: ユーザー認証トークンの検証（セキュリティ要件: 認証必須API用）
+/// 影響: すべての認証必須APIエンドポイントで実行される
+/// 前提: JWT形式のトークンが必要、JWTシークレットが設定ファイルに設定済み
+/// </remarks>
+/// <param name="token">JWT形式の認証トークン</param>
+/// <returns>検証済みユーザーオブジェクト</returns>
+/// <exception cref="UnauthorizedException">トークンが無効、またはユーザーが見つからない場合</exception>
+public async Task<User> ValidateTokenAsync(string token)
+{
+    // JWTトークンのデコードと検証
+    // 影響: 検証失敗時は401エラーを返し、後続処理は実行されない
+    var tokenHandler = new JwtSecurityTokenHandler();
+    var validationParameters = GetValidationParameters();
+
+    SecurityToken validatedToken;
+    var principal = tokenHandler.ValidateToken(token, validationParameters, out validatedToken);
+
+    var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    // ユーザー情報の取得
+    // 影響: DBアクセスが発生（キャッシュ未実装）
+    var user = await _context.Users.FindAsync(int.Parse(userId));
+
+    if (user == null)
+    {
+        throw new UnauthorizedException("User not found");
+    }
+
+    return user;
+}
+```
+
+---
+
+### コメント記述ガイドライン
+
+#### ✅ Good（具体的で文脈が分かる）
+
+```typescript
+// 目的: 在庫数の更新（注文確定時に在庫を減算）
+// 影響: inventory テーブルを更新、在庫不足時は注文をロールバック
+// 前提: トランザクション内で実行、productId は存在するID
+async function updateStock(productId: number, quantity: number): Promise<void> {
+  // ...
+}
+```
+
+#### ❌ Bad（抽象的で意図が不明）
+
+```typescript
+// 在庫を更新する
+async function updateStock(productId: number, quantity: number): Promise<void> {
+  // ...
+}
+```
+
+#### ✅ Good（複雑なロジックの説明）
+
+```typescript
+// ビジネスルール: 営業日の計算（土日祝を除外）
+// 影響: 納期計算に使用される（注文確定画面、発送予定日表示）
+// 前提: holidays テーブルに祝日データが登録済み
+function addBusinessDays(date: Date, days: number): Date {
+  let current = new Date(date);
+  let added = 0;
+
+  while (added < days) {
+    current.setDate(current.getDate() + 1);
+
+    // 土日をスキップ（0=日曜, 6=土曜）
+    if (current.getDay() === 0 || current.getDay() === 6) {
+      continue;
+    }
+
+    // 祝日をスキップ（holidays テーブルと照合）
+    if (isHoliday(current)) {
+      continue;
+    }
+
+    added++;
+  }
+
+  return current;
+}
+```
+
+#### ❌ Bad（処理の説明のみ）
+
+```typescript
+// 営業日を加算する
+function addBusinessDays(date: Date, days: number): Date {
+  // ループで日付を加算
+  // ...
+}
+```
+
+---
+
+### コメント記述の注意点
+
+1. **処理の内容ではなく、意図を書く**
+   - ❌ 「ユーザーをDBから取得する」（何をしているかは見れば分かる）
+   - ✅ 「認証トークンからユーザー情報を取得（認可チェックで使用）」
+
+2. **影響範囲を明確にする**
+   - ❌ 「DBを更新する」
+   - ✅ 「users テーブルの last_login_at を更新（ログイン履歴に使用）」
+
+3. **前提条件を書く**
+   - ❌ 「ユーザーを削除する」
+   - ✅ 「ユーザーを削除（前提: 関連する注文データがないこと、外部キー制約でエラーになる）」
+
+4. **トレードオフがあった場合は理由を書く**
+   - ✅ 「パフォーマンス優先でキャッシュを使用（整合性は5分遅延を許容）」
+   - ✅ 「N+1問題を回避するため eager loading を使用（メモリ使用量は増加）」
+
+5. **将来の変更可能性を示す**
+   - ✅ 「TODO: 将来的にはキャッシュ層を追加予定（現在は毎回DB問い合わせ）」
+   - ✅ 「NOTE: この実装は暫定対応、Phase 2 でリファクタリング予定」
+
+---
+
 ## 🎨 実装プロセス（TDD）
 
 ### Red-Green-Refactor サイクル
