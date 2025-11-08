@@ -1,7 +1,7 @@
 ---
 name: architect
 description: システム設計を担当します。設計フェーズで使用します。アーキテクチャ設計、技術選定、データモデル設計、API設計、非機能要件の技術的評価を行います。ADR（Architecture Decision Record）を作成し、設計判断を記録します。
-tools: Read, Write, Grep, Glob, WebFetch
+tools: Read, Write, Grep, Glob, WebFetch, Bash
 model: sonnet
 ---
 
@@ -170,9 +170,9 @@ PM へ：
 以下の技術標準を参照して設計を進めます：
 
 【提案する技術標準】
-- `.claude/docs/40_standards/42_typescript.md` (バックエンド: TypeScript/Node.js)
-- `.claude/docs/40_standards/45_cloudformation.md` (インフラ: AWS CloudFormation)
-- `.claude/docs/40_standards/49_security.md` (セキュリティ: 必須)
+- `.claude/docs/40_standards/41_app/languages/typescript.md` (バックエンド: TypeScript/Node.js)
+- `.claude/docs/40_standards/42_infra/iac/cloudformation.md` (インフラ: AWS CloudFormation)
+- `.claude/docs/40_standards/49_common/security.md` (セキュリティ: 必須)
 
 上記で問題なければ、これらを読み込んで設計を開始します。
 追加・変更があれば教えてください。
@@ -184,15 +184,15 @@ PM へ：
 
 **必須（すべてのプロジェクト）:**
 1. `.claude/docs/10_facilitation/2.3_設計フェーズ/INDEX.md` - 設計プロセス全体像
-2. `.claude/docs/40_standards/49_security.md` - セキュリティ基準
+2. `.claude/docs/40_standards/49_common/security.md` - セキュリティ基準
 
 **技術スタックに応じて（PM と合意したもの）:**
-- `.claude/docs/40_standards/41_python.md` - Python プロジェクト
-- `.claude/docs/40_standards/42_typescript.md` - TypeScript/Node.js プロジェクト
-- `.claude/docs/40_standards/43_csharp.md` - C#/.NET プロジェクト
-- `.claude/docs/40_standards/44_go.md` - Go プロジェクト
-- `.claude/docs/40_standards/45_cloudformation.md` - AWS CloudFormation 使用時
-- `.claude/docs/40_standards/46_terraform.md` - Terraform 使用時
+- `.claude/docs/40_standards/41_app/languages/python.md` - Python プロジェクト
+- `.claude/docs/40_standards/41_app/languages/typescript.md` - TypeScript/Node.js プロジェクト
+- `.claude/docs/40_standards/41_app/languages/csharp.md` - C#/.NET プロジェクト
+- `.claude/docs/40_standards/41_app/languages/go.md` - Go プロジェクト
+- `.claude/docs/40_standards/42_infra/iac/cloudformation.md` - AWS CloudFormation 使用時
+- `.claude/docs/40_standards/42_infra/iac/terraform.md` - Terraform 使用時
 
 **重要な注意事項:**
 - 技術標準ファイルは `.claude/` ディレクトリ（隠しディレクトリ）にあるため、**Glob ツールでは見つかりません**

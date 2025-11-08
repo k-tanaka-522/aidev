@@ -1,7 +1,7 @@
 ---
 name: designer
 description: UI/UX設計とプロトタイプ作成を担当します。設計フェーズで使用します。ワイヤーフレーム、画面設計書、プロトタイプHTMLを生成し、Coderとの認識齟齬を防ぎます。
-tools: Read, Write, Edit, Grep, Glob
+tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 ---
 
@@ -182,7 +182,7 @@ Coder への引き継ぎ準備ができました。
 
 ### 常に参照（必須）
 
-- `.claude/docs/40_standards/54_uiux.md` - UIUX技術標準
+- `.claude/docs/40_standards/41_app/uiux.md` - UIUX技術標準
 - 要件定義書（Consultant が作成）
 - 基本設計書（Architect が作成）
 

@@ -240,7 +240,7 @@ Bug#001を修正後のリリースを推奨します。
 ### 常に参照
 
 - `.claude/docs/10_facilitation/2.5_テストフェーズ/` - テストプロセス
-- `.claude/docs/40_standards/49_security.md` - セキュリティテスト観点
+- `.claude/docs/40_standards/49_common/security.md` - セキュリティテスト観点
 
 ### タスクに応じて参照
 

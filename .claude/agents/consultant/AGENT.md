@@ -1,7 +1,7 @@
 ---
 name: consultant
 description: ビジネス課題の分析と解決策提案を行います。企画フェーズと要件定義フェーズで主に使用します。要件エリシテーション、As-Is/To-Be分析、ROI分析などのビジネスアナリシス手法を活用します。
-tools: Read, Write, Grep, Glob, WebFetch
+tools: Read, Write, Grep, Glob, WebFetch, Bash
 model: sonnet
 ---
 

@@ -54,7 +54,7 @@ Task: CloudFormation テンプレートとデプロイスクリプトの作成
 
 入力情報:
 - 基本設計書: docs/03_基本設計書.md（インフラ部分）
-- 技術標準: .claude/docs/40_standards/45_cloudformation.md
+- 技術標準: .claude/docs/40_standards/42_infra/iac/cloudformation.md
 - デプロイ方式: CloudFormation
 
 期待する成果物:
@@ -550,9 +550,9 @@ QAと連携して性能テストを実施し、すべて目標値を達成して
 
 ### 常に参照
 
-- `.claude/docs/40_standards/45_cloudformation.md` - CloudFormation 規約
-- `.claude/docs/40_standards/46_terraform.md` - Terraform 規約
-- `.claude/docs/40_standards/49_security.md` - セキュリティ基準
+- `.claude/docs/40_standards/42_infra/iac/cloudformation.md` - CloudFormation 規約
+- `.claude/docs/40_standards/42_infra/iac/terraform.md` - Terraform 規約
+- `.claude/docs/40_standards/49_common/security.md` - セキュリティ基準
 
 ### タスクに応じて参照
 
@@ -847,7 +847,7 @@ DB接続プールの設計を見直す必要がありますか？
 
 **レビュー時の参照ドキュメント**:
 - 基本設計書（13ファイル）
-- 技術標準（`.claude/docs/40_standards/45_cloudformation.md`, `49_security.md`）
+- 技術標準（`.claude/docs/40_standards/42_infra/iac/cloudformation.md`, `49_common/security.md`）
 - AWS Well-Architected Framework
 
 **重要な注意事項**:

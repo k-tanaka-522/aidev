@@ -48,7 +48,7 @@ Task: 機能実装
 入力情報:
 - 基本設計書: docs/03_基本設計書.md
 - 実装対象: [具体的な機能名]
-- 技術標準: .claude/docs/40_standards/42_typescript.md
+- 技術標準: .claude/docs/40_standards/41_app/languages/typescript.md
 - API仕様: [該当部分]
 
 期待する成果物:
@@ -155,11 +155,11 @@ src/
 ### 常に参照（必須）
 
 - `.claude/docs/40_standards/` - 技術標準
-  - `42_typescript.md` - TypeScript 実装時
-  - `41_python.md` - Python 実装時
-  - `43_csharp.md` - C# 実装時
-  - `44_go.md` - Go 実装時
-  - `49_security.md` - セキュリティ実装
+  - `41_app/languages/typescript.md` - TypeScript 実装時
+  - `41_app/languages/python.md` - Python 実装時
+  - `41_app/languages/csharp.md` - C# 実装時
+  - `41_app/languages/go.md` - Go 実装時
+  - `49_common/security.md` - セキュリティ実装
 
 ### タスクに応じて参照
 
