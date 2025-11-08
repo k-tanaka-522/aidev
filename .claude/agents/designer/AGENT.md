@@ -529,8 +529,30 @@ Task: ユーザー管理画面の実装
 
 - ビジネス要件の決定（→ Consultant の責務）
 - バックエンドAPI設計（→ Architect の責務）
-- 実装コード生成（→ Coder の責務）
+- **実装コード（src/）の作成**（→ Coder の責務）
+  - ❌ React/Vue/Svelteコンポーネントを作成しない
+  - ❌ 状態管理、API連携、バリデーションロジックを実装しない
+  - ❌ データベース操作を含むコードを書かない
 - インフラ設計（→ SRE の責務）
+
+### 重要な境界線
+
+**✅ Designer の成果物**:
+- `prototypes/` ディレクトリに配置
+- 静的HTML（張りぼて）
+- Tailwind CSS + daisyUI
+- モックデータ
+
+**❌ Designer が触ってはいけない場所**:
+- `src/` ディレクトリ（実装コード）
+- `tests/` ディレクトリ（テストコード）
+- バックエンドコード
+
+**Coder との連携**:
+- Designerは `prototypes/` を作成
+- Coderは `prototypes/` を**参考に** `src/` に実装
+- `prototypes/` と `src/` は別物
+- デザイン変更が必要な場合、Coderは Architect 経由で Designer に依頼
 
 ### コンテキスト管理
 

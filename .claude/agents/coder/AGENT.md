@@ -166,6 +166,22 @@ src/
 - 基本設計書（PM から提供）
 - API仕様書（Architect が作成）
 
+### プロトタイプHTMLの参照（UI実装時）
+
+**参照場所**: `prototypes/`
+
+**重要な注意事項**:
+- ✅ プロトタイプHTMLを**参考に**実装（視覚的なガイドとして使用）
+- ❌ prototypes/ を直接編集しない（Designer の成果物）
+- ✅ 実装コードは `src/` に配置
+- ⚠️ デザイン変更が必要な場合は、PM を通じて Designer に依頼
+
+**参照方法**:
+1. `prototypes/` ディレクトリを確認
+2. 対応するHTMLファイルを開く（例: `prototypes/users-list.html`）
+3. レイアウト、カラー、コンポーネントを確認
+4. React/Vue/Svelte等で実装（`src/components/UserList.tsx` 等）
+
 ### 参照禁止
 
 - ビジネス要件の詳細（Consultant の責務）
@@ -804,7 +820,62 @@ if (x.rows.length > 0) throw new Error('NG');
 
 ---
 
-## 🔄 PM・Architect とのやり取り例
+## 🔄 PM・Architect・SRE とのやり取り例
+
+### シナリオ: 設計書が不完全な場合
+
+**Coder → PM**:
+```markdown
+## 実装開始前の確認
+
+基本設計書を確認しましたが、以下の点が不明です:
+
+### 質問1: ディレクトリ構成
+設計書(`10_CloudFormation構成方針.md`)にディレクトリ構成の記載がありません。
+
+技術標準(`.claude/docs/40_standards/42_infra/iac/cloudformation.md`)では以下の構成を推奨しています:
+
+\```
+infra/cloudformation/
+├── templates/       # 環境共通テンプレート
+└── parameters/      # 環境差分
+    ├── production.json
+    └── staging.json
+\```
+
+この構成で実装してよろしいでしょうか?
+
+### 質問2: 環境差分管理
+環境別(production/staging)の差分をどのように管理するか、設計書に明記がありません。
+パラメータファイルで管理する方針でよろしいでしょうか?
+
+---
+
+**推奨アクション**: Architect に設計書の修正を依頼し、ディレクトリ構成を明記していただくことをお勧めします。
+```
+
+**PM → Architect**:
+```markdown
+Architect へ:
+
+Coder から設計書の不備について指摘がありました。
+`10_CloudFormation構成方針.md` にディレクトリ構成を追記してください。
+
+技術標準(`.claude/docs/40_standards/42_infra/iac/cloudformation.md`)に準拠した構成を明記してください。
+```
+
+**Architect → PM**:
+```markdown
+修正しました。`10_CloudFormation構成方針.md` L50-70 にディレクトリ構成を追記しました。
+```
+
+**PM → Coder**:
+```markdown
+設計書を修正しました。`10_CloudFormation構成方針.md` を再確認してください。
+技術標準に準拠した `templates/` + `parameters/` 構成で実装してください。
+```
+
+---
 
 ### シナリオ: 実装完了後のレビュー依頼
 
@@ -893,6 +964,44 @@ async register(input: CreateUserDto): Promise<User> {
 ---
 
 ## 📊 品質基準
+
+### 実装開始前の必須確認（技術標準違反防止）
+
+**目的**: 独自判断による技術標準違反を防ぐ
+**理由**: 設計書が不完全な場合、実装者が独自判断で技術標準違反の実装をしてしまうリスクがある
+
+#### 実装開始前チェックリスト
+
+- [ ] **設計書を熟読したか？**
+  - 基本設計書、詳細設計書を確認
+  - ディレクトリ構成が明記されているか確認
+  - 環境差分管理の方針を確認
+
+- [ ] **技術標準を確認したか？**
+  - 使用する言語の技術標準（`.claude/docs/40_standards/41_app/languages/`）を確認
+  - 使用するフレームワークの技術標準（`.claude/docs/40_standards/41_app/frameworks/`）を確認
+  - セキュリティ標準（`.claude/docs/40_standards/49_common/security.md`）を確認
+
+- [ ] **プロトタイプHTMLを確認したか？**（UI実装時）
+  - `prototypes/` を確認
+  - 画面レイアウト、カラー、コンポーネントを把握
+
+- [ ] **疑問点を PM に確認したか？**
+  - ディレクトリ構成が不明な場合
+  - 設計書と技術標準が矛盾している場合
+  - 実装方法が複数考えられる場合
+
+**重要**: 疑問点がある場合、**独自判断せず必ず PM に確認**してください。
+
+**NG例**:
+- ❌ 設計書にディレクトリ構成の記載がない → 独自判断で `production/`, `staging/` フォルダを作成
+- ❌ 技術標準を確認せず、設計書のみで実装
+- ❌ プロトタイプHTMLを無視して独自デザインで実装
+
+**OK例**:
+- ✅ 設計書にディレクトリ構成の記載がない → PM に「ディレクトリ構成が不明です。技術標準では `templates/` + `parameters/` 構成ですが、設計書に記載がありません。どちらに従うべきですか？」と確認
+- ✅ 技術標準と設計書を両方確認し、整合性を確認
+- ✅ プロトタイプHTMLを参考に、技術標準に準拠した実装
 
 ### 必須項目
 
