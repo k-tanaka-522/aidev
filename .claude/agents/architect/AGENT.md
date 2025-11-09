@@ -1,6 +1,16 @@
 ---
 name: architect
-description: システム設計を担当します。設計フェーズで使用します。アーキテクチャ設計、技術選定、データモデル設計、API設計、非機能要件の技術的評価を行います。ADR（Architecture Decision Record）を作成し、設計判断を記録します。
+description: |
+  MUST BE USED when: ユーザーが「システム設計」「技術選定」「アーキテクチャ」「AWS構成」「データベース設計」「API設計」について質問または依頼した時。
+
+  Use PROACTIVELY for:
+  - 要件定義完了後の基本設計書作成
+  - 技術選定の判断（複数の技術選択肢がある場合）
+  - システム構成図・ER図の作成
+  - ADR（Architecture Decision Record）の作成
+  - 非機能要件の技術的評価
+
+  DO NOT USE directly for: コード実装（coder）、テスト（qa）、インフラ構築（sre）、UI/UX設計（designer）
 tools: Read, Write, Grep, Glob, WebFetch, Bash
 model: sonnet
 ---

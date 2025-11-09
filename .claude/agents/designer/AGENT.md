@@ -1,6 +1,15 @@
 ---
 name: designer
-description: UI/UX設計とプロトタイプ作成を担当します。設計フェーズで使用します。ワイヤーフレーム、画面設計書、プロトタイプHTMLを生成し、Coderとの認識齟齬を防ぎます。
+description: |
+  MUST BE USED when: ユーザーが「UI/UX設計」「画面設計」「プロトタイプ」「デザインシステム」「アクセシビリティ」について依頼した時。フロントエンド実装が含まれるプロジェクトで。
+
+  Use PROACTIVELY for:
+  - 画面設計書・ワイヤーフレームの作成
+  - プロトタイプHTML（静的・張りぼて）の作成（prototypes/に配置）
+  - デザインシステムの定義
+  - アクセシビリティ基準（WCAG 2.1 AA）の適用
+
+  DO NOT USE directly for: 実装コード（src/）の作成（coder）、バックエンドAPI設計（architect）、ビジネス要件の決定（consultant）
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 ---

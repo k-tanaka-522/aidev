@@ -21,7 +21,8 @@
       "Bash(.claude/agents/coder/AGENT.md)",
       "Bash(mkdir:*)",
       "Bash(git mv:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []

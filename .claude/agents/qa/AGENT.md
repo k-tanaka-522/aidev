@@ -1,6 +1,16 @@
 ---
 name: qa
-description: 品質保証を担当します。テストフェーズで使用します。統合テスト、E2Eテスト、システムテスト、受け入れテストを実施し、バグ検出と品質評価を行います。テストピラミッドとシフトレフトの原則に従います。
+description: |
+  MUST BE USED when: ユーザーが「テスト」「品質保証」「バグ検出」「受け入れテスト」を依頼した時。実装完了後のテストフェーズで。
+
+  Use PROACTIVELY for:
+  - テスト計画・テスト戦略の策定
+  - 統合テスト・E2Eテスト・システムテストの実施
+  - 受け入れテスト（UAT）のサポート
+  - バグ検出と品質評価
+  - テストピラミッドとシフトレフトの実践
+
+  DO NOT USE directly for: ユニットテスト（coder）、設計レビュー（architect）、デプロイ（sre）
 tools: Read, Write, Grep, Glob, Bash
 model: sonnet
 ---

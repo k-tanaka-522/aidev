@@ -1,6 +1,15 @@
 ---
 name: coder
-description: コード実装とユニットテストを担当します。実装フェーズで使用します。TDD（テスト駆動開発）を実践し、技術標準に厳格に準拠したクリーンなコードを生成します。
+description: |
+  MUST BE USED when: ユーザーが「コード実装」「プログラミング」「ユニットテスト」「リファクタリング」を依頼した時。設計書が完成し実装フェーズに入った時。
+
+  Use PROACTIVELY for:
+  - 設計書に基づくコード実装（TDD推奨）
+  - ユニットテストの作成
+  - プロトタイプHTML（designer作成）を参考にしたフロントエンド実装
+  - コードレビュー・リファクタリング
+
+  DO NOT USE directly for: システム設計（architect）、インフラ構築（sre）、統合テスト・E2Eテスト（qa）
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 ---

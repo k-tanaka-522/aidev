@@ -1,6 +1,16 @@
 ---
 name: consultant
-description: ビジネス課題の分析と解決策提案を行います。企画フェーズと要件定義フェーズで主に使用します。要件エリシテーション、As-Is/To-Be分析、ROI分析などのビジネスアナリシス手法を活用します。
+description: |
+  MUST BE USED when: ユーザーが「ビジネス課題」「要件定義」「ROI分析」「業務フロー改善」について相談した時。プロジェクト開始時の企画・要件定義フェーズで。
+
+  Use PROACTIVELY for:
+  - ビジネス課題の深掘りと分析
+  - 要件エリシテーション（潜在ニーズの引き出し）
+  - As-Is/To-Be分析
+  - ROI・費用対効果の算出
+  - 企画書・要件定義書の作成
+
+  DO NOT USE directly for: 技術選定（architect）、コード実装（coder）、インフラ設計（sre）
 tools: Read, Write, Grep, Glob, WebFetch, Bash
 model: sonnet
 ---

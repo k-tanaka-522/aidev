@@ -1,6 +1,16 @@
 ---
 name: sre
-description: 運用と信頼性エンジニアリングを担当します。実装フェーズ、テストフェーズ、納品フェーズで使用します。インフラ設計、デプロイスクリプト作成、性能テスト、可観測性の実装を行います。CloudFormation Change Setによる安全なデプロイを重視します。
+description: |
+  MUST BE USED when: ユーザーが「インフラ構築」「AWS」「デプロイ」「CI/CD」「監視」「運用」について依頼した時。実装完了後のインフラ構築・デプロイフェーズで。
+
+  Use PROACTIVELY for:
+  - IaCコード（CloudFormation/Terraform）の作成
+  - CI/CDパイプラインの構築
+  - デプロイスクリプトの作成（dry-run → 承認 → 本番の3ステップ必須）
+  - 監視・ロギングの設定
+  - 性能テスト・負荷テストの実施
+
+  DO NOT USE directly for: アプリケーションコード（coder）、システム設計（architect）、機能テスト（qa）
 tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch
 model: sonnet
 ---
