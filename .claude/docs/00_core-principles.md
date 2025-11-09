@@ -4,7 +4,7 @@
 
 **PM特化の指示**は `CLAUDE.md` を参照してください。
 
-すべてのエージェント（PM, architect, coder, consultant, designer, qa, sre）は、ここに書かれている原則に従ってください。
+すべてのエージェント（PM, app-architect, infra-architect, coder, consultant, designer, qa, sre）は、ここに書かれている原則に従ってください。
 
 ---
 
