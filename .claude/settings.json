@@ -1,0 +1,93 @@
+{
+  "env": {
+    "ANTHROPIC_MODEL": "claude-sonnet-4-5-20250929",
+    "MAX_THINKING_TOKENS": "16000",
+    "MAX_MCP_OUTPUT_TOKENS": "25000"
+  },
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 16384
+  },
+  "spinnerTipsEnabled": false,
+  "permissions": {
+    "defaultMode": "normal",
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(git rm:*)",
+      "Bash(git restore:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git mv:*)",
+      "Bash(terraform plan *)",
+      "Bash(terraform validate *)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(tree:*)",
+      "Bash(find:*)",
+      "Bash(test:*)",
+      "Bash(dir:*)",
+      "Bash(cat:*)",
+      "Bash(awk:*)",
+      "Bash(findstr:*)",
+      "Bash(more:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)",
+      "Bash(terraform apply --auto-approve *)",
+      "Bash(terraform destroy *)",
+      "Write(.env*)",
+      "Write(**/secrets/**)",
+      "Write(**/*.pem)",
+      "Write(**/*.key)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/pre-write-check.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/post-write-format.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/quality-gate.sh",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}

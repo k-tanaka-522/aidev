@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "matcher": "Bash(git status|git diff:*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/examples/auto-approve-git-read.sh",
+            "timeout": 2
+          }
+        ]
+      }
+    ]
+  }
+}

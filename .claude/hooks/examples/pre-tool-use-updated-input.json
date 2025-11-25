@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(terraform apply:*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/examples/force-terraform-plan.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
