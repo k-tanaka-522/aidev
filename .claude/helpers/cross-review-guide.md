@@ -9,14 +9,16 @@
 
 ## クロスレビューマトリクス
 
-| 成果物 | 作成者 | レビュアー | レビュー観点 |
-|-------|-------|----------|------------|
-| 要件定義書 | PM | Consultant, App-Arch, Infra-Arch | ビジネス整合性、技術実現可能性 |
-| アプリ設計書 | App-Architect | Coder, Consultant | 実装可能性、ビジネス要件整合 |
-| インフラ設計書 | Infra-Architect | SRE, Consultant | 実装可能性、ビジネス要件整合 |
-| IaC (CloudFormation/Terraform) | SRE | Infra-Architect | 設計との整合性、ベストプラクティス |
-| コード | Coder | QA | テスト可能性、品質 |
-| テストコード | QA | Coder | カバレッジ、実装との整合性 |
+| 成果物 | 作成者 | レビュアー | レビュー観点 | レビュースキル |
+|-------|-------|----------|------------|--------------|
+| 要件定義書 | PM | Consultant, App-Arch, Infra-Arch | ビジネス整合性、技術実現可能性 | `.claude/skills/review-requirements/` |
+| アプリ設計書 | App-Architect | Coder, Consultant | 実装可能性、ビジネス要件整合 | `.claude/skills/review-app-design/` |
+| インフラ設計書 | Infra-Architect | SRE, Consultant | 実装可能性、ビジネス要件整合 | `.claude/skills/review-infra-design/` |
+| IaC (CloudFormation/Terraform) | SRE | Infra-Architect | 設計との整合性、ベストプラクティス | `.claude/skills/review-iac/` |
+| コード | Coder | QA | テスト可能性、品質 | `.claude/skills/review-code/` |
+| テストコード | QA | Coder | カバレッジ、実装との整合性 | `.claude/skills/review-test/` |
+
+**レビュースキル**: 各成果物タイプに対応したSkillsが用意されています。レビュアーは対応するSkillsのチェックリストを参照してレビューを実施します。
 
 ---
 
@@ -54,16 +56,10 @@
 **作成者**: SRE
 **設計書**: docs/design/infra/network-design.md
 
-**レビュー観点**:
-1. 設計書との整合性
-2. CloudFormation ベストプラクティス
-3. 技術標準準拠（.claude/docs/40_standards/42_infra/iac/cloudformation.md）
-4. セキュリティ観点
+**レビュースキル**: `.claude/skills/review-iac/` を参照
+**チェックリスト**: `.claude/skills/review-iac/checklist/infra-architect.md`
 
-**出力形式**:
-- result: approved / approved_with_comments / rejected
-- checklist: 各観点のpass/warn/fail
-- feedback: 具体的なフィードバック
+チェックリストに基づいてレビューを実施し、結果を報告してください。
 ```
 
 ### 設計書レビュー（Infra-Architect → SRE）
@@ -74,16 +70,38 @@
 **対象**: docs/design/infra/network-design.md
 **作成者**: Infra-Architect
 
-**レビュー観点**:
-1. 実装可能性（IaCで実現可能か）
-2. 運用性（監視、アラート、復旧手順）
-3. コスト最適化
-4. 技術標準との整合性
+**レビュースキル**: `.claude/skills/review-infra-design/` を参照
+**チェックリスト**: `.claude/skills/review-infra-design/checklist/sre.md`
 
-**出力形式**:
-- result: approved / approved_with_comments / rejected
-- checklist: 各観点のpass/warn/fail
-- feedback: 具体的なフィードバック
+チェックリストに基づいてレビューを実施し、結果を報告してください。
+```
+
+### アプリ設計書レビュー（App-Architect → Coder）
+
+```
+以下のアプリ設計書をレビューしてください。
+
+**対象**: docs/03_基本設計/app/
+**作成者**: App-Architect
+
+**レビュースキル**: `.claude/skills/review-app-design/` を参照
+**チェックリスト**: `.claude/skills/review-app-design/checklist/coder.md`
+
+チェックリストに基づいてレビューを実施し、結果を報告してください。
+```
+
+### コードレビュー（Coder → QA）
+
+```
+以下のコードをレビューしてください。
+
+**対象**: src/
+**作成者**: Coder
+
+**レビュースキル**: `.claude/skills/review-code/` を参照
+**チェックリスト**: `.claude/skills/review-code/checklist/qa.md`
+
+チェックリストに基づいてレビューを実施し、結果を報告してください。
 ```
 
 ---
