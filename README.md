@@ -62,11 +62,8 @@ git clone https://github.com/k-tanaka-522/aidev.git .aidev-temp
 # .claude/ ディレクトリをコピー
 cp -r .aidev-temp/.claude .
 
-# CLAUDE.md のテンプレートをコピー（プロジェクトメモリのエントリーポイント）
-cp .claude/templates/CLAUDE.md.template CLAUDE.md
-
-# CLAUDE.md を編集（プロジェクト名等を設定）
-# {PROJECT_NAME} を実際のプロジェクト名に置換してください
+# CLAUDE.md をルートにコピー（Claude Codeのエントリーポイント）
+cp .aidev-temp/CLAUDE.md CLAUDE.md
 
 # .gitignore をマージ（既存の.gitignoreがある場合は手動で調整）
 cat .aidev-temp/.gitignore >> .gitignore
