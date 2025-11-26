@@ -11,9 +11,10 @@
 
 | 成果物 | 作成者 | レビュアー | レビュー観点 |
 |-------|-------|----------|------------|
+| 要件定義書 | PM | Consultant, App-Arch, Infra-Arch | ビジネス整合性、技術実現可能性 |
+| アプリ設計書 | App-Architect | Coder, Consultant | 実装可能性、ビジネス要件整合 |
+| インフラ設計書 | Infra-Architect | SRE, Consultant | 実装可能性、ビジネス要件整合 |
 | IaC (CloudFormation/Terraform) | SRE | Infra-Architect | 設計との整合性、ベストプラクティス |
-| インフラ設計書 | Infra-Architect | SRE | 実装可能性、運用性 |
-| アプリ設計書 | App-Architect | Coder | 実装可能性、技術的課題 |
 | コード | Coder | QA | テスト可能性、品質 |
 | テストコード | QA | Coder | カバレッジ、実装との整合性 |
 
