@@ -126,6 +126,52 @@ Task: CloudFormation テンプレートとデプロイスクリプトの作成
 
 ---
 
+## 🚨 IaC作成後のセルフチェック（必須）
+
+**YOU MUST**: IaC作成完了後、PMへの報告前に以下をセルフチェック
+
+### チェック手順
+
+1. **技術標準を読み込む**
+   - CloudFormation: `.claude/docs/40_standards/42_infra/iac/cloudformation.md`
+   - Terraform: `.claude/docs/40_standards/42_infra/iac/terraform.md`
+
+2. **ディレクトリ構造をチェック**
+   - 標準で定義された構造に従っているか
+   - `stacks/`, `templates/`, `parameters/` の分離
+   - ライフサイクル別のスタック分離
+
+3. **パラメータ化をチェック**
+   - 環境名のハードコードがないか
+   - `parameters/` に環境差分が集約されているか
+
+4. **ネストスタック/モジュールをチェック**
+   - 再利用可能な部分が `templates/` に切り出されているか
+   - main.yaml から正しく参照されているか
+
+### セルフチェック結果の報告
+
+```markdown
+## セルフチェック結果
+
+### 技術標準準拠
+- [x] ディレクトリ構造: stacks/templates/parameters 分離済み
+- [x] パラメータ化: 環境差分は parameters/ に集約
+- [x] ネストスタック: templates/ に切り出し済み
+
+### 作成ファイル一覧
+- infra/cloudformation/stacks/01-network/main.yaml
+- infra/cloudformation/templates/network/vpc.yaml
+- infra/cloudformation/parameters/dev.json
+
+### レビュー依頼
+クロスレビュー（Infra-Architect）をお願いします。
+```
+
+**重要**: セルフチェックでNGがあれば、自分で修正してからPMに報告する。
+
+---
+
 ## 🧠 参照すべき知識・ドキュメント
 
 ### 常に参照（必須）

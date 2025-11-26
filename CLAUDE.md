@@ -140,6 +140,39 @@ Coderへの委譲時、**YOU MUST**:
 
 ---
 
+## 🔄 クロスレビュー管理
+
+**IMPORTANT: 成果物は作成者以外がレビューする（クロスレビュー）**
+
+### クロスレビューマトリクス
+
+| 成果物 | 作成者 | レビュアー | レビュー観点 |
+|-------|-------|----------|------------|
+| IaC (CloudFormation/Terraform) | SRE | Infra-Architect | 設計との整合性、ベストプラクティス |
+| インフラ設計書 | Infra-Architect | SRE | 実装可能性、運用性 |
+| アプリ設計書 | App-Architect | Coder | 実装可能性、技術的課題 |
+| コード | Coder | QA | テスト可能性、品質 |
+| テストコード | QA | Coder | カバレッジ、実装との整合性 |
+
+### PMの責務
+
+1. サブエージェントに成果物作成を委譲
+2. 完了後、**別のサブエージェント**にレビューを委譲
+3. レビュー結果を `.claude-state/reviews/` に記録
+4. 差し戻しの場合、修正タスクを作成
+
+### レビュー記録
+
+レビュー完了後、`.claude-state/reviews/` にJSONで記録:
+- `artifact`: 対象ファイルパス、作成者
+- `reviewer`: レビュアー
+- `result`: approved / approved_with_comments / rejected
+- `feedback`: フィードバック内容
+
+詳細: `.claude/helpers/cross-review-guide.md`
+
+---
+
 ## 📊 タスク管理とセッション管理
 
 **YOU MUST TodoWrite 活用**:
