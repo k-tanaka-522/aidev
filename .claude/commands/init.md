@@ -39,21 +39,21 @@
 .claude/helpers/implementation-checker.md               # 実装チェッカー
 \`\`\`
 
-#### 技術標準（プロジェクト開始時は概要のみ、技術選定時に詳細を読み込む）
+#### 技術標準（PMは読まない - サブエージェント専用）
+
+**IMPORTANT: PMは技術標準を一切読みません**
+
 \`\`\`
-# 初期化時は読み込み不要（技術選定時に必要なものを読み込む）
-# 以下は参照用リスト：
-# - .claude/docs/40_standards/41_python.md
-# - .claude/docs/40_standards/42_typescript.md
-# - .claude/docs/40_standards/43_csharp.md
-# - .claude/docs/40_standards/44_go.md
-# - .claude/docs/40_standards/45_cloudformation.md
-# - .claude/docs/40_standards/46_terraform.md
-# - .claude/docs/40_standards/49_security.md (設計フェーズで必須)
+# PMは技術標準を読みません（サブエージェント専用）
+# サブエージェント（Coder, Architect, SRE等）が必要に応じて読み込みます
+#
+# 参考: 技術標準ファイル一覧
+# - .claude/docs/40_standards/41_app/ （アプリケーション標準）
+# - .claude/docs/40_standards/42_infra/ （インフラ標準）
+# - .claude/docs/40_standards/49_common/ （共通標準）
 \`\`\`
 
-**注意**: 技術標準は設計フェーズで技術スタックを選定した後に読み込みます。
-初期化時点では読み込む必要はありません。
+**PMの責務**: 技術的な判断はサブエージェントに委譲し、PMは要件整理とオーケストレーションに専念します。
 
 ### 2. CLAUDE.md の確認とセットアップ
 
@@ -120,7 +120,115 @@
   何を作りたいですか？
   \`\`\`
 
-### 4. 初期化完了メッセージ
+### 4. プロジェクト構造の検出と設定生成
+
+\`.claude/project-structure.json\` の存在を確認：
+
+**存在しない場合（初回 or 既存プロダクト）:**
+
+1. **プロジェクト構造をスキャン**
+
+以下のコマンドでディレクトリを検出：
+
+\`\`\`bash
+# Windowsの場合
+dir /b /ad | findstr /i "^src$ ^app$ ^backend$ ^frontend$ ^infra$ ^infrastructure$ ^tests$ ^test$"
+
+# macOS/Linuxの場合
+find . -maxdepth 1 -type d \( -name "src" -o -name "app" -o -name "backend" -o -name "frontend" -o -name "infra" -o -name "infrastructure" -o -name "tests" -o -name "test" \)
+\`\`\`
+
+設計書ディレクトリの検出：
+\`\`\`bash
+# docs/ 配下をスキャン
+find docs -maxdepth 2 -type d 2>/dev/null | grep -iE "(design|設計|基本設計|詳細設計)"
+\`\`\`
+
+2. **\`.claude/project-structure.json\` を生成**
+
+検出結果に基づいて設定ファイルを生成：
+
+\`\`\`json
+{
+  "detected_at": "{現在時刻}",
+  "pm_policy": {
+    "allow_write": [
+      "docs/requirements/**",
+      "docs/要件定義/**",
+      ".claude-state/**"
+    ],
+    "deny_write": [
+      "{検出されたコードディレクトリ}/**",
+      "{検出されたインフラディレクトリ}/**",
+      "{検出されたテストディレクトリ}/**",
+      "{検出された設計書ディレクトリ}/**",
+      ".claude/docs/40_standards/**"
+    ],
+    "labels": {
+      "{検出されたコードディレクトリ}/**": "Coder",
+      "{検出されたインフラディレクトリ}/**": "Infra-Architect / SRE",
+      "{検出されたテストディレクトリ}/**": "QA",
+      "{検出された設計書ディレクトリ}/**": "App-Architect / Infra-Architect"
+    }
+  }
+}
+\`\`\`
+
+3. **ユーザーに確認**
+
+\`\`\`
+📂 プロジェクト構造を検出しました
+
+検出されたディレクトリ:
+- コード: src/
+- インフラ: infra/
+- テスト: tests/
+- 設計書: docs/design/
+
+PMの編集禁止ディレクトリとして設定します。
+.claude/project-structure.json を生成しました。
+
+内容を確認して、必要に応じて編集してください。
+\`\`\`
+
+**存在する場合:**
+- 既存設定を読み込み
+- 確認メッセージのみ表示:
+  \`\`\`
+  ✅ プロジェクト構造設定を確認しました
+
+  PMの編集禁止ディレクトリ: {deny_write の数}個
+  \`\`\`
+
+**検出されなかった場合:**
+- デフォルト設定で \`.claude/project-structure.json\` を生成
+- aiDev標準のディレクトリ構成を使用:
+  \`\`\`json
+  {
+    "detected_at": "{現在時刻}",
+    "pm_policy": {
+      "allow_write": [
+        "docs/requirements/**",
+        ".claude-state/**"
+      ],
+      "deny_write": [
+        "src/**",
+        "infra/**",
+        "tests/**",
+        "docs/design/**",
+        ".claude/docs/40_standards/**"
+      ],
+      "labels": {
+        "src/**": "Coder",
+        "infra/**": "Infra-Architect / SRE",
+        "tests/**": "QA",
+        "docs/design/**": "App-Architect / Infra-Architect"
+      }
+    }
+  }
+  \`\`\`
+
+### 5. 初期化完了メッセージ
 
 \`\`\`
 ✅ 初期化完了

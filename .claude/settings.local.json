@@ -2,7 +2,6 @@
   "permissions": {
     "allow": [
       "Bash(git log:*)",
-      "Read(//c/dev2/aqua-estimaits/.claude-state/**)",
       "Read(//c/**)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
@@ -23,9 +22,34 @@
       "Bash(git mv:*)",
       "Bash(mv:*)",
       "Bash(tree:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(aws s3api list-buckets:*)",
+      "Bash(aws s3 rb:*)",
+      "Bash(aws s3api list-object-versions:*)",
+      "Bash(python:*)",
+      "Bash(aws s3api delete-objects:*)",
+      "Bash(aws s3api delete-bucket:*)",
+      "Bash(aws s3api put-bucket-versioning:*)",
+      "Bash(aws s3 rm:*)",
+      "Bash(/tmp/delete_bucket.sh:*)",
+      "Bash(aws s3 ls:*)",
+      "Bash(chmod:*)",
+      "Bash(jq:*)"
     ],
     "deny": [],
     "ask": []
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/prevent-pm-layer-violation.sh"
+          }
+        ]
+      }
+    ]
   }
 }
