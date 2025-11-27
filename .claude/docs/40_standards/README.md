@@ -15,7 +15,8 @@ aiDevフレームワークで使用する技術標準を定義しています。
 │
 ├── 42_infra/            # インフラ設計標準
 │   ├── iac/             # Infrastructure as Code標準
-│   └── cicd/            # CI/CD標準
+│   ├── cicd/            # CI/CD標準
+│   └── testing/         # インフラテスト標準
 │
 └── 49_common/           # 共通標準
     └── security.md      # セキュリティ標準
@@ -64,6 +65,12 @@ aiDevフレームワークで使用する技術標準を定義しています。
 | [github_actions.md](42_infra/cicd/github_actions.md) | GitHub Actions | SRE |
 | [cicd-security.md](42_infra/cicd/cicd-security.md) | CI/CDセキュリティ | SRE |
 
+### testing/ - インフラテスト標準
+
+| ファイル | 対象 | 担当エージェント |
+|---------|------|----------------|
+| [infra-test-structure.md](42_infra/testing/infra-test-structure.md) | インフラテスト計画・実施 | QA, SRE |
+
 ## 49_common/ - 共通標準
 
 | ファイル | 対象 | 担当エージェント |
@@ -93,11 +100,13 @@ aiDevフレームワークで使用する技術標準を定義しています。
 - セキュリティ: `49_common/security.md`
 
 **QA（品質保証）**
-- テスト標準: 各言語標準のテストセクション
+- アプリテスト標準: 各言語標準のテストセクション
+- インフラテスト標準: `42_infra/testing/infra-test-structure.md`
 - セキュリティ: `49_common/security.md`
 
 ## 更新履歴
 
+- 2025-11-27: インフラテスト標準を追加
 - 2025-11-09: ディレクトリ構造を再編成（アプリ/インフラ/共通に分離）
 - 2025-11-08: UI/UX標準を追加
 - 2025-11-07: コメント規約を追加
