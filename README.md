@@ -106,56 +106,53 @@ AIが自動的に以下を行います：
 ├── .claude/                    # Claude Code設定
 │   ├── CLAUDE.md              # PM エージェント（メイン）
 │   ├── agents/                # サブエージェント定義
-│   │   ├── ORCHESTRATION_DESIGN.md  # オーケストレーション設計
-│   │   ├── consultant/AGENT.md      # ビジネス分析（企画・要件定義）
-│   │   ├── architect/AGENT.md       # システム設計（設計）
-│   │   ├── coder/AGENT.md           # 実装（実装）
-│   │   ├── qa/AGENT.md              # 品質保証（テスト）
-│   │   └── sre/AGENT.md             # 運用・信頼性（実装・テスト・納品）
-│   ├── commands/              # カスタムコマンド
-│   │   ├── init.md           # /init - プロジェクト初期化（最初に実行）
-│   │   ├── status.md         # /status - プロジェクト状況確認
-│   │   └── next.md           # /next - 次のアクション提案
+│   │   ├── pm/                     # PM補助エージェント
+│   │   │   ├── phase-manager/      # フェーズ管理
+│   │   │   ├── review-coordinator/ # レビュー調整
+│   │   │   ├── state-manager/      # 状態管理
+│   │   │   └── dialog-facilitator/ # 対話ファシリテーション
+│   │   ├── consultant/AGENT.md     # ビジネス分析（企画・要件定義）
+│   │   ├── app-architect/AGENT.md  # アプリ設計
+│   │   ├── infra-architect/AGENT.md # インフラ設計
+│   │   ├── designer/AGENT.md       # UI/UX設計
+│   │   ├── coder/AGENT.md          # 実装
+│   │   ├── qa/AGENT.md             # 品質保証（テスト）
+│   │   └── sre/AGENT.md            # 運用・信頼性
+│   ├── skills/                # スキルカタログ（IPA準拠）
+│   │   ├── INDEX.md           # 48スキル一覧
+│   │   ├── review-requirements/    # 要件レビュースキル
+│   │   ├── review-app-design/      # アプリ設計レビュースキル
+│   │   ├── review-infra-design/    # インフラ設計レビュースキル
+│   │   ├── review-code/            # コードレビュースキル
+│   │   ├── review-iac/             # IaCレビュースキル
+│   │   └── review-test/            # テストレビュースキル
+│   ├── commands/              # カスタムコマンド（/init, /status, /next）
 │   ├── helpers/               # ヘルパードキュメント
-│   │   ├── state-manager.md               # 状態管理方法
-│   │   ├── review-task-generator.md       # レビュータスク生成
-│   │   ├── template-customization-helper.md  # テンプレートカスタマイズ
-│   │   └── directory-structure-helper.md  # ディレクトリ構成決定
 │   └── docs/
-│       ├── 00_core-principles.md          # 核となる行動原則
-│       ├── 10_facilitation/
-│       │   ├── 11_decision-items.md      # フェーズごとの決定項目
-│       │   ├── 15_document-generation-flow.md  # ドキュメント生成フロー
-│       │   ├── 17_secrets-management-flow.md   # シークレット管理フロー
-│       │   └── 18_best-practice-research-flow.md  # ベストプラクティス調査
-│       ├── 30_templates/              # ドキュメントテンプレート
-│       │   ├── 01_planning/          # 企画書テンプレート
-│       │   ├── 02_requirements/      # 要件定義書テンプレート
-│       │   └── 03_design/            # 設計書テンプレート
-│       └── 40_standards/
-│           ├── 41_common.md              # 共通技術標準
-│           ├── 42_infrastructure.md      # インフラ技術標準
-│           └── 45_secrets-management.md  # シークレット管理標準
+│       ├── 00_core-principles.md   # 核となる行動原則
+│       ├── 10_facilitation/        # フェーズ別ファシリテーションガイド
+│       ├── 30_templates/           # ドキュメントテンプレート
+│       └── 40_standards/           # 技術標準
 │
 ├── .claude-state/              # プロジェクト状態（.gitignoreで除外）
-│   ├── project-state.json     # プロジェクト状態
-│   ├── tasks.json             # タスク管理
-│   └── decisions.json         # 決定記録
+│   ├── progress.md            # 進捗状況
+│   ├── decisions.json         # 決定記録
+│   └── context.md             # セッション継続用コンテキスト
 │
 ├── docs/                       # 生成されるドキュメント（ユーザーが読む）
 │   ├── 01_企画書.md
 │   ├── 02_要件定義書.md
-│   ├── 03_基本設計書.md
-│   └── standards/             # プロジェクト固有の規約
-│       ├── アプリケーション/   # アプリ開発規約
-│       └── インフラ/          # インフラ構築規約
+│   ├── 03_設計書.md
+│   ├── 05_ユーザーストーリー.md
+│   ├── 06_フェーズ_エージェント_スキル_マトリクス.md
+│   └── 90_reseach/            # 調査・研究資料
 │
 ├── src/                        # 生成されるコード（アプリの場合）
-│   └── ...
+├── infra/                      # 生成されるインフラコード
+├── tests/                      # テストコード
+├── prototypes/                 # UIプロトタイプ（Designer作成）
 │
-├── infra/                      # 生成されるインフラコード（インフラの場合）
-│   └── ...
-│
+├── CLAUDE.md                   # ルーター（エントリーポイント）
 └── README.md                   # このファイル
 ```
 
@@ -165,15 +162,26 @@ AIが自動的に以下を行います：
 
 aiDev は **PM（プロジェクトマネージャー）** として、専門サブエージェントに作業を委譲します。
 
-#### 5つのコアサブエージェント
+#### 7つのコアサブエージェント
 
 | サブエージェント | 役割 | 使用タイミング |
 |----------------|------|--------------|
 | **consultant** | ビジネス分析・提案 | 企画・要件定義フェーズ |
-| **architect** | システム設計・技術選定 | 設計フェーズ |
+| **app-architect** | アプリ設計・API設計 | 設計フェーズ |
+| **infra-architect** | インフラ設計・AWS構成 | 設計フェーズ |
+| **designer** | UI/UX設計・プロトタイプ | 設計フェーズ |
 | **coder** | コード実装・ユニットテスト | 実装フェーズ |
 | **qa** | テスト設計・実行・品質評価 | テストフェーズ |
-| **sre** | インフラ・デプロイ・性能テスト | 実装・テスト・納品フェーズ |
+| **sre** | インフラ構築・デプロイ・監視 | 実装・テスト・納品フェーズ |
+
+#### PM補助エージェント（内部使用）
+
+| サブエージェント | 役割 |
+|----------------|------|
+| **phase-manager** | フェーズ遷移・進捗管理 |
+| **review-coordinator** | クロスレビュー調整 |
+| **state-manager** | 状態永続化・セッション継続 |
+| **dialog-facilitator** | ヒアリング支援・質問設計 |
 
 #### イテレーティブレビュープロセス
 
