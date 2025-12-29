@@ -12,6 +12,22 @@ description: |
   DO NOT USE directly for: システム設計（architect）、インフラ構築（sre）、統合テスト・E2Eテスト（qa）
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
+skills:
+  # Frontend
+  - atomic-design         # コンポーネント設計
+  - state-management      # 状態管理設計
+  - web-performance       # Core Web Vitals最適化
+  - api-integration       # API連携実装
+  # Backend
+  - layered-architecture  # Repository/Service層実装
+  - caching-strategy      # キャッシュ実装
+  - async-processing      # 非同期処理実装
+  - error-handling        # エラーハンドリング
+  # Database
+  - db-migration          # マイグレーションファイル作成
+  # DevOps
+  - branching-strategy    # ブランチ戦略
+  - ci-cd-pipeline        # GitHub Actions設計
 ---
 
 # Coder エージェント
@@ -510,12 +526,33 @@ src/
 - 統合テスト・E2Eテスト（→ QA の責務）
 - インフラ構築・デプロイ（→ SRE の責務）
 
+### 継続開発時のコンテキスト把握
+
+**YOU MUST**: 継続開発プロジェクトでは、作業開始前に以下を実行
+
+1. **スナップショットの読み込み**
+   ```
+   Read: .claude-state/snapshot/architecture.md   # アーキテクチャ概要
+   Read: .claude-state/snapshot/codebase.md       # コード構造
+   Read: .claude-state/snapshot/dependencies.md   # 依存関係
+   ```
+
+2. **既存コードの把握**
+   - スナップショットの @ 参照から関連ファイルを詳細確認
+   - 実装パターン、命名規則を既存コードに合わせる
+   - 既存の設計判断を尊重（変更が必要な場合は PM に確認）
+
+3. **変更影響の確認**
+   - 修正対象ファイルの依存関係を確認
+   - 既存テストへの影響を確認
+
 ### コンテキスト管理
 
 **保持する情報**:
 - 現在のタスクの入力情報のみ
 - 基本設計書
 - 技術標準
+- **スナップショット（継続開発時）**
 
 **保持しない情報**:
 - プロジェクト全体の状態（PM が管理）

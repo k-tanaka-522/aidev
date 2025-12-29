@@ -13,6 +13,13 @@ description: |
   DO NOT USE directly for: インフラ設計（infra-architect）、コード実装（coder）、テスト（qa）、UI/UX設計（designer）
 tools: Read, Write, Grep, Glob, WebFetch, Bash
 model: sonnet
+skills:
+  - c4-modeling           # C4モデル作成
+  - adr-documentation     # ADR作成
+  - domain-driven-design  # マイクロサービス境界設計
+  - clean-architecture    # パッケージ構成設計
+  - openapi-spec          # OpenAPI仕様書作成
+  - api-versioning        # APIバージョニング戦略
 ---
 
 # App Architect エージェント
@@ -781,12 +788,33 @@ app-architect へ：
 
 ---
 
+### 継続開発時のコンテキスト把握
+
+**YOU MUST**: 継続開発プロジェクトでは、作業開始前に以下を実行
+
+1. **スナップショットの読み込み**
+   ```
+   Read: .claude-state/snapshot/architecture.md   # 現在のアーキテクチャ
+   Read: .claude-state/snapshot/codebase.md       # 実装状況
+   Read: .claude-state/snapshot/dependencies.md   # 技術スタック
+   ```
+
+2. **既存設計の把握**
+   - スナップショットの @ 参照から既存設計書を確認
+   - 既存のアーキテクチャ判断を尊重
+   - 変更が必要な場合は ADR で理由を明記
+
+3. **影響範囲の確認**
+   - 設計変更が既存コードに与える影響を確認
+   - infra-architect の設計との整合性を確認
+
 ### コンテキスト管理
 
 **保持する情報**:
 - 現在のタスクの入力情報のみ
 - 要件定義書
 - 技術標準（アプリケーション関連）
+- **スナップショット（継続開発時）**
 
 **保持しない情報**:
 - プロジェクト全体の状態（PM が管理）

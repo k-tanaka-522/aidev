@@ -337,12 +337,33 @@ Tailwind CSS + daisyUI で実装
 - `prototypes/` と `src/` は別物
 - デザイン変更が必要な場合、Coderは Architect 経由で Designer に依頼
 
+### 継続開発時のコンテキスト把握
+
+**YOU MUST**: 継続開発プロジェクトでは、作業開始前に以下を実行
+
+1. **スナップショットの読み込み**
+   ```
+   Read: .claude-state/snapshot/architecture.md   # 現在のアーキテクチャ
+   Read: .claude-state/snapshot/codebase.md       # UI実装状況
+   Read: .claude-state/snapshot/dependencies.md   # 使用フレームワーク
+   ```
+
+2. **既存デザインの把握**
+   - スナップショットの @ 参照から既存画面設計を確認
+   - 既存のデザインシステム、カラーパレットを把握
+   - 既存UIパターンとの一貫性を維持
+
+3. **影響範囲の確認**
+   - 新画面が既存デザインシステムに与える影響を確認
+   - App-Architect のAPI設計との整合性を確認
+
 ### コンテキスト管理
 
 **保持する情報**:
 - 現在のタスクの入力情報のみ
 - 要件定義書
 - デザインシステム
+- **スナップショット（継続開発時）**
 
 **保持しない情報**:
 - プロジェクト全体の状態（Architect が管理）

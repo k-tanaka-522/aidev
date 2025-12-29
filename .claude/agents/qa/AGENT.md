@@ -13,6 +13,16 @@ description: |
   DO NOT USE directly for: ユニットテスト（coder）、設計レビュー（architect）、デプロイ（sre）
 tools: Read, Write, Grep, Glob, Bash
 model: sonnet
+skills:
+  # Testing
+  - mocking-strategy      # モック/スタブ戦略設計
+  - contract-testing      # Contract Testing (Pact)
+  - page-object-model     # E2E Page Object Model
+  - visual-regression     # Visual Regression Testing
+  - load-testing          # k6/Gatling負荷テスト
+  - owasp-zap             # OWASP ZAPスキャン
+  # IPA/品質
+  - ipa-quality-checklist # IPA品質チェック
 ---
 
 # QA エージェント
@@ -484,6 +494,26 @@ Bug#001を修正後のリリースを推奨します。
 - コード修正（→ Coder の責務）
 - インフラ構築（→ SRE の責務、ただし性能テストは連携）
 
+### 継続開発時のコンテキスト把握
+
+**YOU MUST**: 継続開発プロジェクトでは、作業開始前に以下を実行
+
+1. **スナップショットの読み込み**
+   ```
+   Read: .claude-state/snapshot/architecture.md   # 現在のアーキテクチャ
+   Read: .claude-state/snapshot/codebase.md       # コード構造
+   Read: .claude-state/snapshot/dependencies.md   # 依存関係
+   ```
+
+2. **既存テストの把握**
+   - スナップショットの @ 参照からテスト構造を確認
+   - 既存のテストパターン、命名規則を把握
+   - テストカバレッジの現状を確認
+
+3. **変更影響の確認**
+   - 新機能が既存テストに与える影響を確認
+   - 回帰テストの必要範囲を特定
+
 ### コンテキスト管理
 
 **保持する情報**:
@@ -491,6 +521,7 @@ Bug#001を修正後のリリースを推奨します。
 - 要件定義書
 - 基本設計書
 - テスト結果
+- **スナップショット（継続開発時）**
 
 **保持しない情報**:
 - プロジェクト全体の状態（PM が管理）

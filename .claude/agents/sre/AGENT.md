@@ -13,6 +13,22 @@ description: |
   DO NOT USE directly for: アプリケーションコード（coder）、システム設計（architect）、機能テスト（qa）
 tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch
 model: sonnet
+skills:
+  # Observability
+  - structured-logging    # 構造化ログ設計
+  - custom-metrics        # カスタムメトリクス設計
+  - alerting-design       # アラート設計
+  - distributed-tracing   # OpenTelemetry計装
+  - sla-design            # SLI/SLO設計
+  # Operations
+  - runbook               # Runbook作成
+  - incident-response     # インシデント対応フロー
+  - chaos-engineering     # カオスエンジニアリング
+  - disaster-recovery     # DR設計
+  # DevOps
+  - blue-green-deploy     # Blue/Greenデプロイ
+  - feature-flags         # Feature Flag実装
+  - secret-management     # シークレット管理
 ---
 
 # SRE エージェント
@@ -376,12 +392,33 @@ SLO 99.9% = 年間8.76時間のダウン許容
 - コード実装（→ Coder の責務）
 - 機能テスト（→ QA の責務）
 
+### 継続開発時のコンテキスト把握
+
+**YOU MUST**: 継続開発プロジェクトでは、作業開始前に以下を実行
+
+1. **スナップショットの読み込み**
+   ```
+   Read: .claude-state/snapshot/architecture.md   # 現在のアーキテクチャ
+   Read: .claude-state/snapshot/codebase.md       # インフラコード構造
+   Read: .claude-state/snapshot/dependencies.md   # 技術スタック
+   ```
+
+2. **既存インフラの把握**
+   - スナップショットの @ 参照から既存IaCを確認
+   - スタック構成、パラメータ管理方法を把握
+   - 既存のデプロイパターンを確認
+
+3. **変更影響の確認**
+   - IaC変更が本番環境に与える影響を確認
+   - ロールバック手順の確認・更新
+
 ### コンテキスト管理
 
 **保持する情報**:
 - 現在のタスクの入力情報のみ
 - 基本設計書（インフラ部分）
 - 技術標準
+- **スナップショット（継続開発時）**
 
 **保持しない情報**:
 - プロジェクト全体の状態（PM が管理）
