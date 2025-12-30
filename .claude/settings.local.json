@@ -34,12 +34,60 @@
       "Bash(/tmp/delete_bucket.sh:*)",
       "Bash(aws s3 ls:*)",
       "Bash(chmod:*)",
-      "Bash(jq:*)"
+      "Bash(jq:*)",
+      "Bash(xargs ls:*)",
+      "Bash(move \"c:\\dev2\\aiDev\\.claude\\docs\\00_appendix\\ipa-mapping.md\" \"c:\\dev2\\aiDev\\docs\"\")",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: CLAUDE.mdの構造改善とエージェント間整合確認の追加\n\n- CLAUDE.mdにフェーズマップを追加（全7フェーズ、エージェント割り振り明示）\n- 設計フェーズの詳細プロセス追加（Designer含む）\n- フェーズの柔軟な組み替えを明示\n- 要件定義中の随時サブエージェント確認を追加\n- 認識齟齬チェック（PM/App-Arch/Infra-Arch/Designer間）を追加\n- 各AGENT.mdに「設計完了時の整合確認」セクション追加\n- クロスレビューマトリクスにDesigner追加\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: ユーザー変更要望時のフェーズ戻り対応を追加\n\n機能追加・修正要望があった場合、必要なフェーズに戻って\n成果物を順に更新する計画を立てる原則を明記。\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(dir /s /b \"C:\\\\dev2\\\\calcryptBSC\\\\docs\")",
+      "Bash(dir /s /b \"C:\\\\dev2\\\\aiDev\\\\.claude\\\\docs\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: CLAUDE.md軽量化とPMサブエージェント分割\n\n- CLAUDE.md を396行→81行に軽量化（ルーター特化）\n- PMの機能を4つのサブエージェントに分割:\n  - phase-manager: フェーズ判断・遷移管理\n  - review-coordinator: レビュー調整・集約\n  - state-manager: 状態管理・セッション継続\n  - dialog-facilitator: ユーザー対話支援\n- 公式ドキュメントに従いフラット構造を採用\n- 各AGENT.mdにYAML frontmatter追加\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(powershell -Command:*)",
+      "Bash(pip install:*)",
+      "Bash(cd:*)",
+      "Bash(docker system:*)",
+      "Bash(docker images:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker volume:*)",
+      "Bash(docker builder prune:*)",
+      "Bash(wsl --list:*)",
+      "Bash(wsl --shutdown)",
+      "Bash(cmd.exe /c \"dir /s /b %LOCALAPPDATA%\\\\Docker\\\\wsl\\\\*.vhdx 2>nul\")",
+      "Bash(cmd.exe /c \"dir /s /b %LOCALAPPDATA%\\\\Docker\\\\wsl\\\\data\\\\*.vhdx 2>nul & dir /s /b %USERPROFILE%\\\\AppData\\\\Local\\\\Docker\\\\wsl\\\\*.vhdx 2>nul\")",
+      "Bash(cmd.exe /c \"where /r %LOCALAPPDATA% ext4.vhdx 2>nul || echo Not found in LOCALAPPDATA\")",
+      "Bash(cmd.exe /c \"dir /s /b C:\\\\Users\\\\*ext4.vhdx 2>nul\")",
+      "Bash(cmd.exe /c \"reg query HKCU\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Lxss /s 2>nul | findstr BasePath\")",
+      "Bash(cmd.exe /c \"dir /s /a C:\\\\ProgramData\\\\Docker\\\\*.vhdx 2>nul\")",
+      "Bash(cmd.exe /c \"echo %LOCALAPPDATA% && dir \"\"%LOCALAPPDATA%\\\\Docker\"\" 2>nul\")",
+      "Bash(cmd.exe /c \"dir /s /b %APPDATA%\\\\Docker\\\\*.vhdx 2>nul & echo. & dir /s /b %USERPROFILE%\\\\.docker\\\\*.vhdx 2>nul\")",
+      "Bash(powershell.exe:*)",
+      "Bash(wmic logicaldisk:*)",
+      "Bash(dir /s /a \"%TEMP%\")",
+      "Bash(dir /s /a \"%LOCALAPPDATA%\\\\npm-cache\")",
+      "Bash(cmd.exe /c \"for /f \"\"tokens=1-3\"\" %a in \\(''wmic logicaldisk get size,freespace,caption ^| findstr C:''\\) do @echo Free: %b bytes, Total: %c bytes\")",
+      "Bash(cmd.exe /c \"dir /s /a \"\"%TEMP%\"\" 2>nul\")",
+      "Bash(cmd.exe /c \"dir /s /a \"\"%USERPROFILE%\\\\.npm\"\" 2>nul\")",
+      "Bash(cmd.exe /c \"dir /s /a \"\"%LOCALAPPDATA%\\\\npm-cache\"\" 2>nul\")",
+      "Bash(cmd.exe /c \"dir /s /a \"\"%USERPROFILE%\\\\.cache\"\" 2>nul\")",
+      "Bash(npm cache clean:*)",
+      "Bash(powershell.exe -Command \"Remove-Item -Path ''$env:TEMP\\\\*'' -Recurse -Force -ErrorAction SilentlyContinue; Write-Host ''Temp folder cleaned''\")",
+      "Bash(powershell.exe -Command \"$drive = Get-PSDrive C; $freeGB = [math]::Round\\($drive.Free/1GB, 2\\); Write-Host \"\"C: 空き容量: $freeGB GB\"\"\")",
+      "Bash(cmd.exe /c \"echo %TEMP%\")",
+      "Bash(echo:*)",
+      "Bash(printenv:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": ".claude/hooks/restore-session-context.sh"
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write",
@@ -47,6 +95,17 @@
           {
             "type": "command",
             "command": ".claude/hooks/prevent-pm-layer-violation.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/update-snapshot.sh"
           }
         ]
       }

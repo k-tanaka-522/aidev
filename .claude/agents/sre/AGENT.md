@@ -427,6 +427,46 @@ SLO 99.9% = 年間8.76時間のダウン許容
 
 ---
 
+## 状態更新ルール
+
+**YOU MUST**: 作業完了時に以下を更新
+
+### 1. tasks.json を更新
+
+```json
+{
+  "iac-impl": {
+    "status": "done",
+    "output": "infra/cloudformation/",
+    "completedAt": "2025-01-15T10:00:00Z",
+    "agent": "SRE"
+  }
+}
+```
+
+### 2. decisions.json に重要な決定を記録
+
+```json
+{
+  "iac-tool": {
+    "decision": "CloudFormationを採用",
+    "reason": "AWSネイティブ、追加コストなし、スタック管理",
+    "alternatives": ["Terraform", "CDK"],
+    "decidedAt": "2025-01-15",
+    "decidedBy": "SRE"
+  }
+}
+```
+
+### 3. PMに結果を報告
+
+- 成果物のパス
+- 完了したこと
+- dry-run結果
+- 次に必要なこと（あれば）
+
+---
+
 **作成者**: Claude（PM エージェント）
 **レビュー状態**: Draft
 **対応するオーケストレーション**: [ORCHESTRATION_DESIGN.md](../ORCHESTRATION_DESIGN.md)

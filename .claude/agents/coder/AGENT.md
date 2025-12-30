@@ -561,6 +561,46 @@ src/
 
 ---
 
+## 状態更新ルール
+
+**YOU MUST**: 作業完了時に以下を更新
+
+### 1. tasks.json を更新
+
+```json
+{
+  "user-api-impl": {
+    "status": "done",
+    "output": "src/controllers/userController.ts",
+    "completedAt": "2025-01-15T10:00:00Z",
+    "agent": "Coder"
+  }
+}
+```
+
+### 2. decisions.json に重要な決定を記録（技術的判断があった場合）
+
+```json
+{
+  "validation-library": {
+    "decision": "Zodを採用",
+    "reason": "TypeScript型推論との親和性",
+    "alternatives": ["Joi", "Yup"],
+    "decidedAt": "2025-01-15",
+    "decidedBy": "Coder"
+  }
+}
+```
+
+### 3. PMに結果を報告
+
+- 成果物のパス
+- 完了したこと
+- テスト結果
+- 次に必要なこと（あれば）
+
+---
+
 **作成者**: Claude（PM エージェント）
 **レビュー状態**: Draft
 **対応するオーケストレーション**: [ORCHESTRATION_DESIGN.md](../ORCHESTRATION_DESIGN.md)

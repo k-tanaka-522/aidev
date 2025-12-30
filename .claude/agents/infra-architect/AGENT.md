@@ -971,6 +971,45 @@ infra-architect へ：
 
 ---
 
+## 状態更新ルール
+
+**YOU MUST**: 作業完了時に以下を更新
+
+### 1. tasks.json を更新
+
+```json
+{
+  "infra-design": {
+    "status": "done",
+    "output": "docs/04_インフラ設計/",
+    "completedAt": "2025-01-15T10:00:00Z",
+    "agent": "Architect"
+  }
+}
+```
+
+### 2. decisions.json に重要な決定を記録
+
+```json
+{
+  "db-selection": {
+    "decision": "Aurora PostgreSQLを採用",
+    "reason": "高可用性、自動スケーリング、PostgreSQL互換",
+    "alternatives": ["RDS PostgreSQL", "DynamoDB"],
+    "decidedAt": "2025-01-15",
+    "decidedBy": "Architect"
+  }
+}
+```
+
+### 3. PMに結果を報告
+
+- 成果物のパス
+- 完了したこと
+- 次に必要なこと（あれば）
+
+---
+
 **作成者**: Claude（PM エージェント）
 **レビュー状態**: Draft
 **対応するオーケストレーション**: [ORCHESTRATION_DESIGN.md](../ORCHESTRATION_DESIGN.md)

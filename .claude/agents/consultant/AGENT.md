@@ -344,6 +344,45 @@ Why分析（5回繰り返す）
 
 ---
 
+## 状態更新ルール
+
+**YOU MUST**: 作業完了時に以下を更新
+
+### 1. tasks.json を更新
+
+```json
+{
+  "task-id": {
+    "status": "done",
+    "output": "docs/01_企画/企画書.md",
+    "completedAt": "2025-01-15T10:00:00Z",
+    "agent": "Consultant"
+  }
+}
+```
+
+### 2. decisions.json に重要な決定を記録
+
+```json
+{
+  "business-model": {
+    "decision": "SaaSモデルを採用",
+    "reason": "スケーラビリティとリカーリング収益のため",
+    "alternatives": ["パッケージ販売", "コンサル型"],
+    "decidedAt": "2025-01-15",
+    "decidedBy": "Consultant"
+  }
+}
+```
+
+### 3. PMに結果を報告
+
+- 成果物のパス
+- 完了したこと
+- 次に必要なこと（あれば）
+
+---
+
 **作成者**: Claude（PM エージェント）
 **レビュー状態**: Draft
 **対応するオーケストレーション**: [ORCHESTRATION_DESIGN.md](../ORCHESTRATION_DESIGN.md)

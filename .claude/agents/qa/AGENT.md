@@ -529,6 +529,46 @@ Bug#001を修正後のリリースを推奨します。
 
 ---
 
+## 状態更新ルール
+
+**YOU MUST**: 作業完了時に以下を更新
+
+### 1. tasks.json を更新
+
+```json
+{
+  "e2e-test": {
+    "status": "done",
+    "output": "tests/e2e/",
+    "completedAt": "2025-01-15T10:00:00Z",
+    "agent": "QA"
+  }
+}
+```
+
+### 2. decisions.json に重要な決定を記録（テスト戦略の判断があった場合）
+
+```json
+{
+  "e2e-framework": {
+    "decision": "Playwrightを採用",
+    "reason": "クロスブラウザ対応、並列実行、自動待機",
+    "alternatives": ["Cypress", "Selenium"],
+    "decidedAt": "2025-01-15",
+    "decidedBy": "QA"
+  }
+}
+```
+
+### 3. PMに結果を報告
+
+- 成果物のパス
+- 完了したこと
+- テスト結果サマリ
+- 次に必要なこと（あれば）
+
+---
+
 **作成者**: Claude（PM エージェント）
 **レビュー状態**: Draft
 **対応するオーケストレーション**: [ORCHESTRATION_DESIGN.md](../ORCHESTRATION_DESIGN.md)

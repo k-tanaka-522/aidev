@@ -55,3 +55,75 @@ CI/CD戦略をヒアリングして決定する
 - **最優先のもの**を選ぶ
 - **具体的**に記述する
 - **理由**を明確に説明する
+
+---
+
+## タスク実行フロー
+
+```
+1. PM: tasks.json 確認 → 次タスク特定
+     ↓
+2. PM: サブエージェントに委譲
+     （例: Architect + c4-modeling スキル）
+     ↓
+3. サブエージェント: 作業実行
+     ↓
+4. サブエージェント: tasks.json 更新
+     - status: "done" or "review"
+     - output: ファイルパス
+     - completedAt: 日時
+     ↓
+5. サブエージェント: PM に報告
+     ↓
+6. PM: ユーザーに結果報告
+```
+
+---
+
+## 状態更新（重要）
+
+タスク完了時、サブエージェントは必ず以下を更新：
+
+**tasks.json:**
+```json
+{
+  "task-id": {
+    "status": "done",
+    "output": "docs/03_設計/xxx.md",
+    "completedAt": "2025-01-15T10:00:00Z",
+    "agent": "Architect"
+  }
+}
+```
+
+**decisions.json（重要な決定があった場合）:**
+```json
+{
+  "decision-id": {
+    "decision": "何を決めたか",
+    "reason": "なぜそう決めたか",
+    "alternatives": ["検討した代替案"],
+    "decidedAt": "2025-01-15",
+    "decidedBy": "Architect"
+  }
+}
+```
+
+---
+
+## 修正フロー
+
+ユーザーから修正依頼があった場合：
+
+```
+1. PM: tasks.json の status を "revision" に
+     ↓
+2. PM: 同じサブエージェントに修正依頼
+     （フィードバック内容を伝える）
+     ↓
+3. サブエージェント: 修正実行
+     ↓
+4. サブエージェント: tasks.json 更新 (status: "review")
+     ↓
+5. PM: ユーザーに再確認
+```

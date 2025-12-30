@@ -62,7 +62,7 @@ git clone https://github.com/k-tanaka-522/aidev.git .aidev-temp
 # .claude/ ディレクトリをコピー
 cp -r .aidev-temp/.claude .
 
-# CLAUDE.md をルートにコピー（Claude Codeのエントリーポイント）
+# CLAUDE.md をルートにコピー（ルーター）
 cp .aidev-temp/CLAUDE.md CLAUDE.md
 
 # .gitignore をマージ（既存の.gitignoreがある場合は手動で調整）
