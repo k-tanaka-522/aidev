@@ -1,0 +1,949 @@
+<!-- このファイルは Claude Artifact として公開されるため、doctype/html/head/body タグを持たない -->
+<title>aiDev v2 プロセス設計</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@400;500;600;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+
+<style>
+  :root {
+    /* ライト（既定） */
+    --ground:      #F7F7F5;
+    --surface:     #FFFFFF;
+    --ink:         #1A2332;
+    --ink-muted:   #5A6472;
+    --rule:        #D8DAD6;
+    --vermilion:   #C0392B;
+    --slate:       #46687F;
+
+    --font-mincho: "Zen Old Mincho", "Yu Mincho", "Hiragino Mincho ProN", serif;
+    --font-gothic: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+    --font-mono:   "JetBrains Mono", "SFMono-Regular", Consolas, "Courier New", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #15191F;
+      --surface:     #1C2229;
+      --ink:         #E4E6E3;
+      --ink-muted:   #98A0AB;
+      --rule:        #2E3640;
+      --vermilion:   #E2685A;
+      --slate:       #7FA3BC;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #15191F;
+    --surface:     #1C2229;
+    --ink:         #E4E6E3;
+    --ink-muted:   #98A0AB;
+    --rule:        #2E3640;
+    --vermilion:   #E2685A;
+    --slate:       #7FA3BC;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-gothic);
+    font-size: 16px;
+    line-height: 1.9;
+    padding-inline: 16px;
+    padding-block: 40px 80px;
+    margin: 0;
+  }
+
+  .page {
+    max-width: 880px;
+    margin-inline: auto;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-mincho);
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
+  p, li { max-width: 40em; }
+
+  h1 { font-size: clamp(1.6rem, 5vw, 2.3rem); margin: 0 0 0.3em; letter-spacing: 0.02em; }
+  h2 {
+    font-size: clamp(1.25rem, 4vw, 1.5rem);
+    margin-top: 3.2rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  h3 { font-size: 1.12rem; margin-top: 2rem; margin-bottom: 0.7rem; }
+  h4 { font-family: var(--font-gothic); font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.5rem; color: var(--ink-muted); }
+
+  p { margin: 0.9em 0; }
+  ul, ol { padding-left: 1.4em; margin: 0.9em 0; }
+  li { margin: 0.35em 0; }
+
+  a { color: var(--slate); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+  .kicker {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+  }
+
+  header.masthead {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 1.4rem;
+    margin-bottom: 1rem;
+  }
+  header.masthead .lede {
+    font-size: 1.02rem;
+    color: var(--ink-muted);
+    max-width: 42em;
+    margin-top: 0.6rem;
+  }
+  .doc-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3em 1.4em;
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--ink-muted);
+    margin-top: 1.1rem;
+  }
+  .doc-meta span b { color: var(--ink); font-weight: 600; }
+
+  nav.toc {
+    margin: 1.8rem 0 2.6rem;
+    padding: 1rem 1.2rem;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: var(--surface);
+  }
+  nav.toc .kicker { display: block; margin-bottom: 0.6rem; }
+  nav.toc ol {
+    columns: 2;
+    column-gap: 1.6rem;
+    padding-left: 1.1em;
+    font-size: 0.88rem;
+    margin: 0;
+  }
+  nav.toc li { margin: 0.25em 0; break-inside: avoid; }
+  @media (max-width: 520px) { nav.toc ol { columns: 1; } }
+
+  /* コード的 ID チップ */
+  code.id {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 0.05em 0.4em;
+    border-radius: 3px;
+    color: var(--ink);
+  }
+  code.id.gate {
+    color: var(--vermilion);
+    border-color: var(--vermilion);
+    font-weight: 600;
+  }
+
+  /* 朱印風バッジ：ゲート・承認・HOLD専用 */
+  .hanko {
+    display: inline-block;
+    font-family: var(--font-mincho);
+    font-weight: 700;
+    font-size: 0.82em;
+    color: var(--vermilion);
+    border: 2px solid var(--vermilion);
+    border-radius: 3px;
+    padding: 0.05em 0.5em;
+    transform: rotate(-2deg);
+    line-height: 1.4;
+  }
+
+  /* 中核主張ボックス — この文書で唯一持ち上げる要素 */
+  .thesis-box {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--ink);
+    border-radius: 2px;
+    padding: 1.6rem 1.8rem;
+    margin: 1.6rem 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  }
+  .thesis-box p { margin: 0.7em 0; }
+  .thesis-box .lead {
+    font-family: var(--font-mincho);
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.8;
+  }
+
+  /* テーブル */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 1.3rem 0;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 520px;
+    font-size: 0.87rem;
+  }
+  caption {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+    padding: 0.5rem 0.9rem 0;
+  }
+  th, td {
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid var(--rule);
+    text-align: left;
+    vertical-align: top;
+  }
+  thead th {
+    background: var(--ground);
+    font-family: var(--font-mincho);
+    font-weight: 700;
+    border-bottom: 2px solid var(--ink);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: color-mix(in srgb, var(--slate) 6%, transparent); }
+  td.narrow { white-space: nowrap; }
+
+  /* 図 */
+  figure { margin: 1.6rem 0; }
+  figure figcaption {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--ink-muted);
+    margin-top: 0.6rem;
+    line-height: 1.6;
+  }
+  .diagram-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: var(--surface);
+    padding: 1rem 0.6rem;
+  }
+  .diagram-wrap svg { display: block; margin: 0 auto; height: auto; }
+  .diagram-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.6rem;
+    font-size: 0.78rem;
+    color: var(--ink-muted);
+    padding: 0.7rem 1rem 0.2rem;
+  }
+  .diagram-legend .swatch {
+    display: inline-block;
+    width: 1.6em;
+    border-top: 2px solid var(--ink);
+    vertical-align: middle;
+    margin-right: 0.4em;
+  }
+  .diagram-legend .swatch.dashed { border-top-style: dashed; border-top-color: var(--slate); }
+
+  .svg-mono   { font-family: var(--font-mono); }
+  .svg-mincho { font-family: var(--font-mincho); }
+  .svg-gothic { font-family: var(--font-gothic); }
+
+  /* 二穴セクション */
+  .hole {
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1.2rem 1.4rem 1.4rem;
+    margin: 1.4rem 0 2rem;
+  }
+  .hole h3 { margin-top: 0; display: flex; align-items: baseline; gap: 0.6em; }
+  .hole .hole-num {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+  }
+
+  /* 3段構え */
+  .tiers { display: flex; flex-direction: column; gap: 0.9rem; margin: 1.3rem 0; }
+  .tier {
+    display: grid;
+    grid-template-columns: 3.4em 1fr;
+    gap: 0.9rem;
+    align-items: start;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: var(--surface);
+  }
+  .tier .tier-num {
+    font-family: var(--font-mono);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+    line-height: 1.2;
+  }
+  .tier.tier-block .tier-num { color: var(--vermilion); }
+  .tier h4 { margin: 0 0 0.4em; color: var(--ink); font-size: 1rem; }
+  .tier p { margin: 0.3em 0; font-size: 0.92rem; }
+  .tier .tier-tag {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+  }
+
+  blockquote {
+    margin: 1.3rem 0;
+    padding: 0.2rem 0 0.2rem 1.1rem;
+    border-left: 3px solid var(--slate);
+    color: var(--ink-muted);
+    font-size: 0.95rem;
+  }
+
+  hr.section-rule {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 3rem 0;
+  }
+
+  footer.colophon {
+    margin-top: 4rem;
+    padding-top: 1.4rem;
+    border-top: 2px solid var(--ink);
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--ink-muted);
+    line-height: 1.8;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; scroll-behavior: auto !important; }
+  }
+
+  @media (max-width: 480px) {
+    .hole { padding: 1rem; }
+    .thesis-box { padding: 1.2rem 1.2rem; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <span class="kicker">Framework Redesign Proposal — Process &amp; Execution Architecture</span>
+    <h1>aiDev v2 プロセス設計</h1>
+    <p class="lede">
+      「要件を固めてから作る」から「ハリボテで会話しながら作り、ローンチ時に実物と一致した文書を逆生成する」へ。
+      aiDev フレームワーク v2 の全体計画を1枚にまとめる。
+    </p>
+    <div class="doc-meta">
+      <span><b>V2-01</b> プロセス定義書 / 版数1.2 / 作成 Consultant</span>
+      <span><b>V2-02</b> 実行基盤アーキテクチャ / 版数1.3 / 作成 App-Architect</span>
+      <span>準拠規格: <b>IPA共通フレーム2013</b></span>
+      <span>作成日: <b>2026-09-10</b></span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <span class="kicker">目次</span>
+    <ol>
+      <li><a href="#intro">導入</a></li>
+      <li><a href="#thesis">中核主張</a></li>
+      <li><a href="#zones">Zone 0〜4 のプロセスモデル</a></li>
+      <li><a href="#lanes">Zone 1の3レーン並行</a></li>
+      <li><a href="#holes">2つの穴とその塞ぎ方</a></li>
+      <li><a href="#decisionlog">決定ログの3段構え</a></li>
+      <li><a href="#review">AIレビュー文化</a></li>
+      <li><a href="#ipa">IPA共通フレーム準拠の論理</a></li>
+      <li><a href="#modeb">Mode B（チケット駆動）</a></li>
+      <li><a href="#infra">実行基盤の要点</a></li>
+      <li><a href="#migration">v1 → v2 移行計画</a></li>
+      <li><a href="#risks">残課題</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================ -->
+  <section id="intro">
+    <h2>導入</h2>
+    <p>
+      aiDev v1 は「PMがオーケストレーションに専念し、サブエージェントが成果物を作る」という層分離の発想自体は正しかった。
+      問題はその発想を実現する手段にあった。<code class="id">.claude/docs/10_facilitation/</code> 配下だけで
+      100件超のMarkdownがあり、<code class="id">CLAUDE.md</code>（338行）はサブエージェントに「参照すること」を
+      指示する自然文でプロセスを実現していた。長い会話が続けばコンテキストは希釈され、実際に参照されたかを
+      検証する手段もない。ロール強制・レビュー結果の集約もすべて自己申告のテキストに依存していた。
+    </p>
+    <div class="table-wrap">
+      <table>
+        <caption>01_プロセス定義書 2.1節より抜粋</caption>
+        <thead><tr><th>v1の問題点（事実）</th><th>v2の対処</th></tr></thead>
+        <tbody>
+          <tr><td>「読ませる」方式の限界。参照されたか検証する手段がない</td><td>プロセス定義を集約し、強制力を要する部分は機構（権限・hooks）に委ねる</td></tr>
+          <tr><td>ロール強制がプロンプト依存の自己申告的規範</td><td>作成者と判定者の分離をMUST要件とし、Gate判定を作成主体から独立させる</td></tr>
+          <tr><td>レビューが自己申告。合格率をPMが転記するだけになりうる</td><td>判定者が分母・分子を自ら数える。合格率のみの報告は受理しない</td></tr>
+          <tr><td>運用フェーズが未定義。稼働後の改修プロセスがない</td><td>Mode B（チケット駆動アジャイル）を新設し、影響範囲分析を入口ゲートに</td></tr>
+          <tr><td>IPA準拠が「高対応/部分対応/参考」の曖昧な3値評価</td><td>「準拠する／意図的に差分をつける」の二値評価とし、差分は理由必須</td></tr>
+          <tr><td>「要件を固めてから作る」前提そのものが非効率</td><td>ハリボテ駆動＋ローンチ時リバース方式へプロセスを再設計</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      層分離の発想、ビジネス背景優先の対話原則、本番環境への直接操作禁止といったv1の判断は維持する。
+      変えるのは「発想を実現する手段」と「確定順序の前提」である。
+    </p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="thesis">
+    <h2>中核主張</h2>
+    <div class="thesis-box">
+      <p class="lead">
+        AI駆動開発においては、動くもの（ハリボテ・プロトタイプ）を作るコストが人間主体の開発より劇的に低い。
+        したがって机上で要件・設計を固めてから作るより、先に動くものを出してそれを見ながら合意形成するほうが
+        速く、かつ認識齟齬を早期に検出できる。
+      </p>
+      <p>
+        IPA標準成果物（要件定義書・基本設計書・詳細設計書等）は放棄しない。放棄するのは
+        「先に文書を書いてから作る」という順序であり、成果物そのものではない。動くプロダクトと決定ログから、
+        ローンチ時（Zone 3）にas-builtで同等の成果物を逆生成する。
+      </p>
+      <p>
+        従来型（要件定義書を先に書いてから実装する方式）は、実装が要件からずれても文書が追随せず、
+        「作文としての要件定義書」になりがちである。本方式は逆に<b>要件定義書を実物から生成する</b>ため、
+        生成された文書と実物が乖離することが構造的に起こりえない。すなわち
+        「実物と一致することが保証された要件定義」になる。
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="zones">
+    <h2>Zone 0〜4 のプロセスモデル</h2>
+    <p>
+      Mode A（0→1開発）は、Zone 0（不可逆決定）→ Zone 1（探索・収束ループ）→ Zone 2（実装・硬化）→
+      Zone 3（ローンチ時リバース）の順に進む。初回本番リリース後はZone 4（= Mode B、チケット駆動アジャイル）
+      へ切り替わる。従来型のフェーズゲート型とは異なり、<b>ゾーン間の戻りは異常ではなく正常系</b>として
+      組み込まれている点が最大の特徴である。
+    </p>
+
+    <figure>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 960 250" role="img" aria-label="Zone0からZone4への遷移と、Zone2・Zone3・Mode Bからの正常系の差し戻しを示す図" style="min-width:760px;width:100%;">
+          <defs>
+            <marker id="arrInk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"></path>
+            </marker>
+            <marker id="arrSlate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--slate)"></path>
+            </marker>
+          </defs>
+
+          <!-- Zone boxes -->
+          <g>
+            <rect x="10" y="20" width="140" height="80" rx="3" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.3"></rect>
+            <text x="80" y="44" text-anchor="middle" class="svg-mono" font-size="11" fill="var(--ink-muted)">Zone 0</text>
+            <text x="80" y="64" text-anchor="middle" class="svg-mincho" font-size="14" font-weight="700" fill="var(--ink)">不可逆決定</text>
+            <text x="80" y="82" text-anchor="middle" class="svg-gothic" font-size="10" fill="var(--ink-muted)">Fix First</text>
+          </g>
+
+          <g>
+            <rect x="190" y="20" width="230" height="80" rx="3" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.8"></rect>
+            <text x="305" y="40" text-anchor="middle" class="svg-mono" font-size="11" fill="var(--ink-muted)">Zone 1 ★中核</text>
+            <text x="305" y="60" text-anchor="middle" class="svg-mincho" font-size="14" font-weight="700" fill="var(--ink)">探索・収束ループ</text>
+            <text x="305" y="77" text-anchor="middle" class="svg-gothic" font-size="10" fill="var(--ink-muted)">3レーン並行 + 同期点</text>
+            <text x="305" y="91" text-anchor="middle" class="svg-gothic" font-size="9" fill="var(--ink-muted)">（レーン内反復は日常・無番号）</text>
+          </g>
+
+          <g>
+            <rect x="450" y="20" width="140" height="80" rx="3" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.3"></rect>
+            <text x="520" y="44" text-anchor="middle" class="svg-mono" font-size="11" fill="var(--ink-muted)">Zone 2</text>
+            <text x="520" y="64" text-anchor="middle" class="svg-mincho" font-size="14" font-weight="700" fill="var(--ink)">実装・硬化</text>
+            <text x="520" y="82" text-anchor="middle" class="svg-gothic" font-size="10" fill="var(--ink-muted)">コードが正になる</text>
+          </g>
+
+          <g>
+            <rect x="630" y="20" width="140" height="80" rx="3" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.3"></rect>
+            <text x="700" y="44" text-anchor="middle" class="svg-mono" font-size="11" fill="var(--ink-muted)">Zone 3</text>
+            <text x="700" y="64" text-anchor="middle" class="svg-mincho" font-size="14" font-weight="700" fill="var(--ink)">ローンチ時</text>
+            <text x="700" y="80" text-anchor="middle" class="svg-mincho" font-size="14" font-weight="700" fill="var(--ink)">リバース</text>
+          </g>
+
+          <g>
+            <rect x="810" y="20" width="140" height="80" rx="3" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.3"></rect>
+            <text x="880" y="44" text-anchor="middle" class="svg-mono" font-size="11" fill="var(--ink-muted)">Zone 4</text>
+            <text x="880" y="64" text-anchor="middle" class="svg-mincho" font-size="14" font-weight="700" fill="var(--ink)">Mode B</text>
+            <text x="880" y="82" text-anchor="middle" class="svg-gothic" font-size="10" fill="var(--ink-muted)">チケット駆動</text>
+          </g>
+
+          <!-- forward connectors -->
+          <line x1="150" y1="60" x2="188" y2="60" stroke="var(--ink)" stroke-width="1.6" marker-end="url(#arrInk)"></line>
+          <line x1="420" y1="60" x2="448" y2="60" stroke="var(--ink)" stroke-width="1.6" marker-end="url(#arrInk)"></line>
+          <line x1="590" y1="60" x2="628" y2="60" stroke="var(--ink)" stroke-width="1.6" marker-end="url(#arrInk)"></line>
+          <line x1="770" y1="60" x2="808" y2="60" stroke="var(--ink)" stroke-width="1.6" marker-end="url(#arrInk)"></line>
+
+          <!-- gate stamps -->
+          <g transform="rotate(-4 169 45)">
+            <rect x="150" y="32" width="38" height="20" rx="2" fill="var(--surface)" stroke="var(--vermilion)" stroke-width="1.5"></rect>
+            <text x="169" y="46" text-anchor="middle" class="svg-mono" font-size="11" font-weight="700" fill="var(--vermilion)">GZ0</text>
+          </g>
+          <text x="434" y="43" text-anchor="middle" class="svg-gothic" font-size="9" fill="var(--ink-muted)">機能単位で収束</text>
+          <text x="434" y="53" text-anchor="middle" class="svg-gothic" font-size="9" fill="var(--ink-muted)">（無番号）</text>
+          <g transform="rotate(-4 609 45)">
+            <rect x="590" y="32" width="38" height="20" rx="2" fill="var(--surface)" stroke="var(--vermilion)" stroke-width="1.5"></rect>
+            <text x="609" y="46" text-anchor="middle" class="svg-mono" font-size="11" font-weight="700" fill="var(--vermilion)">GZ2</text>
+          </g>
+          <g transform="rotate(-4 789 45)">
+            <rect x="770" y="32" width="38" height="20" rx="2" fill="var(--surface)" stroke="var(--vermilion)" stroke-width="1.5"></rect>
+            <text x="789" y="46" text-anchor="middle" class="svg-mono" font-size="11" font-weight="700" fill="var(--vermilion)">GZ3</text>
+          </g>
+
+          <!-- return arrows (dashed) -->
+          <path d="M520,100 L520,133 L262,133 L262,100" fill="none" stroke="var(--slate)" stroke-width="1.3" stroke-dasharray="5 4" marker-end="url(#arrSlate)"></path>
+          <text x="392" y="128" text-anchor="middle" class="svg-gothic" font-size="9.5" fill="var(--ink-muted)">実装判明事項による差し戻し（Zone2→1・4.8節）</text>
+
+          <path d="M700,100 L700,166 L300,166 L300,100" fill="none" stroke="var(--slate)" stroke-width="1.3" stroke-dasharray="5 4" marker-end="url(#arrSlate)"></path>
+          <text x="500" y="161" text-anchor="middle" class="svg-gothic" font-size="9.5" fill="var(--ink-muted)">設計不整合の発覚（Zone3→1・要注意）</text>
+
+          <path d="M880,100 L880,199 L340,199 L340,100" fill="none" stroke="var(--slate)" stroke-width="1.3" stroke-dasharray="5 4" marker-end="url(#arrSlate)"></path>
+          <text x="610" y="194" text-anchor="middle" class="svg-gothic" font-size="9.5" fill="var(--ink-muted)">大型機能の退避（Mode B→Zone1・3.4節）</text>
+
+          <text x="10" y="230" class="svg-gothic" font-size="10" fill="var(--ink-muted)">実線 = 順方向の遷移／ゲート　　破線 = 正常系としての差し戻し（矢印は slate 色で区別）</text>
+        </svg>
+      </div>
+      <figcaption>Zone0→1はGZ0、Zone2→3はGZ2、Zone3→4はGZ3のゾーンゲート（朱）で判定する。Zone1⇄2の機能単位往復とZone1内の同期点は無番号のミニゲートであり、差し戻しカウントの対象外とする（10.2節）。</figcaption>
+    </figure>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Zone</th><th>目的</th><th>主な成果物</th><th>ゲート</th><th>主担当</th></tr></thead>
+        <tbody>
+          <tr><td>Zone 0</td><td>手戻りコストが非線形に跳ねる事項だけを前倒しで確定</td><td>決定ログ（Decision Log）</td><td><span class="hanko">GZ0</span> ユーザー承認 + 実現可能性確認</td><td>PM + Consultant</td></tr>
+          <tr><td>Zone 1</td><td>ハリボテで3レーン並行しながら機能・UI・構成を収束</td><td>ハリボテ、決定ログ追記、<code class="id">HB-ID</code>骨格</td><td>同期点（ミニゲート・無番号・日常）</td><td>Designer / App-Architect+Consultant / Infra-Architect+SRE</td></tr>
+          <tr><td>Zone 2</td><td>ハリボテ・決定が実装に置き換わる</td><td><code class="id">src/</code>, <code class="id">infra/</code>, 単体テスト</td><td>機能単位完了（無番号）→ <span class="hanko">GZ2</span></td><td>Coder, SRE</td></tr>
+          <tr><td>Zone 3</td><td>実物と決定ログからIPA標準成果物をas-built生成</td><td>00〜07相当の設計文書一式、RTM正式版</td><td><span class="hanko">GZ3</span> 成果物充足 + 安定稼働確認</td><td>Reverse担当（実装者と異なることが望ましい）</td></tr>
+          <tr><td>Zone 4</td><td>稼働後のチケット駆動アジャイル（Mode B）</td><td>Issue / PR、影響範囲分析ログ</td><td>チケット単位Gate（短縮版ループ）</td><td>5章参照</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Zone 1とZone 2は機能単位で重なる。ある機能はまだハリボテの段階、別の機能はもう実装済み、という状態が
+      正常であり、全機能が同時にZone 1からZone 2へ移行することは前提としない。Zone 0の決定そのものを覆す
+      要望が出た場合は単なる差し戻しではなく<b>プロジェクトの再定義に相当</b>し、必ず<span class="hanko">HOLD</span>としてユーザー判断を仰ぐ。
+    </p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="lanes">
+    <h2>Zone 1の3レーン並行と同期点</h2>
+    <p>
+      Zone 1では、レーンA（UI/ハリボテ）・レーンB（ビジネスロジック・外部連携）・レーンC（インフラ）を
+      並行で走らせる。3レーンを完全に独立させると後工程（Zone 2）で矛盾が露呈し手戻りが増えるため、
+      レーン間には<b>同期点（ミニゲート）</b>を置き、確定内容を定期的に突き合わせる。
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>レーン</th><th>主担当</th><th>確定していく内容</th></tr></thead>
+        <tbody>
+          <tr><td>A: UI/ハリボテ</td><td>Designer</td><td>画面、遷移、画面上のデータ項目</td></tr>
+          <tr><td>B: ビジネスロジック・外部連携</td><td>App-Architect + Consultant</td><td>業務ルール、外部IF、データの意味</td></tr>
+          <tr><td>C: インフラ</td><td>Infra-Architect + SRE</td><td>構成、非機能の実現手段</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <figure>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 760 260" role="img" aria-label="レーンA・B・C間の同期点と相互駆動を示す図" style="min-width:600px;width:100%;">
+          <defs>
+            <marker id="arrSlate2a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--slate)"></path>
+            </marker>
+          </defs>
+
+          <rect x="30" y="15" width="560" height="50" rx="3" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.4"></rect>
+          <text x="60" y="36" class="svg-mincho" font-size="13" font-weight="700" fill="var(--ink)">レーン A</text>
+          <text x="60" y="53" class="svg-gothic" font-size="10.5" fill="var(--ink-muted)">UI／ハリボテ（Designer）</text>
+
+          <rect x="30" y="105" width="560" height="50" rx="3" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.4"></rect>
+          <text x="60" y="126" class="svg-mincho" font-size="13" font-weight="700" fill="var(--ink)">レーン B</text>
+          <text x="60" y="143" class="svg-gothic" font-size="10.5" fill="var(--ink-muted)">ビジネスロジック・外部連携（App-Architect + Consultant）</text>
+
+          <rect x="30" y="195" width="560" height="50" rx="3" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.4"></rect>
+          <text x="60" y="216" class="svg-mincho" font-size="13" font-weight="700" fill="var(--ink)">レーン C</text>
+          <text x="60" y="233" class="svg-gothic" font-size="10.5" fill="var(--ink-muted)">インフラ（Infra-Architect + SRE）</text>
+
+          <line x1="170" y1="65" x2="170" y2="105" stroke="var(--slate)" stroke-width="1.5" marker-start="url(#arrSlate2a)" marker-end="url(#arrSlate2a)"></line>
+          <text x="190" y="90" class="svg-gothic" font-size="10.5" fill="var(--ink-muted)">同期点 A⇔B</text>
+
+          <line x1="170" y1="155" x2="170" y2="195" stroke="var(--slate)" stroke-width="1.5" marker-start="url(#arrSlate2a)" marker-end="url(#arrSlate2a)"></line>
+          <text x="190" y="180" class="svg-gothic" font-size="10.5" fill="var(--ink-muted)">同期点 B⇔C</text>
+
+          <path d="M590,40 C650,40 650,220 590,220" fill="none" stroke="var(--slate)" stroke-width="1.5" marker-start="url(#arrSlate2a)" marker-end="url(#arrSlate2a)"></path>
+          <text x="665" y="130" text-anchor="middle" class="svg-gothic" font-size="10.5" fill="var(--ink-muted)" transform="rotate(-90 665 130)">同期点 A⇔C</text>
+        </svg>
+      </div>
+      <figcaption>
+        画面表示項目の確定 → レーンBのデータモデルの入力 → 外部連携の制約判明 → 画面仕様への差し戻し（項目の削除・追加）、
+        という相互駆動がZone1の収束メカニズムである。
+      </figcaption>
+    </figure>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>同期点</th><th>実施タイミング</th><th>確認内容</th></tr></thead>
+        <tbody>
+          <tr><td>A⇔B</td><td>ハリボテの画面が一定範囲で固まったとき</td><td>画面上のデータ項目がレーンBのデータモデル・業務ルールと矛盾しないか</td></tr>
+          <tr><td>B⇔C</td><td>外部連携の制約が判明したとき</td><td>外部IFの制約がインフラ構成（レイテンシ、接続方式等）に影響しないか</td></tr>
+          <tr><td>A⇔C</td><td>非機能要件が絡む操作が現れたとき</td><td>画面操作がZone 0の非機能骨格・インフラ構成と矛盾しないか</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      同期点を通過した内容のみが決定ログへの追記対象となる。Zone 1では画面設計書・API設計書等の
+      <b>記述系文書を作らない</b>（MUST NOT）。ハリボテは書き換え・破棄される前提の成果物であり、
+      並行して記述系文書を作ると、ハリボテが変わるたびに文書が陳腐化し負債化するためである。
+      Zone 1で永続化するのは「決定と根拠」だけである。
+    </p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="holes">
+    <h2>この方式の2つの穴と、その塞ぎ方</h2>
+    <p>
+      「文書を後回しにする」という設計は、2つの既存原則と正面から衝突する。以下はその衝突と、
+      衝突を解消するための具体的な仕組みである。
+    </p>
+
+    <div class="hole">
+      <h3><span class="hole-num">穴 1 /</span> 後知恵の作文問題</h3>
+      <p>
+        orchestrateスキルは「決定と根拠は前（Plan/Execute）に置け。後から書くと後知恵の作文になり
+        記録価値が消える」と明記している。Zone 3でのリバース（後から書く）を前提とする本方式は、
+        この原則と表面上は衝突する。
+      </p>
+      <p>
+        <b>解決方針</b>：「決定と根拠」だけをリアルタイムに軽量記録し（決定ログ）、
+        「記述系文書」（構成図・API仕様・データモデル・手順書）だけをリバースする、という線引きを徹底する。
+        後知恵の作文になり得るのは「なぜその判断をしたか」という根拠であり、「何が出来上がったか」という
+        記述はリバースしても正確性が損なわれない。むしろ実物という正解があるため、リバースのほうが正確になる。
+      </p>
+      <div class="table-wrap">
+        <table>
+          <caption>01_プロセス定義書 4.7.1節より抜粋</caption>
+          <thead><tr><th>文書種別</th><th>前（Zone0/1で決定ログ）</th><th>後（Zone3でリバース）</th><th>理由</th></tr></thead>
+          <tbody>
+            <tr><td>事業背景・スコープ外周</td><td>○</td><td>—</td><td>覆すと全設計が壊れる。「なぜ作らないと決めたか」は実物からは復元できない</td></tr>
+            <tr><td>法規制・コンプライアンス前提</td><td>○</td><td>—</td><td>後から実装を見ても判断理由は分からない</td></tr>
+            <tr><td>アーキテクチャ選定とトレードオフ理由</td><td>○</td><td>—</td><td>「なぜAではなくBを選んだか」は決定ログにのみ存在しうる情報</td></tr>
+            <tr><td><code class="id">SCR-ID</code>・<code class="id">HB-ID</code></td><td>○（先行採番）</td><td><code class="id">HB-ID</code>のみ正式要件IDへ変換</td><td>試験の分母問題を避けるため根拠ではなくIDのみを先出しする例外</td></tr>
+            <tr><td>画面遷移図・画面レイアウト設計書</td><td>—</td><td>○</td><td>ハリボテが頻繁に書き換わるため前倒し文書化は即座に陳腐化</td></tr>
+            <tr><td>API仕様書 / データモデル・ER図</td><td>—</td><td>○</td><td>実装が正になった時点で実物から機械的に生成できる</td></tr>
+            <tr><td>運用手順書</td><td>—</td><td>○</td><td>実際の構築・運用手順から書くほうが正確</td></tr>
+            <tr><td>不可逆決定に基づくGate合否判断</td><td>○</td><td>—</td><td>判断そのものが決定であり後から作文すると価値が消える</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="hole">
+      <h3><span class="hole-num">穴 2 /</span> 試験の分母問題</h3>
+      <p>
+        orchestrateスキルは「試験設計は左岸（要件定義・基本設計）で起こす。実装を見てシナリオを書くと、
+        カバレッジの分母が実装側に寄り、設計要求の抜けを検出できなくなる」と定めている。
+        Mode Aでは要件定義書という文書の確定をZone 3まで遅らせるため、この「左岸」に相当する文書が
+        Zone 1の時点では存在しない、という問題が生じる。
+      </p>
+      <p>
+        <b>解決方針</b>：ハリボテそのものを左岸の代替として扱う。ただし、ハリボテの単位（画面1枚）と
+        E2Eシナリオの単位（複数画面をまたぐ業務の流れ）は粒度が異なる。粒度が異なるものを単一のID体系に
+        押し込めると、機械抽出と業務カバレッジ判定のいずれかが成立しなくなるため、<b>ID体系を二層に分ける</b>。
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>粒度</th><th>採番者・タイミング</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code class="id">SCR-{連番}</code></td><td>画面1枚</td><td>ハリボテHTML記述時点で機構が自動採番。<br><code class="id">prototypes/SCREEN_ID_INDEX.md</code>に登録</td><td>機械抽出の単位。<code>grep</code>等で機械的に数えられる</td></tr>
+            <tr><td><code class="id">HB-{連番}</code></td><td>機能／E2Eシナリオ1本（複数画面をまたぐ）</td><td>同期点A⇔B通過時にQAが採番</td><td><b>カバレッジの分母。</b>1件が複数の<code class="id">SCR-ID</code>を経路として参照する</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <code class="id">SCR-ID</code>は画面が実体として存在することの証跡であり、単独ではカバレッジの分母に
+        ならない（1画面が複数の業務フローに登場しうるため）。カバレッジの分母は<code class="id">HB-ID</code>であり、
+        Zone 3で正式要件ID（<code class="id">F-{領域}-{連番}</code>）へ変換する。<code class="id">SCR-ID</code>は
+        画面IDとしてそのまま設計書側に残り、変換は不要である。
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="decisionlog">
+    <h2>決定ログの3段構え</h2>
+    <p>
+      決定ログは本方式の生命線である。実物は後から読めるが「なぜそう決めたか」は後から復元できない。
+      書き忘れを完全に機構化することはできないため、確実性の異なる3段の網を重ねる設計を取る。
+    </p>
+    <div class="tiers">
+      <div class="tier">
+        <div class="tier-num">1</div>
+        <div>
+          <h4><code class="id">decision-log-guard.js</code>（PostToolUse） <span class="tier-tag">確実性: 中</span></h4>
+          <p>
+            アーキテクチャに関わるファイル変更（<code class="id">infra/**</code>、<code class="id">src/**/schema.*</code>、
+            <code class="id">prototypes/**</code>の新規画面、外部連携設定等）を検知した際、対応する決定ログエントリが
+            なければ<b>警告のみ</b>を出す（exit 0）。
+          </p>
+        </div>
+      </div>
+      <div class="tier">
+        <div class="tier-num">2</div>
+        <div>
+          <h4>Stop hookによるセッション終了時チェック <span class="tier-tag">確実性: 低〜中</span></h4>
+          <p>
+            セッション中に変更されたファイル一覧と決定ログの追記を突き合わせ、記録が無い変更を
+            「未記録の決定」としてPMに一覧提示する。
+          </p>
+        </div>
+      </div>
+      <div class="tier tier-block">
+        <div class="tier-num">3</div>
+        <div>
+          <h4><code class="id">decision-check</code> Skill（ミニゲート／ゾーンゲート時） <span class="tier-tag">確実性: 高</span></h4>
+          <p>
+            <code class="id">gate-check</code>がミニゲート/ゾーンゲート（<code class="id gate">GZ0</code>/<code class="id gate">GZ2</code>/<code class="id gate">GZ3</code>）を
+            判定する際、1・2段の警告が未解消のまま残っていないかを条件の一つとして確認する。
+            ここで初めて「先に進めない」という強い制約になる。
+          </p>
+        </div>
+      </div>
+    </div>
+    <p>
+      1段目をあえてブロックにしない理由は、決定ログを書くべきかの判断自体にエージェントの裁量が
+      必要な場面が多く、機械的な<code class="id">exit 2</code>は誤検知のコストが高いためである。
+      Zone 1のハリボテ反復のような高頻度・低コストの変更にまでブロックが効くと、ハリボテ駆動という
+      速度重視のプロセス自体を阻害する。1・2段は「気づかせる」機構、3段目でようやく「止める」機構になる
+      という段階設計であり、Zone 1の速度を殺さずに書き漏れの実害（Zone 3での欠落）を防ぐ。
+    </p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="review">
+    <h2>AIレビュー文化</h2>
+    <p>
+      v1最大の弱点は、レビューが「レビュー担当エージェントが自己申告した結果を、PMがそのまま集約する」
+      構造だった点にある。v2では<b>作成者・レビュア・判定者が三者とも別主体</b>であることを原則とする。
+    </p>
+    <ul>
+      <li><b>作成者はレビュアになれない</b>（MUST）。同一エージェントが自分の成果物を自分でレビューして
+        問題なしと判定する構造を禁止する。</li>
+      <li><b>判定者は報告の数字を転記しない。自ら数える。</b>分母（前工程成果物から数えるべき総数）と
+        分子（一次証跡から数えられる合格件数）を判定主体が独自に数え直す。<b>合格率をカバレッジとして
+        受理しない。</b></li>
+      <li><b>テストを書いた者が合否を判定しない。</b>IT（結合テスト）以上は実装者が書いてはならない
+        （MUST NOT）。UTのみ、分母が実装の分岐であるため実装者が書いてよい（MAY）。</li>
+      <li>差し戻し回数は3回を上限とし、超過は自動的に<span class="hanko">HOLD</span>とする。
+        カウントは<b>セッションを跨いで</b>累積する。</li>
+    </ul>
+    <p>
+      判定の実行機構としては、<code class="id">review-dispatch</code>が<code class="id">context: fork</code>で
+      複数レビュアを並列ファンアウトし、指摘を個別検証したうえで<code class="id">gate-check</code>が
+      <code>grep</code>と引き算による機械判定を行う。作成者・レビュアの分離はSubagentのツール制限
+      （レビュー実行時は<code>Write</code>/<code>Edit</code>を持たせない）によっても裏打ちされる。
+    </p>
+    <div class="table-wrap">
+      <table>
+        <caption>クロスレビューマトリクス（01_プロセス定義書 7.6節より抜粋）</caption>
+        <thead><tr><th>成果物</th><th>作成者</th><th>クロスレビュアー</th></tr></thead>
+        <tbody>
+          <tr><td>決定ログ（Zone 0）</td><td>各領域の主担当</td><td>ユーザー承認を前提に、提案者以外2名以上</td></tr>
+          <tr><td>ハリボテ（レーンA）</td><td>Designer</td><td>App-Architect、Consultant</td></tr>
+          <tr><td>as-built要件定義書等（Zone 3）</td><td>Reverse担当（実装者以外が望ましい）</td><td>PM + 当該領域の主担当以外</td></tr>
+          <tr><td>IT／E2Eテスト実装</td><td>QA</td><td>合否判定はGate機構。QAは書くが判定しない</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="ipa">
+    <h2>IPA共通フレーム準拠の論理</h2>
+    <p>
+      本方式は、IPA共通フレームが暗黙に前提とする実施順序（企画→要件定義→方式設計→詳細設計→構築→…という
+      文書の確定順序）とは異なる順序で成果物を確定させる。要件定義書・方式設計書という<b>「文書」</b>の確定は
+      Zone 3まで遅延するが、要件・設計の<b>「実体」</b>（何を作り、何を作らないか、どう動くか）はZone 0〜2で
+      確定している。
+    </p>
+    <blockquote>
+      IPA共通フレーム自体はアクティビティ・タスクの実施を求めるものであり、文書の形式・名称・作成順序
+      そのものを規定するものではない。したがって本方式はIPAが求めるプロセスの充足を満たしつつ、
+      確定順序をAI駆動開発の実情に合わせて最適化したものと位置づける。妥当性は、Zone 3で生成された文書が
+      トレーサビリティマトリクスにより実装・テストと機械的に整合していることで担保する。
+    </blockquote>
+    <div class="table-wrap">
+      <table>
+        <caption>プロセス対応マトリクス（01_プロセス定義書 8.2節より代表行を抜粋）</caption>
+        <thead><tr><th>IPA共通フレームプロセス</th><th>満たすゾーン</th><th>対応</th><th>理由（差分の場合）</th></tr></thead>
+        <tbody>
+          <tr><td>企画プロセス</td><td>Zone 0</td><td>準拠</td><td>順序はIPAと一致。文書化のタイミングのみ後ろ倒し</td></tr>
+          <tr><td>要件定義プロセス</td><td>Zone 1（実体）+ Zone 3（文書化）</td><td>意図的に差分</td><td>IPAが要求するのは「要件が定義され設計の入力になっていること」であり「文書が先に存在すること」ではない</td></tr>
+          <tr><td>ソフトウェア詳細設計プロセス</td><td>Zone 2</td><td>意図的に差分</td><td>実装前に全項目を固定すると実装段階の最適化との乖離が生じやすい</td></tr>
+          <tr><td>検証プロセス（Verification）</td><td>全ゾーンの同期点・Gate</td><td>意図的に差分</td><td>Gateとして独立した判定機構に外出しし、作成主体から独立した主体が機械的に判定する</td></tr>
+          <tr><td>品質保証プロセス</td><td>全ゾーンのReview</td><td>意図的に差分</td><td>「作成者と異なるエージェントによるクロスレビュー」という形で役割分離により構造化する</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="modeb">
+    <h2>Mode B（稼働後のチケット駆動）</h2>
+    <p>
+      初回本番リリース後は、機能追加・不具合修正・非機能改善のすべてを単一のチケット単位ループで処理する。
+      ループの入口は必ず<b>影響範囲分析</b>であり、これを経ずに実装へ進むことを禁止する（MUST NOT）。
+    </p>
+    <p>
+      影響範囲分析は、Zone 3で生成されたトレーサビリティマトリクスを逆引きし、要件ID→設計→コード→テストの
+      連鎖から波及先を機械的に導出する。実装を読んで「影響がありそうな箇所」を主観的に洗い出す方法は
+      禁止する。実装からの推測では、設計に存在するが実装に反映されていない要件（未実装項目）への影響を
+      見落とすためである。
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>分類</th><th>定義</th><th>対応</th></tr></thead>
+        <tbody>
+          <tr><td>直接影響</td><td>Ticketが変更を意図するID</td><td>差分設計・実装・テストの対象とする</td></tr>
+          <tr><td>連動影響</td><td>同一の実装ファイル・API・画面を共有するID</td><td>差分設計の対象にはしないが回帰テストの対象に含める</td></tr>
+          <tr><td>非機能影響</td><td>セキュリティ・性能等の横断的な非機能要件ID</td><td>Guardの対象範囲として明示する</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      リリース単位はチケット単位を原則とし、本番反映はdry-run（差分確認）→ユーザー承認→本番実行の
+      3ステップを必須とする。以下のいずれかに該当する場合は、通常のチケットループでは扱わず
+      Zone 1（探索・収束ループ）へ退避しなければならない（MUST）。
+    </p>
+    <ul>
+      <li>新規テナント区分・新規契約形態の追加</li>
+      <li>Zone 0で確定したアーキテクチャの土台を変更する</li>
+      <li>新規の外部システム連携・新規の非機能要件カテゴリの追加</li>
+      <li>影響範囲分析の結果、影響を受ける要件IDがトレーサビリティマトリクスの1領域を跨ぐ</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="infra">
+    <h2>実行基盤の要点</h2>
+
+    <h3>巨大CLAUDE.mdの解体</h3>
+    <p>
+      v1の<code class="id">CLAUDE.md</code>（338行）はフェーズマップ・品質ゲート・読み書き権限表まで
+      常時全文コンテキストに乗っていた。Skillのプログレッシブ・ディスクロージャに相当する遅延ロード機構が
+      無かったためである。v2ではCLAUDE.mdを150〜180行に削減し、フェーズマップ・ゲート詳細・
+      クロスレビュー詳細は<code class="id">orchestrate</code> Skillと<code class="id">settings.json</code>に
+      移す。この分離がv2最大のコンテキスト削減レバーである。
+    </p>
+
+    <h3>ディレクトリスコープSkill</h3>
+    <p>
+      <code class="id">prototypes/</code>・<code class="id">src/{layer}/</code>・<code class="id">infra/{layer}/</code>・
+      <code class="id">docs/{02〜07}/</code>配下にそれぞれ<code class="id">.claude/skills/</code>を配置する。
+      対象ディレクトリのファイルを読み書きした時点で有効化され（ウォームアップ）、
+      <code class="id">ディレクトリ:スキル名</code>の修飾名で呼び出す。
+      <code class="id">docs/02〜04</code>には<code class="id">execute</code>/<code class="id">plan</code>を
+      意図的に置かず、<code class="id">reverse-doc</code>/<code class="id">review</code>のみを置く。
+      記述系文書を先に書かせてしまう導線を、ディレクトリ構成そのもので物理的に作らないためである。
+    </p>
+
+    <h3>permissions / hooksによる規律の機構化</h3>
+    <p>
+      「誰が何を書けるか」を宣言的なallow/ask/denyとエージェント単位のツール制限で固定する。
+      PMの主スレッドからは<code class="id">docs/02〜04</code>・<code class="id">src/</code>・
+      <code class="id">infra/</code>・<code class="id">tests/</code>へのWrite/Editをdeny、
+      本番デプロイ関連はask（人間承認必須）、<code>terraform destroy</code>や
+      <code>git push --force</code>等の破壊的操作は恒久deny。主なhooksは以下の通り。
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Hook</th><th>検知内容</th><th>動作</th></tr></thead>
+        <tbody>
+          <tr><td><code class="id">role-boundary-guard.js</code></td><td>ロール境界違反（<code class="id">prototypes/</code>、<code class="id">decisions/</code>を追加対象化）</td><td><code>exit 2</code></td></tr>
+          <tr><td><code class="id">gate-transition-guard.js</code></td><td>ゾーンゲート未通過での次ゾーン着手</td><td><code>exit 2</code>（ミニゲートには非適用）</td></tr>
+          <tr><td><code class="id">doc-header-guard.js</code></td><td>as-built必須フィールドの欠落</td><td><code>exit 2</code></td></tr>
+          <tr><td><code class="id">artifact-emptiness-guard.js</code></td><td><code class="id">docs/02〜07</code>の未生成項目</td><td>Zone3未到達なら検知を抑制。標準構成では空が正常</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>モデル階層</h3>
+    <p>
+      「反復頻度が高く後戻りが容易な工程は下位モデル、反復頻度が低く後戻りが困難な工程は上位モデル」
+      という軸で線引きする。Zone 0の決定ログ起票とゾーンゲート判定（<code class="id gate">GZ0</code>/<code class="id gate">GZ2</code>/<code class="id gate">GZ3</code>）はOpus 5、
+      ハリボテ生成やレーンB/Cの実装はSonnet 5、lint等の機械チェックはHaiku 4.5とする。
+      ハリボテ駆動モデルは反復回数がフェーズ順次型より格段に多くなるため、全工程をOpus 5に統一すると
+      反復コストが線形以上に増加し非現実的になる。
+    </p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="migration">
+    <h2>v1 → v2 移行計画</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>フェーズ</th><th>内容</th><th>完了条件</th></tr></thead>
+        <tbody>
+          <tr><td class="narrow">M0</td><td>v2骨格の新設（settings.json雛形、agents/*.md雛形、横断Skill雛形）</td><td>v2骨格が空実装でもロード可能</td></tr>
+          <tr><td class="narrow">M1</td><td>横断Skill実装＋決定ログ機構実装（<code class="id">decide</code>, <code class="id">decision-check</code>）</td><td>決定ログの起票からミニゲート参照までが単体で動作確認済み</td></tr>
+          <tr><td class="narrow">M2</td><td>ゾーン/レーンSkill実装（<code class="id">mockup-*</code>3種、<code class="id">SCR-ID</code>/<code class="id">HB-ID</code>二層採番）</td><td>ミニゲートが機能単位で1件通しで動作確認済み</td></tr>
+          <tr><td class="narrow">M3</td><td>Hooks/Permissions強制層の実装</td><td>settings.jsonがプロジェクト共有としてコミットされ、全hookが動作確認済み</td></tr>
+          <tr><td class="narrow">M4</td><td>リバース生成エンジン実装（<code class="id">reverse-doc</code>群、<code class="id">traceability-reverse</code>）</td><td>サンプルからIPA成果物一式が生成され、逆差分0件を確認</td></tr>
+          <tr><td class="narrow">M5</td><td>Mode B機構実装（GitHub MCP連携、impact-analysis、PR購読、Routines）</td><td>Issue起票からPRマージまでのループが1件通しで動作確認済み</td></tr>
+          <tr><td class="narrow">M6</td><td>旧資産（CLAUDE.md, AGENT.md, 10_facilitation等）を削除</td><td>v1資産がリポジトリから完全に除去</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>破壊的変更</h3>
+    <ul>
+      <li>プロセスモデル自体がフェーズ順次型からゾーン/レーン型に変わるため、<b>v1で進行中の案件をv2へ
+        移行する経路は原則提供しない</b>。v2は新規案件立ち上げ時のみ選択可能とする。</li>
+      <li><code class="id">docs/02〜04</code>に<code class="id">plan</code>/<code class="id">execute</code> Skillを
+        置かないという構成自体が破壊的変更であり、v1の運用に慣れたユーザーへの説明が必須になる。</li>
+      <li><code class="id">.claude-state/</code>の形式変更（決定ログ、<code class="id">current-zone.json</code>、
+        <code class="id">process-option.json</code>の新設）を伴うため、自動マイグレーションはスコープ外とする。</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="risks">
+    <h2>残課題</h2>
+    <ul>
+      <li><b>Gate判定主体の実行可能性</b> — 分母・分子を自ら数えるにはコード・テストを読む必要があるが、
+        PMは<code class="id">src/</code>・<code class="id">tests/</code>を読まない方針を維持する。
+        Gate判定を担う主体をPMともQAとも別の独立した機構として設計しなければ、両者は原理的に両立しない。</li>
+      <li><b>Zone 1の長期化リスク</b> — 記述系文書を作らない方針は、探索が数ヶ月続く大規模プロジェクトに
+        おいて意思疎通コストを増大させうる。ハリボテと決定ログだけでは途中参加者のオンボーディングが
+        困難になりうる。</li>
+      <li><b>Zone 3リバースの省略リスク</b> — 初回リリースを急ぐあまりローンチ時リバースを簡略化・省略する
+        事業判断が行われた場合、IPA準拠が恒久的に未達成のまま本番稼働に入るリスクがある。</li>
+      <li><b>Zone 0の選別基準の判断難度</b> — 「後から変えると手戻りコストが非線形に跳ねるか」という
+        選別基準自体が高度な設計判断であり、誤ればZone 0の肥大化かZone 1での場当たり的変更のいずれかが起こる。</li>
+      <li><b>小規模プロジェクトへの適用過多</b> — 数日で完了するスクリプト開発等にZone 0〜3のフルセットを
+        適用すると、プロセスのオーバーヘッドが成果物の価値を上回る。</li>
+      <li><b>Reverse生成物の精度</b> — 実装からの自動抽出の正確性は抽出エージェントの能力と実装の複雑度に
+        依存する。当面は人間またはエージェントによる査読を必須とし、無査読での正本化は避けるべきである。</li>
+      <li><b>アクティブエージェント識別の未検証</b> — hookイベントペイロードに呼び出し元Subagentの識別子が
+        含まれるかは要検証であり、含まれない場合の代替方式は更新漏れに脆弱という限界を持つ。</li>
+    </ul>
+  </section>
+
+  <footer class="colophon">
+    <div>V2-01 AI駆動IPA標準フレームワーク プロセス定義書 / 版数1.2 / 作成者 Consultant / 分類 関係者限り</div>
+    <div>V2-02 AI駆動IPA標準フレームワーク aidev v2 実行基盤アーキテクチャ / 版数1.3 / 作成者 App-Architect / 分類 内部（aidevフレームワーク開発者向け）</div>
+    <div>本ページは docs/v2/01_プロセス定義書.md および docs/v2/02_実行基盤アーキテクチャ.md を元にした要約である。全文は各Markdown文書を参照。</div>
+  </footer>
+
+</div>
