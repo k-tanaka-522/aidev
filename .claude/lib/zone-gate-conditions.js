@@ -139,20 +139,75 @@ function findDeferredIds(cwd, ids) {
 }
 
 /**
- * `00-01_成果物構成カタログ.md`の指定区分（`sections`、例: ['06']）について、
- * `excludePrefixes`（項番の前方一致、例: ['07-50']）を除いた行の生成完了状況を判定する。
+ * `00-01_成果物構成カタログ.md`の列スキーマ判定（02文書9.4.3節・版1.9が正本の9列
+ * スキーマを一次スキーマとする。旧M3暫定の5列スキーマは移行期の後方互換のみ）。
  *
- * - `catalogFound`: カタログ自体が読めたか（読めない場合は判定不能として扱う。fail closed）
- * - `applicable`: 対象区分・対象外項番を除いた行のうち、「対象外」でない行が1件以上あるか
- *   （＝該当する案件かどうか。02文書10.2節「該当する案件では」の判定に用いる）
- * - `complete`: `applicable`な行すべてが「生成済み」か
- * - `missing`: 未生成の行一覧
+ * 【本タスクでの是正（PMへ報告）】
+ * 従来実装はM3が採用した暫定5列スキーマ（`項番|成果物名|区分（02〜07）|状態（未生成/
+ * 生成済み/対象外）|生成日時`）のみを前提としており、02文書9.4.3節（版1.9）が正本化した
+ * 9列スキーマ（`文書番号|文書名|生成ゾーン|生成主体|生成方式|必須区分|IPA対応|想定分量|
+ * 生成状態`）を渡すと、列名が一致せず`applicable`が常に`false`（`totalRows: 0`）になり、
+ * GZ2条件5・GZ3条件6が**エラーにならないまま黙ってスキップされる**という不整合があった
+ * （実測済み）。本関数は9列スキーマを一次スキーマとして扱うよう是正し、5列スキーマの
+ * カタログを渡された場合は後方互換で判定は行うが、`console.error`で明示的に警告する
+ * （移行期に「黙ってスキップ」を再発させないため。5項目目の検証観点）。
  */
-function checkCatalogSection(cwd, { sections, excludePrefixes = [] }) {
-  const rows = readCatalog(cwd);
-  if (!rows.length) {
-    return { catalogFound: false, applicable: false, complete: false, missing: [], totalRows: 0 };
-  }
+const CATALOG_V9_KEY = '文書番号';
+const CATALOG_V5_KEY = '区分（02〜07）';
+
+/** 9列スキーマの「生成状態」5値のうち、「生成済み」相当とみなす値（判断根拠は関数コメント参照）。 */
+const V9_GENERATED_STATES = ['as-built生成済', '前倒し作成'];
+/** 9列スキーマの「生成状態」のうち、対象外（旧5列スキーマの「対象外」相当）とみなす値。 */
+const V9_OMITTED_STATE = '省略';
+
+/**
+ * `文書番号`（例: "06-01"、"07-50"）から区分（"06"、"07"等の2桁）を前方一致で導出する。
+ * `GZ{0,2,3}-99`・`decisions/DL-{4桁}`・`（欠番）`のように2桁数字始まりでない文書番号は
+ * 区分なし（空文字）として扱い、`sections`フィルタで自然に除外される。
+ */
+function deriveSectionFromDocNo(docNo) {
+  const m = /^(\d{2})-/.exec(String(docNo || '').trim());
+  return m ? m[1] : '';
+}
+
+/**
+ * 9列スキーマ（正本）での区分別集計。`excludePrefixes`は`文書番号`の前方一致。
+ * 「生成済み」相当の判定は`V9_GENERATED_STATES`（`as-built生成済`・`前倒し作成`）、
+ * 「対象外」相当の判定は`V9_OMITTED_STATE`（`省略`）を用いる（判断根拠は本ファイル
+ * 冒頭コメント、および完了報告の「3. 『生成済み相当』の判定」を参照）。
+ */
+function checkCatalogSectionV9(rows, { sections, excludePrefixes }) {
+  const relevant = rows.filter((r) => {
+    const docNo = (r['文書番号'] || '').trim();
+    const sec = deriveSectionFromDocNo(docNo);
+    if (!sections.includes(sec)) return false;
+    if (excludePrefixes.some((p) => docNo.startsWith(p))) return false;
+    return true;
+  });
+  const applicableRows = relevant.filter((r) => (r['生成状態'] || '').trim() !== V9_OMITTED_STATE);
+  const missing = applicableRows.filter((r) => !V9_GENERATED_STATES.includes((r['生成状態'] || '').trim()));
+  return {
+    catalogFound: true,
+    applicable: applicableRows.length > 0,
+    complete: missing.length === 0,
+    missing,
+    totalRows: relevant.length,
+    schemaVersion: 'v9',
+    schemaWarning: null,
+  };
+}
+
+/**
+ * 5列スキーマ（M3暫定、後方互換のみ）での区分別集計。旧実装と同じロジックを維持しつつ、
+ * 呼び出し側（`console.error`）へ移行が必要である旨を明示的に警告する（黙ってスキップ
+ * しない。5項目目の検証観点）。
+ */
+function checkCatalogSectionV5(rows, { sections, excludePrefixes }) {
+  const warning =
+    '00-01成果物構成カタログが旧スキーマ（5列、M3暫定）のまま読み込まれた。' +
+    '02文書9.4.3節（版1.9）が正本化した9列スキーマ（文書番号/生成状態列を含む）への' +
+    '移行が必要（判定は5列スキーマの互換ロジックで継続するが、早期に00-01を9列化すること）。';
+  console.error(`[zone-gate-conditions] ${warning}`);
   const relevant = rows.filter((r) => {
     const sec = (r['区分（02〜07）'] || '').trim();
     if (!sections.includes(sec)) return false;
@@ -168,6 +223,62 @@ function checkCatalogSection(cwd, { sections, excludePrefixes = [] }) {
     complete: missing.length === 0,
     missing,
     totalRows: relevant.length,
+    schemaVersion: 'v5',
+    schemaWarning: warning,
+  };
+}
+
+/**
+ * `00-01_成果物構成カタログ.md`の指定区分（`sections`、例: ['06']）について、
+ * `excludePrefixes`（文書番号の前方一致、例: ['07-50']）を除いた行の生成完了状況を判定する。
+ *
+ * - `catalogFound`: カタログ自体が読めたか（読めない場合は判定不能として扱う。fail closed）
+ * - `applicable`: 対象区分・対象外文書番号を除いた行のうち、「対象外」（9列: `省略`、
+ *   5列: `対象外`）でない行が1件以上あるか（＝該当する案件かどうか。02文書10.2節
+ *   「該当する案件では」の判定に用いる）
+ * - `complete`: `applicable`な行すべてが「生成済み」相当か
+ * - `missing`: 未完了の行一覧
+ * - `schemaVersion`: `'v9'`（正本）| `'v5'`（旧・後方互換）| `'unknown'`（列を認識できず
+ *   判定不能） | `null`（カタログ自体が無い）
+ * - `schemaWarning`: `v5`/`unknown`の場合に設定される警告文（黙ってスキップしないため）
+ */
+function checkCatalogSection(cwd, { sections, excludePrefixes = [] }) {
+  const rows = readCatalog(cwd);
+  if (!rows.length) {
+    return {
+      catalogFound: false,
+      applicable: false,
+      complete: false,
+      missing: [],
+      totalRows: 0,
+      schemaVersion: null,
+      schemaWarning: null,
+    };
+  }
+  const sampleKeys = Object.keys(rows[0]);
+  if (sampleKeys.includes(CATALOG_V9_KEY)) {
+    return checkCatalogSectionV9(rows, { sections, excludePrefixes });
+  }
+  if (sampleKeys.includes(CATALOG_V5_KEY)) {
+    return checkCatalogSectionV5(rows, { sections, excludePrefixes });
+  }
+  const warning =
+    '00-01成果物構成カタログの列スキーマを認識できない（9列スキーマの`文書番号`列、' +
+    '5列スキーマの`区分（02〜07）`列のいずれも見つからない）。判定不能として扱う' +
+    '（fail closed。黙ってスキップしない）。';
+  console.error(`[zone-gate-conditions] ${warning}`);
+  // `catalogFound: false`とし、呼び出し側（zone-gate.js）の既存fail-closed分岐
+  // （`!section.catalogFound`でNG）を通す。`applicable: true`のまま素通りさせると
+  // 「未知スキーマ＝該当なし」に誤読され、本タスクが問題視した「黙ってスキップ」を
+  // 別形で再発させるため（`applicable: false`だとゲートを通過してしまう）。
+  return {
+    catalogFound: false,
+    applicable: false,
+    complete: false,
+    missing: [],
+    totalRows: 0,
+    schemaVersion: 'unknown',
+    schemaWarning: warning,
   };
 }
 

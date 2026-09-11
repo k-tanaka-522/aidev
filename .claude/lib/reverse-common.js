@@ -19,26 +19,67 @@
  * `docs/05_テスト/.claude/skills/traceability-reverse/scripts/*.js`。
  *
  * 【前提条件・制約】
- * - `00-01_成果物構成カタログ.md`の列スキーマは`artifact-emptiness-guard.js`（M3実装済み、
- *   変更不可）が前提とする暫定スキーマ
- *   `項番 | 成果物名 | 区分（02〜07） | 状態（未生成/生成済み/対象外） | 生成日時`
- *   に完全に合わせる（MUST）。列名を変えるとhookが誤動作せず単に検査対象から外れる
- *   （安全側フォールバックのため実害は無いが、hookの検知が機能しなくなる）。
+ * - `00-01_成果物構成カタログ.md`の列スキーマは、02文書9.4.3節（版1.9）が正本化した
+ *   9列スキーマ
+ *   `文書番号 | 文書名 | 生成ゾーン | 生成主体 | 生成方式 | 必須区分 | IPA対応 | 想定分量 | 生成状態`
+ *   に合わせる（MUST、本タスクでM3暫定の5列スキーマから追随・是正した。PMへの報告事項）。
+ *   `artifact-emptiness-guard.js`・`zone-gate-conditions.js`（`checkCatalogSection`）も
+ *   本タスクで同時にこの9列スキーマへ追随済み。「生成状態」列の値は5値
+ *   （`未生成` | `生成中` | `as-built生成済` | `前倒し作成` | `省略`）。
+ *   `markCatalogGenerated`は既存行があれば「生成状態」列のみを更新し、他の8列
+ *   （案件のZone0初期化で入る値）を保持する（更新の都度、行全体を空欄で上書きしない）。
  * - `生成区分`の値集合は`doc-header-guard.js`が検査する4値
  *   （`実装反映(as-built)` | `実装反映(as-built) - スナップショット版` |
- *   `事前設計(前倒し)` | `手動作成`）と一致させる（MUST）。
+ *   `事前設計(前倒し)` | `手動作成`）と一致させる（MUST）。この`生成区分`
+ *   （文書ヘッダーのfrontmatterフィールド）と、00-01カタログの`生成状態`列は別物である
+ *   （前者は個々の文書ヘッダーが持つ4値、後者はカタログ台帳が持つ5値。混同しないこと）。
+ * - `docs/00_.../00-01_成果物構成カタログ.md`の**雛形**（`docs/v2`が定める03文書3章の
+ *   カタログをそのまま書き出したプロジェクト非依存のテンプレート）は、区分（00〜07）ごとに
+ *   `##`見出しで区切られた**複数のMarkdownテーブル**から成る。一方、個別案件が実際に運用する
+ *   `00-01`は空ファイルから`markCatalogGenerated`の呼び出しによって育つため、見出しを持たない
+ *   **単一テーブル**になる（実測確認済み、既存の生成済みサンプル案件（M3スキーマ）も単一
+ *   テーブル）。`readCatalog`は両形式に対応するため、ファイル内の**全テーブル**を走査して
+ *   9列スキーマ（`文書番号`列を持つ）の行をすべて連結する（本タスクで是正。従来は
+ *   `readTableAsObjects`経由で最初の1テーブルしか読めず、複数テーブル構成の雛形を渡すと
+ *   02〜07区分の行が常に読み落とされる不具合があった。PMへの報告事項）。`markCatalogGenerated`
+ *   （書き込み側）は単一テーブル案件を前提とした実装のままとする（雛形ファイルへの書き込みは
+ *   03文書3章冒頭・本ファイル自身の注記により想定外＝行わない運用のため。複数テーブル雛形への
+ *   直接書き込みに対応する追加実装は本タスクのスコープ外とし、既知の限界としてPMへ報告する）。
  */
 
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { upsertRow, readTableAsObjects } = require('./markdown-table');
+const { upsertRow, readTable, readTableAsObjects, findAllTables } = require('./markdown-table');
 const { ledger0001Path, ledger0002Path, ledger0003Path } = require('./ledger-paths');
 const { decisionsDir, listDecisionFiles } = require('./decisions');
 const { readZoneState } = require('./zone-state');
 
-/** artifact-emptiness-guard.js（M3実装、変更不可）が前提とする00-01の列スキーマ。 */
-const CATALOG_HEADER = ['項番', '成果物名', '区分（02〜07）', '状態（未生成/生成済み/対象外）', '生成日時'];
+/**
+ * 02文書9.4.3節（版1.9）が正本化した00-01の9列スキーマ。03文書3.1節の8列
+ * （文書番号〜想定分量）を継承し、02固有の運用列「生成状態」を追加した構成
+ * （本タスクでM3暫定の5列スキーマから追随・是正した）。
+ */
+const CATALOG_HEADER = [
+  '文書番号',
+  '文書名',
+  '生成ゾーン',
+  '生成主体',
+  '生成方式',
+  '必須区分',
+  'IPA対応',
+  '想定分量',
+  '生成状態',
+];
+
+/** 02文書9.4.3節が定める「生成状態」列の5値。 */
+const SEISEI_JOTAI = {
+  NOT_GENERATED: '未生成',
+  IN_PROGRESS: '生成中',
+  AS_BUILT_DONE: 'as-built生成済',
+  FRONT_LOADED_DONE: '前倒し作成',
+  OMITTED: '省略',
+};
 
 /** doc-header-guard.js（M3実装）が検査する`生成区分`の値集合。 */
 const SEISEIKUBUN = {
@@ -115,30 +156,100 @@ function buildDocHeader({
 }
 
 /**
- * 00-01成果物構成カタログの当該行を更新する（03文書8.1節の状態遷移、02文書9.4節の
- * 分割生成・中断耐性）。生成のたびに都度呼ぶ（MUST、まとめ書き禁止の原則を
+ * 00-01成果物構成カタログの当該行の「生成状態」列を更新する（03文書8.1節の状態遷移、
+ * 02文書9.4節の分割生成・中断耐性）。生成のたびに都度呼ぶ（MUST、まとめ書き禁止の原則を
  * カタログの更新にも適用する）。
+ *
+ * 【9列スキーマへの追随（本タスクでの是正）】
+ * 呼び出し側（各`docs/{02,03,04,06,07}_.../reverse-doc`、`docs/05_テスト/traceability-reverse`）
+ * の呼び出しシグネチャ（`{ itemNo, name, section, status }`）は変更しない（既存呼び出し箇所を
+ * 変更するのは本タスクの委譲範囲外）。内部実装のみ9列スキーマに追随させる。
+ * - `itemNo`は9列スキーマの`文書番号`列の値として書く（キー列も`文書番号`に変更）。
+ * - `section`引数は9列スキーマでは独立列を持たない（`文書番号`の前方一致から導出する設計、
+ *   `zone-gate-conditions.js`の`deriveSectionFromDocNo`と対称）ため、本関数では使わない
+ *   （後方互換のため引数自体は受け取り続ける）。
+ * - `status`（`'generated'`｜`'excluded'`、呼び出し側が使う値はこの2種のみ。実測確認済み）は
+ *   「生成状態」5値へ次のとおり変換する: `'generated'` → `as-built生成済`（reverse-doc は
+ *   常にas-built生成であるため。前倒し（`前倒し作成`）を書く呼び出しは現状無い）、
+ *   `'excluded'` → `省略`。それ以外の値は`未生成`にフォールバックする。
+ * - 「文書番号／文書名／生成ゾーン／生成主体／生成方式／必須区分／IPA対応／想定分量」の
+ *   8列はZone0初期化時点で確定している値（03文書3.1節）であり、reverse-doc実行のたびに
+ *   空欄で上書きしてはならない。既存行があれば8列を保持し「生成状態」のみ差し替える。
+ *   既存行が無い場合（カタログ未初期化）は`文書番号`・`文書名`・`生成状態`のみを埋め、
+ *   残り6列は空欄の新規行として追記する（フェイルセーフ。値を推測しない）。
  */
-function markCatalogGenerated(cwd, { itemNo, name, section, status = 'generated' }) {
-  const statusLabel = status === 'generated' ? '生成済み' : status === 'excluded' ? '対象外' : '未生成';
-  upsertRow(
-    ledger0001Path(cwd),
-    CATALOG_HEADER,
-    '項番',
-    itemNo,
-    [itemNo, name, section, statusLabel, new Date().toISOString()],
-    {
-      title: '00-01 成果物構成カタログ',
-      description:
-        '> 列定義: `.claude/hooks/artifact-emptiness-guard.js`が前提とする暫定スキーマ（PMへの報告事項、M3）。\n' +
-        '> 各reverse-doc実行が自身の担当行を都度更新する（03文書8.1節「自己申告、機械検査はgate-check/decision-check」）。',
-    }
-  );
+function markCatalogGenerated(cwd, { itemNo, name, section: _section, status = 'generated' }) {
+  const seiseiJotai =
+    status === 'generated'
+      ? SEISEI_JOTAI.AS_BUILT_DONE
+      : status === 'excluded'
+        ? SEISEI_JOTAI.OMITTED
+        : SEISEI_JOTAI.NOT_GENERATED;
+
+  const filePath = ledger0001Path(cwd);
+  const { header: existingHeader, rows: existingRows } = readTable(filePath);
+  const isV9 = Array.isArray(existingHeader) && existingHeader.includes('文書番号');
+
+  let rowValues;
+  if (isV9) {
+    const keyIdx = existingHeader.indexOf('文書番号');
+    const existingRow = existingRows.find((r) => r[keyIdx] === itemNo);
+    const base = {};
+    CATALOG_HEADER.forEach((col) => {
+      const idx = existingHeader.indexOf(col);
+      base[col] = existingRow && idx !== -1 ? existingRow[idx] || '' : '';
+    });
+    base['文書番号'] = itemNo;
+    base['文書名'] = name || base['文書名'] || '';
+    base['生成状態'] = seiseiJotai;
+    rowValues = CATALOG_HEADER.map((col) => base[col]);
+  } else {
+    // カタログ未初期化、またはスキーマ不明（想定外だが安全に新規行を9列で作る）。
+    rowValues = CATALOG_HEADER.map((col) => {
+      if (col === '文書番号') return itemNo;
+      if (col === '文書名') return name || '';
+      if (col === '生成状態') return seiseiJotai;
+      return '';
+    });
+  }
+
+  upsertRow(filePath, CATALOG_HEADER, '文書番号', itemNo, rowValues, {
+    title: '00-01 成果物構成カタログ',
+    description:
+      '> 列定義の正本: `docs/v2/02_実行基盤アーキテクチャ.md` 9.4.3節（版1.9）。9列スキーマ\n' +
+      '> （文書番号/文書名/生成ゾーン/生成主体/生成方式/必須区分/IPA対応/想定分量/生成状態）。\n' +
+      '> 各reverse-doc実行が自身の担当行の「生成状態」列を都度更新する\n' +
+      '> （03文書8.1節「自己申告、機械検査はgate-check/decision-check」）。',
+  });
 }
 
-/** 00-01カタログの現状を読む（INDEXの「状態」列集計等に使う）。 */
+/**
+ * 00-01カタログの現状を読む（INDEXの「状態」列集計・`checkCatalogSection`等に使う）。
+ * ファイル内の**全テーブル**を走査し連結する（本タスクで是正。単一テーブル構成
+ * （個別案件が運用する実体の00-01）・複数テーブル構成（区分ごとに見出しで区切られた
+ * 03文書3章の雛形）のいずれにも対応する。ファイル冒頭の注記コメント参照）。
+ * テーブルが複数ある場合、各テーブル自身のヘッダーをそのままキーとして使う
+ * （雛形は全テーブルで同一の9列ヘッダーを持つ設計、02文書9.4.3節）。
+ */
 function readCatalog(cwd) {
-  return readTableAsObjects(ledger0001Path(cwd));
+  let content;
+  try {
+    content = fs.readFileSync(ledger0001Path(cwd), 'utf-8');
+  } catch (_err) {
+    return [];
+  }
+  const tables = findAllTables(content);
+  const rows = [];
+  for (const t of tables) {
+    for (const r of t.rows) {
+      const obj = {};
+      t.header.forEach((h, idx) => {
+        obj[h] = r[idx] !== undefined ? r[idx] : '';
+      });
+      rows.push(obj);
+    }
+  }
+  return rows;
 }
 
 /**
@@ -290,6 +401,7 @@ function convertBatIdsToFormalIds(cwd) {
 
 module.exports = {
   CATALOG_HEADER,
+  SEISEI_JOTAI,
   SEISEIKUBUN,
   REQUIRED_HEADER_FIELDS,
   buildExecutionMarker,

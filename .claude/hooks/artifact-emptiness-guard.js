@@ -19,14 +19,20 @@
  *     明示的な`exit 2`の記載が無く、抑制ロジックの説明に終始するため、本実装は
  *     警告専用hookとして実装する。この解釈をPMへ報告する）。
  *
- * 【PMへの報告事項: `00-01`のスキーマが未定義】
- * 02文書は`00-01_成果物構成カタログ.md`を随所で参照するが、Markdownとしての具体的な
- * 列定義（テーブルスキーマ）をどの節にも与えていない（`current-zone.json`がM2時点で
- * 抱えていたのと同種の設計不足）。本実装は次の**暫定スキーマ**を採用する。
+ * 【`00-01`のスキーマ: 02文書9.4.3節（版1.9）の9列スキーマへ追随済み（本タスクで是正）】
+ * `docs/00_プロジェクト管理・ガバナンス/00-01_成果物構成カタログ.md`の列定義は
+ * 02文書9.4.3節（版1.9）が正本化した9列スキーマ
+ *   `| 文書番号 | 文書名 | 生成ゾーン | 生成主体 | 生成方式 | 必須区分 | IPA対応 | 想定分量 | 生成状態 |`
+ * （「生成状態」列は`未生成|生成中|as-built生成済|前倒し作成|省略`の5値）を一次スキーマとする。
+ * 旧M3実装はこの節が未定義だった時点で暫定採用した5列スキーマ
  *   `| 項番 | 成果物名 | 区分（02〜07） | 状態（未生成/生成済み/対象外） | 生成日時 |`
- * `docs/00_プロジェクト管理・ガバナンス/00-01_成果物構成カタログ.md`がこの列構成である
- * ことを前提に実装しており、実際のファイルが存在しない/この形式でない場合は
- * 検査を行わず終了する（誤検知よりも見逃しを優先する安全側設計）。
+ * のままだったため、9列スキーマのカタログを渡すと列が一致せず**検査そのものが黙って
+ * スキップされる**不整合があった（実測確認済み、`.claude/lib/zone-gate-conditions.js`の
+ * `checkCatalogSection`と同種の不整合。PMへの報告事項）。本実装は9列スキーマを優先して
+ * 検査し、旧5列スキーマのカタログを検知した場合は後方互換で検査を継続しつつ
+ * `console.error`で移行が必要な旨を明示的に警告する（黙ってスキップしない）。
+ * いずれの列構成にも一致しない場合のみ、検査を行わず終了する（誤検知よりも見逃しを
+ * 優先する安全側設計、旧実装からの方針を維持）。
  *
  * 【影響範囲】
  * `docs/02_要件定義/`〜`docs/07_運用・保守/`（`docs/01`は成果物を持たないため対象外、
@@ -114,31 +120,63 @@ function main() {
 
   const { header, rows } = findTable(changed);
   if (!header) {
-    process.exit(0); // 暫定スキーマのテーブルが見当たらない。誤検知を避け終了する。
+    process.exit(0); // テーブルが見当たらない。誤検知を避け終了する。
   }
 
-  const idxTask = header.indexOf('項番');
-  const idxName = header.indexOf('成果物名');
-  const idxKubun = header.indexOf('区分（02〜07）');
-  const idxStatus = header.indexOf('状態（未生成/生成済み/対象外）');
-  if (idxStatus === -1) {
-    process.exit(0); // 想定と異なるスキーマ。誤検知回避のため終了する。
+  // `文書番号`（例: "06-01"）から区分（"06"等の2桁）を前方一致で導出する。
+  // `.claude/lib/zone-gate-conditions.js`の`deriveSectionFromDocNo`と同じロジック
+  // （このhookは軽量に保つため独立した子プロセスとして起動されるhookの性質上、
+  // 重い依存を持つ`zone-gate-conditions.js`を直接requireせず同ロジックを複製する）。
+  function deriveSectionFromDocNo(docNo) {
+    const m = /^(\d{2})-/.exec(String(docNo || '').trim());
+    return m ? m[1] : '';
   }
 
-  const ungenerated = rows.filter((r) => (r[idxStatus] || '').includes('未生成'));
-  if (ungenerated.length === 0) {
-    process.exit(0);
+  const idxDocNo9 = header.indexOf('文書番号');
+  const idxDocName9 = header.indexOf('文書名');
+  const idxStatus9 = header.indexOf('生成状態');
+
+  let ungenerated;
+  let lines;
+
+  if (idxStatus9 !== -1) {
+    // 9列スキーマ（02文書9.4.3節・版1.9が正本）。「生成状態」が厳密に`未生成`の行のみを
+    // 警告する（`生成中`は着手済みのため対象外。従来実装の「未生成のみ検知する」意図を
+    // 5値スキーマへそのまま引き継ぐ）。
+    ungenerated = rows.filter((r) => (r[idxStatus9] || '').trim() === '未生成');
+    if (ungenerated.length === 0) process.exit(0);
+    lines = ungenerated.map((r) => {
+      const docNo = idxDocNo9 !== -1 ? r[idxDocNo9] : '?';
+      const name = idxDocName9 !== -1 ? r[idxDocName9] : '?';
+      const kubun = deriveSectionFromDocNo(docNo) || '?';
+      return `  - [${docNo}] ${name}（区分:${kubun}）`;
+    });
+  } else {
+    // 9列スキーマの`生成状態`列が無い。M3暫定の5列スキーマ（後方互換）かを確認する。
+    const idxTask = header.indexOf('項番');
+    const idxName = header.indexOf('成果物名');
+    const idxKubun = header.indexOf('区分（02〜07）');
+    const idxStatusLegacy = header.indexOf('状態（未生成/生成済み/対象外）');
+    if (idxStatusLegacy === -1) {
+      process.exit(0); // いずれのスキーマにも一致しない。誤検知回避のため終了する。
+    }
+    console.error(
+      '[artifact-emptiness-guard] 00-01成果物構成カタログが旧スキーマ（5列、M3暫定）のまま' +
+        'です。02文書9.4.3節（版1.9）が定める9列スキーマへの移行が必要です' +
+        '（互換ロジックで検査は継続します。黙ってスキップしません）。'
+    );
+    ungenerated = rows.filter((r) => (r[idxStatusLegacy] || '').includes('未生成'));
+    if (ungenerated.length === 0) process.exit(0);
+    lines = ungenerated.map((r) => {
+      const task = idxTask !== -1 ? r[idxTask] : '?';
+      const name = idxName !== -1 ? r[idxName] : '?';
+      const kubun = idxKubun !== -1 ? r[idxKubun] : '?';
+      return `  - [${task}] ${name}（区分:${kubun}）`;
+    });
   }
 
   // 06_移行・導入は抑制対象から除外され別枠で扱われるが、`suppressed`がfalseの時点で
   // 既に全区分を警告対象にしているため、ここでは区分によらず一律に警告する。
-  const lines = ungenerated.map((r) => {
-    const task = idxTask !== -1 ? r[idxTask] : '?';
-    const name = idxName !== -1 ? r[idxName] : '?';
-    const kubun = idxKubun !== -1 ? r[idxKubun] : '?';
-    return `  - [${task}] ${name}（区分:${kubun}）`;
-  });
-
   console.error(
     `[artifact-emptiness-guard] docs/02〜07 に未生成のIPA成果物が ${ungenerated.length} 件あります` +
       `（zone=${zoneState.zone}, mode=${mode}）:`

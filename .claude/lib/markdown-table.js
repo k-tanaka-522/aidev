@@ -66,6 +66,43 @@ function findTable(content) {
   return { header: null, rows: [], startLine: -1, endLine: -1, lines };
 }
 
+/**
+ * ファイル内容に含まれる**全ての**Markdownテーブルを検出し、出現順の配列で返す
+ * （`findTable`は最初の1つのみを返す既存動作のまま変更しない。後方互換のため純粋な
+ * 追加関数とする）。
+ *
+ * 【新設理由（00-01成果物構成カタログの区分別テーブル構成への対応）】
+ * `docs/00_.../00-01_成果物構成カタログ.md`（02文書9.4.3節・版1.9の9列スキーマ雛形、
+ * 03文書3章）は「00_プロジェクト管理・ガバナンス」「02_要件定義」…「07_運用・保守」の
+ * 区分ごとに`##`見出しで区切られた**複数のテーブル**から成る（1ファイル1テーブルではない）。
+ * `readTableAsObjects`（`findTable`ベース）は最初のテーブル（00区分）しか読めず、
+ * `.claude/lib/reverse-common.js`の`readCatalog`がこれをそのまま使うと、02〜07区分の行が
+ * 常に読み落とされ、`checkCatalogSection`の`totalRows`が0になる（実測確認・PMへ報告）。
+ * 本関数はファイル全体を走査してこの問題を解消する。
+ */
+function findAllTables(content) {
+  const lines = content.split(/\r?\n/);
+  const tables = [];
+  let i = 0;
+  while (i < lines.length - 1) {
+    if (lines[i].trim().startsWith('|') && isSeparatorRow(lines[i + 1])) {
+      const header = splitRow(lines[i]);
+      let end = i + 1;
+      const rows = [];
+      for (let j = i + 2; j < lines.length; j++) {
+        if (!lines[j].trim().startsWith('|')) break;
+        rows.push(splitRow(lines[j]));
+        end = j;
+      }
+      tables.push({ header, rows, startLine: i, endLine: end });
+      i = end + 1;
+    } else {
+      i += 1;
+    }
+  }
+  return tables;
+}
+
 /** ファイルを読み、テーブルを抽出する。存在しなければ table: null。 */
 function readTable(filePath) {
   let content;
@@ -239,6 +276,7 @@ function upsertRow(filePath, headerCols, keyCol, keyValue, rowValues, { title, d
 
 module.exports = {
   findTable,
+  findAllTables,
   readTable,
   readTableAsObjects,
   appendRow,

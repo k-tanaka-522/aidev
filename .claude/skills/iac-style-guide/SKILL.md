@@ -1,8 +1,8 @@
 ---
 name: iac-style-guide
-description: v2のIaC規約。CDK/Terraform/CloudFormation等、ツール別規約は個別ファイル、CI/CD規約はcicd/配下、インフラテスト規約はtesting/配下を参照する。infra/**・.github/workflows/**のexecute/reviewから自動で参照される。
+description: v2のIaC規約。CDK/Terraform/CloudFormation等、ツール別規約は個別ファイル、CI/CD規約はcicd/配下、インフラテスト規約はtesting/配下を参照する。infra/**・.github/workflows/**・tests/integration/**のexecute/reviewから自動で参照される。
 user-invocable: false
-paths: "infra/**, .github/workflows/**"
+paths: "infra/**, .github/workflows/**, tests/integration/**"
 ---
 
 # iac-style-guide（IaC規約）
@@ -11,6 +11,11 @@ paths: "infra/**, .github/workflows/**"
 > `user-invocable: false`, `paths` は設計書5.1節が定める本来の値。
 > **`paths`の書式に関する重要な訂正（M1で判明）**: `code-style-guide/SKILL.md`と同様の
 > 理由により、`paths`はカンマ区切りの単一文字列で与える。M0雛形のYAMLリスト構文を修正した。
+> **`tests/integration/**`の欠落を是正（本タスク）**: 設計書5.1節（`docs/v2/02_実行基盤アーキテクチャ.md`）は
+> `paths: "infra/**, .github/workflows/**, tests/integration/**"`の3パスを正本と定めているが、
+> 本ファイルのfrontmatterは`tests/integration/**`を欠いたまま（当初からの記載漏れ）だった。
+> 設計書側が正のため、frontmatterの`paths`・`description`・下記「呼び出し元・連携先」を
+> 設計書と一致させた。
 
 ## 責務
 
@@ -21,7 +26,9 @@ IaC規約（IAM最小権限、暗号化デフォルト、タグ必須、環境�
 ## 呼び出し元・連携先
 
 - 呼び出し元: `infra/**`の`execute`/`review`（自動、Zone2）。CI/CD定義
-  （`.github/workflows/**`）もsre主導での参照対象に追加（02文書4.4節）
+  （`.github/workflows/**`）もsre主導での参照対象に追加（02文書4.4節）。
+  `tests/integration/**`のexecute/review（インフラ結合テスト実装、02文書5.1節）も対象
+  （本タスクでfrontmatterの記載漏れを是正）
 
 ## 規約ファイル一覧（02文書4.4節の移管マッピング、M1で内容移管済み）
 
