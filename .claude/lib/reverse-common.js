@@ -33,7 +33,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { upsertRow, readTableAsObjects } = require('./markdown-table');
-const { ledger0001Path } = require('./ledger-paths');
+const { ledger0001Path, ledger0002Path, ledger0003Path } = require('./ledger-paths');
 const { decisionsDir, listDecisionFiles } = require('./decisions');
 const { readZoneState } = require('./zone-state');
 
@@ -205,6 +205,89 @@ function writeGeneratedDoc(filePath, { header, marker, body }) {
   fs.writeFileSync(filePath, header + marker + '\n\n' + body, 'utf-8');
 }
 
+/**
+ * 01文書4.4.5節 手順8: `HB-ID`を正式要件ID（`F-{領域}-{連番}`）へ変換する。
+ * 冪等（既に変換済みの行はスキップする）。生成DAG（02文書9.4.1節）「00-02 HB台帳
+ * （正式ID変換前）→ 02-02 機能要件一覧」に対応し、`docs/02_要件定義/reverse-doc`が
+ * `02-02`を生成する処理の一部として呼ぶ（MUST、この時点で初めて正式要件IDが定まる）。
+ * `domain`は領域名（例: "FUNC"）。省略時は"FUNC"に固定する（案件別の領域分割は
+ * 01文書に具体的な粒度規定が無いため、本実装は単一領域で機械的に採番する簡易版とし、
+ * 領域分割が必要な場合は生成後に手動でリネームすることを許容する）。
+ */
+function convertHbIdsToFormalIds(cwd, domain = 'FUNC') {
+  const rows = readTableAsObjects(ledger0002Path(cwd));
+  const header = [
+    'HB-ID',
+    '経路（SCR-ID/RPT-ID/BAT-ID/API-ID）',
+    '正式要件ID',
+    '実装ファイル（逆引き）',
+    'API-ID（逆引き）',
+    'モジュール（逆引き）',
+    '状態',
+  ];
+  const converted = [];
+  let seq = 1;
+  // 既存の変換済みIDの最大連番を引き継ぐ（再実行時の重複採番防止）。
+  for (const r of rows) {
+    const m = new RegExp(`F-${domain}-(\\d+)`).exec(r['正式要件ID'] || '');
+    if (m) seq = Math.max(seq, parseInt(m[1], 10) + 1);
+  }
+  for (const r of rows) {
+    let formalId = r['正式要件ID'];
+    if (!formalId || formalId === '(Zone3で変換)') {
+      formalId = `F-${domain}-${String(seq).padStart(4, '0')}`;
+      seq += 1;
+      upsertRow(
+        ledger0002Path(cwd),
+        header,
+        'HB-ID',
+        r['HB-ID'],
+        [r['HB-ID'], r['経路（SCR-ID/RPT-ID/BAT-ID/API-ID）'], formalId, r['実装ファイル（逆引き）'] || '', r['API-ID（逆引き）'] || '', r['モジュール（逆引き）'] || '', r['状態'] || '']
+      );
+    }
+    converted.push({ hbId: r['HB-ID'], formalId, route: r['経路（SCR-ID/RPT-ID/BAT-ID/API-ID）'] });
+  }
+  return converted;
+}
+
+/** 同様に`BAT-ID`を`F-BAT-{連番}`へ変換する（01文書4.4.5節、03文書3.2.3節版1.4）。 */
+function convertBatIdsToFormalIds(cwd) {
+  const rows = readTableAsObjects(ledger0003Path(cwd));
+  const header = [
+    'BAT-ID',
+    'ジョブ名',
+    '入出力仕様参照（decisions/配下）',
+    '経由HB-ID（画面経由の場合）',
+    '正式ID（F-BAT-{連番}）',
+    '状態',
+    '登録日時',
+  ];
+  const converted = [];
+  let seq = 1;
+  for (const r of rows) {
+    const m = /F-BAT-(\d+)/.exec(r['正式ID（F-BAT-{連番}）'] || '');
+    if (m) seq = Math.max(seq, parseInt(m[1], 10) + 1);
+  }
+  for (const r of rows) {
+    let formalId = r['正式ID（F-BAT-{連番}）'];
+    if (!formalId) {
+      formalId = `F-BAT-${String(seq).padStart(4, '0')}`;
+      seq += 1;
+      upsertRow(ledger0003Path(cwd), header, 'BAT-ID', r['BAT-ID'], [
+        r['BAT-ID'],
+        r['ジョブ名'],
+        r['入出力仕様参照（decisions/配下）'],
+        r['経由HB-ID（画面経由の場合）'] || '',
+        formalId,
+        r['状態'] || '',
+        r['登録日時'] || '',
+      ]);
+    }
+    converted.push({ batId: r['BAT-ID'], formalId });
+  }
+  return converted;
+}
+
 module.exports = {
   CATALOG_HEADER,
   SEISEIKUBUN,
@@ -218,5 +301,7 @@ module.exports = {
   getFreezeTag,
   checkFreezeTagDrift,
   writeGeneratedDoc,
+  convertHbIdsToFormalIds,
+  convertBatIdsToFormalIds,
   decisionsDir,
 };
