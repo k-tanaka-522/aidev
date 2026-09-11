@@ -47,6 +47,50 @@ M0の作業指示（PMからの委譲）に基づき新設した。
 この段階1配置の目的は、14.2節M3完了条件の「Task完了ペイロードのフィールド名を実機で
 確認する」を、ブロックのリスクゼロで達成することである。
 
+### hookの`command`記法に関する重要な注意（M3でPMが実機確認した実バグ）
+
+**現象**: `settings.json`の`hooks[...].hooks[].command`に `.claude/hooks/xxx.js`
+（`node`を前置しない形）で登録すると、そのファイルに shebang
+（`#!/usr/bin/env node`）が書かれていても**実行権限（`+x`）が付与されていない限り
+`Permission denied`で起動に失敗し、hookが一切発火しない**（無音で失敗するため
+気づきにくい）。M3でPMが実機のサブエージェント起動により確認した。
+
+**採用する解決策: `command`に`node `を前置する（`chmod +x`ではない）**。理由は2点。
+
+1. 参考実装 annotation は`command`を`"node .claude/hooks/xxx.js"`の形で登録している
+   （`.claude/hooks/xxx.js`単体ではない）
+2. aidevはREADMEでWindows + Git Bashを推奨環境としている。Windows環境では
+   shebangも実行ビット（`chmod +x`）も機能しないため、`chmod +x`による解決は
+   Windows配布先で再発する。フレームワークとして配布される以上、実行環境に依存しない
+   `node `前置が唯一の正解である
+
+**本ファイルおよび`.claude/settings.json`のすべての`command`は、この教訓を反映して
+`node `前置済みである（M3で修正）。今後、新しいhookを追加する際は必ず
+`"command": "node .claude/hooks/{新規hook}.js"`の形式で登録すること（MUST）。
+`.claude/hooks/*.js`単体（`node`前置なし）での登録は行わないこと（MUST NOT）。**
+
+### 未確定事項: `settings.json`の変更は同一セッション内で反映されるか（要PM再検証）
+
+`command`を`node `前置に修正した後、**この修正が同一セッション内でhookとして
+反映されるかどうかは、本タスク（Coder）の実行中には確認できていない**。
+確認できない理由: Coderは自分自身のセッション内でTaskツールを呼び出せない
+（サブエージェントを自ら起動する権限を持たない）ため、`node`前置修正後にhookが
+実際に発火するかどうかを試すには、PMが別のサブエージェントを起動する必要がある。
+
+**この検証結果には次の重大な分岐がある**（PM再検証で確定する）。
+
+- **反映される場合**: 段階2（M6）の切替後、追加の作業なしにhookが有効化される
+- **反映されない場合（`settings.json`の変更がセッション起動時にのみ読み込まれる場合）**:
+  M6の切替手順に**「`.claude/settings.json`を完全版に差し替えた後、Claude Codeの
+  セッションを再起動する」という手順が追加で必要になる**。この場合、段階2の手順3
+  （`.claude/settings.json`の全面差し替え）の直後に、PMは必ずセッションを再起動し、
+  再起動後の最初の数回のツール呼び出しで`role-boundary-guard.js`等が意図通りに
+  動作しているかを確認しなければならない（手順3の「最初の数回のツール呼び出しを
+  慎重に確認する」に「セッション再起動後に」という条件が追加される）
+
+**M3時点ではこの分岐を確定できていない。PMが実機で再検証済みかどうかを段階2着手前に
+必ず確認すること（下記チェックリストにも反映）。**
+
 ## 段階2（M6で実施）: 完全版への切替
 
 M6（旧資産削除・`.claude/agents/*.md`の昇格と**同時**）に、以下の手順で切り替える。
@@ -59,15 +103,23 @@ M6（旧資産削除・`.claude/agents/*.md`の昇格と**同時**）に、以�
          `agent_type` が `consultant`/`app-architect`/`infra-architect`/`designer`/
          `coder`/`qa`/`sre` のいずれかと一致することも合わせて確認する）
    - [ ] `.claude/v2-staging/agents/*.md`（7ファイル）の内容が確定していること
+   - [ ] **上記「未確定事項: `settings.json`の変更は同一セッション内で反映されるか」が
+         PMにより再検証済みであること。** 反映されない（セッション起動時のみ読込）と
+         判明している場合は、次の手順3の直後に**必ずセッション再起動**を行う
 2. **`.claude/agents/` の昇格**
    - `.claude/agents/<name>/AGENT.md`（v1、ディレクトリ形式）を削除する
    - `.claude/v2-staging/agents/<name>.md`（フラット形式）を `.claude/agents/<name>.md`
      へ移動する
 3. **`.claude/settings.json` の全面差し替え**
    - `.claude/v2-staging/settings.json`（本ディレクトリの完全版）の内容を
-     `.claude/settings.json` としてコミットする（`permissions` 2表＋7章の全hookを含む）
-   - 差し替え後、**最初の数回のツール呼び出しをPM自身が慎重に確認する**（`role-boundary-guard.js`
-     が意図せずPM自身の `docs/00_.../` 書込までブロックしていないか等）
+     `.claude/settings.json` としてコミットする（`permissions` 2表＋7章の全hookを含む。
+     すべての`command`が`node `前置済みであることを再確認すること、MUST）
+   - **「未確定事項」でセッション再起動が必要と判明している場合、この時点で
+     Claude Codeのセッションを再起動する（MUST）。** 再起動せずに続行すると、
+     新しいhookが発火しないまま「有効化された」と誤認するリスクがある
+   - 差し替え（および必要な場合は再起動）後、**最初の数回のツール呼び出しをPM自身が
+     慎重に確認する**（`role-boundary-guard.js`が意図せずPM自身の `docs/00_.../` 書込
+     までブロックしていないか等）
 4. **v1の`CLAUDE.md`の置き換え**
    - v1の `.claude/CLAUDE.md`（338行、フェーズ順次型の記述）を、v2の軽量CLAUDE.md
      （6.2節、150〜180行目安、ゾーン/レーン型のオーケストレーション定義）に置き換える
@@ -106,9 +158,12 @@ M3新設の観測専用フック1種）は、v1と名前が衝突しないため
   付与済みのため、ユーザーが明示的に呼ばない限り起動しない
 - hook: `.claude/settings.json`（段階1の安全な有効化版）には
   `decision-log-guard.js`・`sync-ledger-guard.js`・`decision-stop-check.js`・
-  `task-payload-observer.js`の4件のみが登録されている。いずれも`process.exit(0)`固定で
-  ブロックしない。それ以外の`.claude/hooks/*.js`（`role-boundary-guard.js`等）は
-  実装済みだが未登録のため一切発火しない
+  `task-payload-observer.js`の4件が`command`を`node `前置の形で登録されている
+  （M3でPMが発見した`Permission denied`不具合の修正済み。上記「hookの`command`記法に
+  関する重要な注意」参照）。いずれも`process.exit(0)`固定でブロックしない設計だが、
+  **本セッション内でこの修正後に実際に発火するかどうかはPMの再検証待ちである**
+  （Coder自身はTaskツールを持たず検証できない）。それ以外の`.claude/hooks/*.js`
+  （`role-boundary-guard.js`等）は実装済みだが未登録のため一切発火しない
 - `.claude/settings.local.json`が登録する`prevent-pm-layer-violation.sh`（v1）は
   そのまま有効に動作し続けている
 

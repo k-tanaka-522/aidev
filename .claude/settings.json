@@ -1,26 +1,26 @@
 {
-  "_note": "M3『安全な有効化』版。docs/v2/02_実行基盤アーキテクチャ.md 7章に基づくが、PMのM3委譲指示により意図的に不完全な状態で配置している。理由: このリポジトリの.claude/はこのセッション自身を制御しているため、7章の全hookをここで有効化すると即座にPMの権限が変わりexit 2でブロックするhookが発火し、残るM4・M5の実装が進められなくなる。よって本ファイルは(1) permissionsキーを含めない（M6で追加）、(2) exit 0で常に素通りする警告専用hookのみを登録する（exit 2でブロックするhookはM6まで登録しない）という2点を厳守する。完全版はcompletion後.claude/v2-staging/settings.jsonを参照。切替手順は.claude/v2-staging/README.md参照。",
+  "_note": "M3『安全な有効化』版。docs/v2/02_実行基盤アーキテクチャ.md 7章に基づくが、PMのM3委譲指示により意図的に不完全な状態で配置している。理由: このリポジトリの.claude/はこのセッション自身を制御しているため、7章の全hookをここで有効化すると即座にPMの権限が変わりexit 2でブロックするhookが発火し、残るM4・M5の実装が進められなくなる。よって本ファイルは(1) permissionsキーを含めない（M6で追加）、(2) exit 0で常に素通りする警告専用hookのみを登録する（exit 2でブロックするhookはM6まで登録しない）という2点を厳守する。完全版はcompletion後.claude/v2-staging/settings.jsonを参照。切替手順は.claude/v2-staging/README.md参照。【修正】PM実機確認により、commandを`.claude/hooks/xxx.js`のみ（`node`前置なし）で登録すると、実行権限（+x）が無いため`Permission denied`で起動できず全hookが無音のまま発火しない不具合が判明したため、全commandに`node `を前置する形に修正した（`chmod +x`ではなく`node`前置を採用した理由はv2-staging/README.md参照）。",
   "hooks": {
-    "_note": "登録した4 hookはいずれもprocess.exit(0)固定（何もブロックしない）。role-boundary-guard.js・gate-transition-guard.js・doc-header-guard.js・lint-guard.js・task-boundary-guard.js・artifact-emptiness-guard.js・ops-item-guard.jsはM3で実装済みだが、ブロックする可能性がある（またはPM指示により安全な有効化の対象外とされた）ため、意図的に本ファイルには登録しない。動作確認は `echo '<JSON>' | node .claude/hooks/xxx.js` で個別に行う。",
+    "_note": "登録した4 hookはいずれもprocess.exit(0)固定（何もブロックしない）。role-boundary-guard.js・gate-transition-guard.js・doc-header-guard.js・lint-guard.js・task-boundary-guard.js・artifact-emptiness-guard.js・ops-item-guard.jsはM3で実装済みだが、ブロックする可能性がある（またはPM指示により安全な有効化の対象外とされた）ため、意図的に本ファイルには登録しない。動作確認は `echo '<JSON>' | node .claude/hooks/xxx.js` で個別に行う。commandは必ず`node `を前置すること（実行権限に依存させない。理由はv2-staging/README.md参照）。",
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": ".claude/hooks/decision-log-guard.js" },
-          { "type": "command", "command": ".claude/hooks/sync-ledger-guard.js" }
+          { "type": "command", "command": "node .claude/hooks/decision-log-guard.js" },
+          { "type": "command", "command": "node .claude/hooks/sync-ledger-guard.js" }
         ]
       },
       {
         "matcher": "Task",
         "hooks": [
-          { "type": "command", "command": ".claude/hooks/task-payload-observer.js" }
+          { "type": "command", "command": "node .claude/hooks/task-payload-observer.js" }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": ".claude/hooks/decision-stop-check.js" }
+          { "type": "command", "command": "node .claude/hooks/decision-stop-check.js" }
         ]
       }
     ]
