@@ -188,8 +188,9 @@ ID体系であり混同しない（MUST NOT混同、03文書9.1節）。
 
 ## セキュリティ規約への参照（版1.6、4.4節の移管マッピングに伴う追記）
 
-全レーン横断のセキュリティ基準は`security-guard`直下の`SECURITY_STANDARD.md`を正本と
-する（02文書4.4節）。本Skillは内容を転記・複製せず、必要な箇所でリンク参照する
+全レーン横断のセキュリティ基準は`security-style-guide`直下の`SECURITY_STANDARD.md`を正本と
+する（02文書4.4節、版1.7で`security-guard`から`security-style-guide`へ参照先変更）。
+本Skillは内容を転記・複製せず、必要な箇所でリンク参照する
 （例: 「3-06 セキュリティ設計（アプリ層）」を`reverse-doc`する際は
-`.claude/skills/security-guard/SECURITY_STANDARD.md`を参照するよう`reverse-doc`側の
+`.claude/skills/security-style-guide/SECURITY_STANDARD.md`を参照するよう`reverse-doc`側の
 実装で案内する）。

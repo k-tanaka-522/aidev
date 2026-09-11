@@ -1,4 +1,10 @@
-> 移行元: `.claude/docs/40_standards/49_common/security.md`（02文書4.4節、新設 `security-guard/SECURITY_STANDARD.md`。全レーン横断の正本とし、code-style-guide/iac-style-guide/contract-design/ui-style-guideの各SKILL.mdからはリンク参照する）
+> 移行元: `.claude/docs/40_standards/49_common/security.md`（02文書4.4節、新設 `security-guard/SECURITY_STANDARD.md`）
+> **配置変更（版1.7、M2）**: 02文書版1.7 4.4節・5.1節が`security-guard`（能動検査専用、`context: fork`）と
+> `security-style-guide`（受動自動参照専用、`user-invocable: false`・`paths`）を分離したことに伴い、
+> 本ファイルの正本を`security-guard/SECURITY_STANDARD.md`から`security-style-guide/SECURITY_STANDARD.md`
+> へ移動した（複製ではなく移動。旧ファイルは削除済み）。全レーン横断の正本であることは変わらず、
+> `code-style-guide`/`iac-style-guide`/`contract-design`/`ui-style-guide`/`security-guard`の各SKILL.md
+> からはリンク参照する（MUST NOT複製）。
 
 # セキュリティ・運用基準
 
@@ -136,4 +142,3 @@ PreferredBackupWindow: "03:00-04:00"  # 深夜3-4時
 - **RPO（復旧ポイント目標）**: 5分以内
 
 ---
-

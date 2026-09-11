@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * sync-ledger-guard.js（新設、版1.5、M0雛形）
+ * sync-ledger-guard.js（新設、版1.5、M2実装）
  *
  * 設計書: docs/v2/02_実行基盤アーキテクチャ.md 7.3節#10・10.1.5節
  *
@@ -25,13 +25,20 @@
  * `docs/00_プロジェクト管理・ガバナンス/00-02_HBトレーサビリティ台帳.md`、
  * `docs/00_プロジェクト管理・ガバナンス/00-03_バッチトレーサビリティ台帳.md` へのEdit|Write。
  * 【前提条件・制約】
- * 実装時期は02文書14.2節の段階移行計画（M0〜M6）に明記が無い
- * （本Skillの起票元である`sync-check`はM2の完了条件に含まれるため、
- * 本ファイルは暫定的にM2相当での実装を想定する。この対応関係は設計書に
- * 明記が無いためPMへ報告する）。settings.json未登録のM0段階では発火しない。
+ * - `sync-check.js`（M2実装）は00-02/00-03への追記と00-05への追記を同一プロセス実行内で
+ *   ほぼ同時に行うため、正常系では両ファイルのmtimeの差はごく短時間になる。本フックは
+ *   `decision-log-guard.js`（段1）と同じ「直近更新時刻の近接判定」方式を採用し、既定の
+ *   判定窓を5分（環境変数 `SYNC_LEDGER_GUARD_WINDOW_MS` で上書き可）とした。
+ *   `sync-check.js`経由の正常な追記であれば数秒〜数十ms差に収まるため誤検知しないが、
+ *   人間が`00-02`/`00-03`を手動編集した場合（`sync-check`を経由しない直接Write）は
+ *   `00-05`が更新されないため確実に警告される（意図した検知対象）。
+ * - settings.json未登録のM0〜M2段階では発火しない（M3でsettings.jsonが昇格するまで無害）。
  */
 
 const fs = require('fs');
+const path = require('path');
+const { readWarnings, writeWarnings, addWarning } = require('../lib/warnings-store');
+const { ledger0005Path } = require('../lib/ledger-paths');
 
 function readHookPayload() {
   try {
@@ -43,12 +50,66 @@ function readHookPayload() {
   }
 }
 
-function main() {
-  const _payload = readHookPayload();
+/**
+ * 対象パスが00-02/00-03台帳かどうかを判定する。
+ * `architecture-patterns.js`（decision-log-guard.js等が使う分類器）とは検知対象パターンが
+ * 異なる（あちらは「アーキテクチャ関連変更」、こちらは「トレーサビリティ台帳への追記」）ため
+ * 専用の判定を持つ。
+ */
+function classifyLedger(relPath) {
+  const p = String(relPath).replace(/\\/g, '/');
+  if (p.endsWith('00-02_HBトレーサビリティ台帳.md')) return '00-02';
+  if (p.endsWith('00-03_バッチトレーサビリティ台帳.md')) return '00-03';
+  return null;
+}
 
-  // <!-- M2相当で実装（14.2節に明記なし、PMへ要確認）: 00-02/00-03への追記検知、
-  //      同一操作内の00-05追記有無の確認、decision-warnings.jsonへの
-  //      {type: "sync_ledger_missing", ...} 追記処理 -->
+/** 00-05台帳が直近windowMs以内に更新されたかを確認する。 */
+function ledger0005RecentlyUpdated(cwd, windowMs) {
+  const p = ledger0005Path(cwd);
+  try {
+    const stat = fs.statSync(p);
+    return Date.now() - stat.mtimeMs <= windowMs;
+  } catch (_err) {
+    return false;
+  }
+}
+
+function main() {
+  const payload = readHookPayload();
+  const filePath = payload && payload.tool_input && payload.tool_input.file_path;
+  if (!filePath) {
+    process.exit(0);
+  }
+
+  const cwd = process.cwd();
+  const absTarget = path.isAbsolute(filePath) ? filePath : path.resolve(cwd, filePath);
+  const relPath = path.relative(cwd, absTarget).replace(/\\/g, '/');
+
+  const ledger = classifyLedger(relPath);
+  if (!ledger) {
+    process.exit(0);
+  }
+
+  const windowMs = Number(process.env.SYNC_LEDGER_GUARD_WINDOW_MS || 5 * 60 * 1000);
+  if (ledger0005RecentlyUpdated(cwd, windowMs)) {
+    process.exit(0);
+  }
+
+  const data = readWarnings(cwd);
+  const entry = addWarning(data, {
+    type: 'sync_ledger_missing',
+    path_or_task: relPath,
+    extra: { ledger, agent_type: payload.agent_type || null },
+  });
+  writeWarnings(data, cwd);
+
+  console.error(
+    `[sync-ledger-guard] ${relPath} への追記を検知しましたが、` +
+      `直近${Math.round(windowMs / 60000)}分以内の00-05同期点記録台帳の更新が見つかりません。`
+  );
+  console.error(
+    `[sync-ledger-guard] sync-checkを経由せず直接編集した可能性があります。00-05への追記を確認してください（警告のみ・ブロックしません）。 warning_id=${entry.id}`
+  );
 
   process.exit(0);
 }

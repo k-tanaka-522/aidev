@@ -1,87 +1,57 @@
 ---
 name: security-guard
-description: コンプライアンス検査。全ゾーンのExecute/reverse-doc完了後にorchestrateから能動的に起動される（context:fork）ほか、src/**・infra/**・decisions/contracts/**・prototypes/**編集時にSECURITY_STANDARD.mdが自動参照される。
+description: コンプライアンス検査（能動）。orchestrateから明示的に呼び出され、対象範囲（src/, infra/, decisions/contracts/等）がセキュリティ標準に準拠しているかをcontext:forkの独立コンテキストで検査する。
 context: fork
-paths: "src/**, infra/**, decisions/contracts/**, prototypes/**"
 ---
 
-# security-guard（コンプライアンスガード）
+# security-guard（コンプライアンスガード・能動検査専用）
 
-> 版数: M1実装（実装対象: docs/v2/02_実行基盤アーキテクチャ.md 5.1節・3.2節・4.4節）
-> `context: fork` は設計書5.1節が定める本来の値。`paths`は版1.6の4.4節が追加要求した
-> 「`paths`によるpassive自動参照」を実装したもの。
+> 版数: M2実装（実装対象: docs/v2/02_実行基盤アーキテクチャ.md 5.1節・4.4節。版1.7で`security-style-guide`へ責務分離）
+> `context: fork` は設計書5.1節が定める本来の値。**版1.7で`paths`を削除した**（旧M1版は
+> `context: fork`と`paths`を1つのSkillに併設していたが、能動検査と受動自動参照を
+> `security-guard`／`security-style-guide`に分離する設計判断が確定したため）。
 
 ## 責務
 
-1. **能動的検査（`context: fork`、主機能）**: `orchestrate`から明示的に呼び出され、
-   対象範囲（`src/`, `infra/`, `decisions/contracts/`等）がセキュリティ標準
-   （`SECURITY_STANDARD.md`）に準拠しているかを独立コンテキストで検査する
-2. **受動的自動参照（`paths`、版1.6で追加）**: `src/**`・`infra/**`・
-   `decisions/contracts/**`・`prototypes/**`のいずれかを編集した際、本Skillが
-   条件付きで活性化され、`code-style-guide`等と同様にモデルが自律的に参照できる
-   ようになる（全レーン共通のセキュリティ基準の一元管理、02文書4.4節）
+**能動的検査のみ**（`context: fork`）。`orchestrate`から明示的に呼び出され、対象範囲
+（`src/`, `infra/`, `decisions/contracts/`等）が`security-style-guide`の
+`SECURITY_STANDARD.md`に準拠しているかを独立コンテキストで検査する。
+
+**版1.7での変更**: 旧M1版が持っていた「受動的自動参照（`paths`）」の責務は
+`security-style-guide`（新設）へ完全に移した。本Skillはもはや`paths`を持たない。
 
 ## 呼び出し元・連携先
 
-- 呼び出し元: `orchestrate`（能動検査）、各execute/review Skill（受動自動参照）
-- 連携先: `qa`
+- 呼び出し元: `orchestrate`（能動検査のみ）
+- 連携先: `qa`、`security-style-guide`（同じ標準を参照）
 
 ## レビューとの役割分担
 
 本ガードは**検査者であり、テストを書かない**。セキュリティテスト・テナント分離テスト等の設計と実装は`qa`が担う（書いた本人が合否を出す構造を作らないため）。本ガードは実施済み・合格であることを**確認する**。
 
-## セキュリティ標準の正本（`SECURITY_STANDARD.md`、版1.6で新設）
+## セキュリティ標準の参照先（版1.7で移動、MUST NOT複製）
 
-`.claude/docs/40_standards/49_common/security.md`から移管した内容を
-`.claude/skills/security-guard/SECURITY_STANDARD.md`として保持する。
-`code-style-guide`・`iac-style-guide`・`ui-style-guide`・（Zone1の`contract-design`）は
-この内容を転記・複製せず、必要な箇所でリンク参照する（02文書4.4節、MUST NOT複製）。
+`SECURITY_STANDARD.md`本体は`.claude/skills/security-style-guide/SECURITY_STANDARD.md`
+を正本とする（版1.6でのM1新設時は`security-guard`直下に置いていたが、版1.7の分離に伴い
+移動した。旧ファイルは削除済み）。本Skillは内容を転記・複製せず、検査時に参照する。
 
-主な内容: シークレット管理（AWS Secrets Manager優先）、セキュリティチェックリスト
-（アプリ: SQLインジェクション対策・XSS対策・CSRF対策・パスワードハッシュ化・HTTPS強制・
-セキュリティヘッダー、インフラ: SecurityGroup最小化・IAM最小権限・VPCプライベートサブネット・
-RDS暗号化・S3パブリックアクセス無効化・CloudTrail・GuardDuty、依存関係: 脆弱性スキャン）、
-監視・ログ（構造化ログ、シークレットのログ出力禁止）、バックアップ・復旧（RTO/RPO目標）。
+## `context: fork` と `paths` の分離に至った経緯（要検証15章#23、版1.7で解消済み）
 
-## `context: fork` と `paths` の両立可否（要検証15章#23への回答、M1で検証済み）
-
-**検証方法**: 実際にインストールされている`@anthropic-ai/claude-code@2.1.42`
-（`/opt/node22/lib/node_modules/@anthropic-ai/claude-code/cli.js`）のSkillロード処理
-（`Hu1`関数・`PH9`関数・`W01`関数）をソースレベルで確認した。
-
-**確認できた事実**:
-
-1. Skillのfrontmatterパース処理（`Hu1`関数）は`context`（→`executionContext`）と
-   `paths`（→`PH9`が返す配列）を独立にパースしており、両方が同時に設定されていても
-   パース・ロードの時点でエラーにはならない、または一方が無効化されることもない
-   （両方とも通常どおり値を持つ）
-2. `paths`を持つSkillは「条件付きSkill」として保留状態（`$u1`マップ）に置かれ、
-   `paths`パターンにマッチするファイルが編集されたタイミングで初めて通常のSkill一覧
-   （`Io`マップ）へ昇格し、モデルから自律的に呼び出し可能になる（`W01`関数）。
-   `context: fork`はこの「呼び出し可能になった後、実際に呼び出された時」の実行方式
-   （独立コンテキストで実行し結果テキストのみを返す）を規定するものであり、
-   `paths`による活性化タイミングの制御とは**独立した別レイヤの設定**である
-3. したがって**技術的には両立可能**であり、frontmatterに`context: fork`と`paths`を
-   同時に設定してよい（MAY、パース・ロードエラーにならないことを確認済み）
-
-**残る意味論上の注意点（要報告）**: 両立は技術的に可能だが、**動作の性質が
-`code-style-guide`等の非fork自動参照Skillとは異なる**。非fork Skillは呼び出されると
-SKILL.md本文がそのまま現在のコンテキストへ展開され、呼び出し元（例: コーディング中の
-coder）はそのガイドラインを読みながら直接作業を続けられる。一方`context: fork`の
-Skillは呼び出されるたびに独立した新規コンテキストが作られ、そこでの処理結果（テキスト）
-のみが呼び出し元に返る。つまりsecurity-guardが受動的に自動参照された場合も、
-「その場でSECURITY_STANDARD.mdの内容を読む」のではなく「security-guardを1回呼び出し、
-フォークされた文脈からの回答を受け取る」という**往復（ラウンドトリップ）が毎回発生する**。
-機能上は成立するが、`code-style-guide`等と全く同じ使用感（ゼロコストなインライン参照）
-にはならない点をPMへ報告する。分離すべきか（能動検査用と受動参照用を別Skillに割る）は
-App-Architectの設計判断に委ねる。
-
-## `paths`書式に関する注意（M1で判明した既知の問題、再掲）
-
-`paths`は**カンマ区切りの単一文字列**として与えなければならない（YAMLリスト構文は
-無視されるか、常時ロードのSkillとして扱われてしまう。`test-design-guide/SKILL.md`の
-該当箇所を参照）。本ファイルはこの訂正を反映済み。
+M1時点で、実際にインストールされている`@anthropic-ai/claude-code@2.1.42`のSkillロード処理
+（`Hu1`関数・`PH9`関数・`W01`関数）をソースレベルで確認し、**技術的には`context: fork`と
+`paths`を1つのSkillに併設してもパース・ロードエラーにはならない**ことを確認済みだった。
+しかし意味論上、`paths`による受動的自動参照は「本文がそのまま呼び出し元のコンテキストへ
+展開される」ことを期待する用途である一方、`context: fork`は「呼ばれるたびに独立コンテキストで
+実行され結果テキストのみが返る」ため、受動参照のたびに往復（ラウンドトリップ）が発生してしまう。
+この非対称性を理由に、版1.7（02文書4.4節・5.1節、指摘6）は能動検査専用の本Skillと、
+受動参照専用の`security-style-guide`（新設）への分離を設計判断として確定した。
 
 ## ツール権限
 
 `context: fork`内での実行のため`Write`/`Edit`は持たない（`Read`/`Grep`/`Glob`のみ）。
+
+## 動作確認（M2）
+
+- `paths`削除後も`context: fork`単独でのSkill定義として問題なくロードされることを確認済み
+- `security-style-guide`への参照リンクが機能することを確認済み（同一ディレクトリ外への
+  リンク参照であり複製ではないことを確認）

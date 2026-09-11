@@ -137,6 +137,21 @@ node .claude/skills/decide/scripts/process-option.js \
 ヒアリングが完了したら、`.claude/skills/decision-check/SKILL.md`（`decision-check`）を
 呼び出しGZ0の分母充足状況（9/9か）を確認することを推奨する。
 
+## NFR-IDの採番経路（M2で新設、02文書10.1.1節）
+
+非機能要件に該当する決定（`対象カテゴリ=非機能骨格`等）を起票する際、`NFR-ID`は
+LLMが目視で連番管理すると重複のリスクがあるため、`next-nfr-id.js`で機械的に採番する（MUST）。
+
+```bash
+NFR_ID=$(node .claude/skills/decide/scripts/next-nfr-id.js)
+node .claude/skills/decide/scripts/new-decision.js \
+  --category=非機能骨格 --nfr-id="$NFR_ID" ...
+```
+
+`new-decision.js`自体は変更していない（既存の`--nfr-id`引数をそのまま使う）。
+`next-nfr-id.js`は`decisions/DL-*.md`の`NFR-ID`フィールドを走査し次の連番を返すだけの
+読み取り専用ツールである。
+
 ## 運用設計向け追加ヒアリング項目（04文書6.3節、8.4節、MUST）
 
 条件B相当の決定（運用項目コードM2/B5/M10）が生じた際、追加で次の5項目をヒアリングする。

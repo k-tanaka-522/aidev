@@ -45,8 +45,8 @@ Designer定義（`.claude/v2-staging/agents/designer.md`、M6で`.claude/agents/
 ## セキュリティ標準への参照
 
 ハリボテはUI表示専用であり、通常はセキュリティ標準を直接参照する必要は薄いが、
-入力フォームのXSS対策等、`security-guard`の`SECURITY_STANDARD.md`と重複しうる観点が
-生じた場合はそちらを参照する（複製しない）。
+入力フォームのXSS対策等、`security-style-guide`の`SECURITY_STANDARD.md`と重複しうる観点が
+生じた場合はそちらを参照する（複製しない。版1.7で参照先を`security-guard`から`security-style-guide`へ変更）。
 
 ## 動作確認（M1）
 

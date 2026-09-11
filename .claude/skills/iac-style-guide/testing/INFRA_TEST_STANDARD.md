@@ -1,5 +1,12 @@
 > 移行元: `.claude/docs/40_standards/42_infra/testing/infra-test-structure.md`（02文書4.4節、新設 `iac-style-guide/testing/INFRA_TEST_STANDARD.md`）
-> **移管時の注意**: 本ファイルのディレクトリ構造例（`docs/03_テスト/インフラテスト/`）・PM委譲プロンプト例はv1（フェーズ順次型）を前提にしており、v2のゾーン/レーン型モデル（Zone2硬化のGuard適用、Zone3の`traceability-reverse`）とは前提が異なる。内容の骨子（テスト観点09種、テストフェーズ、品質基準、自動化ツール一覧）はv2でも有用なため移管するが、ディレクトリ構造・PM委譲プロンプトの節はv2向けの書き換えが必要である（本タスクでは実施せず、PMへの報告事項とする）。
+> **v1前提記述の書き換え（M2、02文書版1.7 14.2節の完了条件）**: M1移管時点のディレクトリ構造例
+> （`docs/03_テスト/インフラテスト/`）・PM委譲プロンプト例はv1（フェーズ順次型、PMがフェーズ単位で
+> 委譲する運用）を前提にしており、v2のゾーン/レーン型モデルとは前提が異なっていたため、本改訂で
+> 「ディレクトリ構造」「PMハンドリングフロー」の2節をv2向けに書き換えた（下記参照）。
+> **書き換えなかった箇所**（v1/v2で変わらない技術的内容）: テスト観点09種、品質基準
+> （性能・可用性基準）、自動化ツール一覧、ドキュメントテンプレート、「テストフェーズと実施順序」
+> （dev→stg→prdという環境昇格順序はZone/レーンの概念と直交するインフラテストの実務そのものであり
+> 変更不要と判断した）。
 
 # インフラテスト標準
 
@@ -17,12 +24,19 @@ QAエンジニアがインフラテスト計画を作成・実施する際の標
 
 ---
 
-## ディレクトリ構造
+## ディレクトリ構造（v2、M2で書き換え）
 
-プロジェクトの `docs/` 配下に以下の構造でテストドキュメントを配置:
+**v2での位置づけ**: インフラテストの計画・シナリオ・実行結果は、01文書4.4.4節「Zone 1では
+記述系文書を作らない」の対象ではないが、正式なIPA成果物（`docs/05_テスト/`）はZone3まで
+生成しない（02文書4.2.1節）。テストシナリオ・実行スクリプト・実行結果は**Zone2の実行成果物**
+であるため、`docs/`ではなく`tests/integration/infra/`配下に置く（04文書・02文書のいずれも
+明示的なテストシナリオ配置先を定めていなかったため、02文書4.3節の`tests/integration/`
+（API-ID起点のIT）と対称的な構成として本標準が採用する）。Zone3では、この実行成果物から
+`05-01_テスト方針.md`（責務分担の要約）・`05-03_テスト結果報告書.md`（サマリ、条件付き必須）
+へ`traceability-reverse`/`reverse-doc`が要約を転記する（03文書3.7節）。
 
 ```
-docs/03_テスト/インフラテスト/
+tests/integration/infra/
 ├── 00_テスト計画/
 │   ├── テスト計画書.md              # 全体計画
 │   └── テスト環境構成.md            # 環境説明
@@ -166,13 +180,13 @@ Phase 3: 本番環境 (prd)
 
 ---
 
-## テスト計画のタイミング区分
+## テスト計画のタイミング区分（v2、M2で書き換え）
 
-| 区分 | タイミング | 実施者 | 内容 |
+| 区分 | タイミング（v2） | 実施者 | 内容 |
 |-----|-----------|-------|------|
-| **事前策定** | 設計フェーズ | QA | テスト計画全体を策定 |
-| **CI/CD組み込み** | デプロイ時 | 自動 | 静的検証、デプロイ確認、設定確認 |
-| **手動/定期実行** | デプロイ後 | QA | 動作確認、障害試験、性能試験 |
+| **事前策定** | Zone1〜Zone2着手時（`infra/{layer}:execute`が本標準を自動参照した直後） | QA | テスト計画全体を策定 |
+| **CI/CD組み込み** | デプロイ時（Zone2、機能単位でZone1と反復） | 自動 | 静的検証、デプロイ確認、設定確認 |
+| **手動/定期実行** | デプロイ後（Zone2硬化中〜GZ2直前） | QA | 動作確認、障害試験、性能試験 |
 
 ---
 
@@ -264,69 +278,53 @@ aws ec2 describe-vpcs --query 'Vpcs[*].{ID:VpcId,CIDR:CidrBlock}'
 
 ---
 
-## PMハンドリングフロー
+## ゾーン/レーンでの実行フロー（v2、M2で書き換え。旧「PMハンドリングフロー」を置き換え）
 
-### インフラ開発プロセス全体
-
-```
-Phase 1: 設計
-├── PM → Infra-Architect: 設計委譲
-└── PM → レビュー委譲（SRE, Consultant）
-
-Phase 2: IaC実装
-├── PM → SRE: IaC実装委譲
-├── PM → レビュー委譲（Infra-Architect）
-└── CI: 静的検証（自動）← PR時
-
-Phase 3: デプロイ + 単体テスト
-├── PM → SRE: デプロイ委譲
-└── CI/CD: デプロイ確認・設定確認（自動）
-    ※ 結果は自動記録
-
-Phase 4: テスト計画策定
-├── PM → QA: テスト計画作成委譲
-│   入力: docs/design/infra/, infra/cloudformation/
-│   出力: docs/03_テスト/インフラテスト/
-└── PM → レビュー委譲（Coder）
-
-Phase 5: テスト実施
-├── PM → QA: テスト実施委譲
-└── 成果物: テスト結果記録
-```
-
-### PM委譲プロンプト例
-
-#### テスト計画作成委譲
+**v1との違い**: v1はPMがフェーズ単位（設計→実装→デプロイ→テスト計画→テスト実施）で
+都度Task委譲する直列フローだったが、v2は`orchestrate`がZone/レーン単位で統制し、
+本標準はディレクトリスコープSkill（`infra/{layer}:execute`/`review`）から`paths`により
+自動参照される（人が都度「参照してください」と指示する必要が無い、02文書2.2節）。
 
 ```
-インフラテスト計画を作成してください。
+Zone1（レーンC探索）:
+├── infra-architect + sre: 決定ログでインフラ制約・非機能骨格を確定（decide）
+└── QAが並行してテスト観点（本標準09種）からテスト計画の骨格を検討開始
 
-**入力**:
-- 設計書: docs/design/infra/
-- IaCコード: infra/cloudformation/
+Zone2（レーンC硬化、機能単位でZone1と反復）:
+├── orchestrate → sre: `infra/{layer}:execute`（IaC実装）
+│     └── `iac-style-guide`（本標準含む）が`paths`一致で自動参照される
+├── CI: 静的検証（自動）← PR時
+├── orchestrate → sre: デプロイ実行（dry-run→承認→本番、CLAUDE.mdの3ステップ原則）
+├── CI/CD: デプロイ確認・設定確認（自動、結果は`tests/integration/infra/`配下に記録）
+├── orchestrate → qa: テスト計画作成・テスト実施
+│     入力: 決定ログ（インフラ制約）、`infra/{layer}/`（IaCコード）
+│     出力: `tests/integration/infra/`（本標準のディレクトリ構造）
+└── `infra/{layer}:review`（`context: fork`）が規約準拠・決定ログ整合を検証
 
-**出力先**: docs/03_テスト/インフラテスト/
-
-**参照標準**:
-- `.claude/docs/40_standards/42_infra/testing/infra-test-structure.md`
-
-標準に従ってテスト計画書とシナリオを作成してください。
+Zone3（レーンC、`reverse-doc`/`traceability-reverse`）:
+└── `tests/integration/infra/`の実行結果から`05-01`（テスト方針）・`05-03`
+    （テスト結果報告書、条件付き必須）へ要約を転記する（03文書3.7節）
 ```
 
-#### テスト実施委譲
+### Skill呼び出し例（v2、PM委譲プロンプトの置き換え）
+
+v1は「PM委譲プロンプト」を都度手書きしていたが、v2では`infra/{layer}:execute`・
+`qa`への委譲はorchestrateのTask経由で行い、本標準は自動参照されるため、標準側で
+プロンプト文言を持つ必要がなくなった。テスト計画・実施を明示的に依頼する場合の
+要点のみ示す。
 
 ```
-インフラテストを実施してください。
+# テスト計画作成（orchestrate経由でqaへ委譲）
+入力: decisions/DL-*.md（インフラ制約・非機能骨格）, infra/{layer}/（IaCコード）
+出力先: tests/integration/infra/
+（`iac-style-guide/testing/INFRA_TEST_STANDARD.md`が`paths`一致で自動参照されるため、
+  参照標準を明示的に指示する必要はない）
 
-**テスト計画**: docs/03_テスト/インフラテスト/00_テスト計画/テスト計画書.md
-**対象環境**: stg
-
-テスト計画に従って以下を実施し、結果を記録してください：
-- 動作確認
-- 障害試験
-- 性能試験
-
-結果は `docs/03_テスト/インフラテスト/テスト結果/YYYY-MM-DD/` に記録してください。
+# テスト実施（orchestrate経由でqaへ委譲）
+テスト計画: tests/integration/infra/00_テスト計画/テスト計画書.md
+対象環境: stg
+実施項目: 動作確認・障害試験・性能試験
+結果記録先: tests/integration/infra/テスト結果/YYYY-MM-DD/
 ```
 
 ---
@@ -336,4 +334,4 @@ Phase 5: テスト実施
 - CloudFormation標準（本Skill内 `../cloudformation.md`）
 - Terraform標準（本Skill内 `../terraform.md`）
 - CI/CDセキュリティ標準（本Skill内 `cicd/cicd-security.md`）
-- セキュリティ標準（`.claude/skills/security-guard/SECURITY_STANDARD.md`が正本、02文書4.4節）
+- セキュリティ標準（`.claude/skills/security-style-guide/SECURITY_STANDARD.md`が正本、02文書4.4節、版1.7で参照先変更）

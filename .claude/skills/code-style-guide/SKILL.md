@@ -52,11 +52,12 @@ v1固有の外部参照（`.claude/agents/coder/AGENT.md`、`.claude/docs/10_fac
   「影響範囲」「前提条件・制約」を日本語で記載する（AI協業を前提としたコンテキスト明記。
   `languages/*.md`の各言語別コメント例を参照）
 
-## セキュリティ標準への参照（02文書4.4節）
+## セキュリティ標準への参照（02文書4.4節、版1.7で参照先変更）
 
-全レーン横断のセキュリティ基準は`security-guard`直下の`SECURITY_STANDARD.md`が正本。
-本Skillは内容を複製せず、実装時のセキュリティ判断が必要な箇所ではそちらを参照する
-（MUST NOT複製）。
+全レーン横断のセキュリティ基準は`security-style-guide`直下の`SECURITY_STANDARD.md`が正本
+（版1.6のM1新設時は`security-guard`直下だったが、版1.7で能動検査/受動自動参照の分離に伴い
+`security-style-guide`へ移動した）。本Skillは内容を複製せず、実装時のセキュリティ判断が
+必要な箇所ではそちらを参照する（MUST NOT複製）。
 
 ## 動作確認（M1）
 
