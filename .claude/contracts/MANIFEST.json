@@ -1,0 +1,65 @@
+{
+  "_comment": "設計⇔実装の契約検証機構（02文書16章）の対応表。実行時の合否(pass/fail)は保持しない（16.3.2節、静的passingフラグの陳腐化を避けるため。実行のたびにtestFileをnodeで走らせて都度判定する）。",
+  "contracts": [
+    {
+      "id": "CT-0001",
+      "must": {
+        "doc": "01",
+        "section": "6.5",
+        "quote": "skip/fixme、例外処理の握りつぶしを含むテストは分子に数えない"
+      },
+      "target": {
+        "module": ".claude/skills/gate-check/scripts/gate-check.js",
+        "function": "countTestCoverage"
+      },
+      "testFile": ".claude/contracts/gate-check.countTestCoverage.contract.js",
+      "author": "app-architect",
+      "status": "active"
+    },
+    {
+      "id": "CT-0002",
+      "must": {
+        "doc": "02",
+        "section": "9.4.3",
+        "quote": "未知スキーマは判定不能として扱う（fail closed。黙ってスキップしない）"
+      },
+      "target": {
+        "module": ".claude/lib/zone-gate-conditions.js",
+        "function": "checkCatalogSection"
+      },
+      "testFile": ".claude/contracts/zone-gate-conditions.checkCatalogSection.contract.js",
+      "author": "app-architect",
+      "status": "active"
+    },
+    {
+      "id": "CT-0003",
+      "must": {
+        "doc": "02",
+        "section": "9.4.3",
+        "quote": "00-01カタログはファイル内の全テーブルを走査して9列スキーマの行をすべて連結する"
+      },
+      "target": {
+        "module": ".claude/lib/reverse-common.js",
+        "function": "readCatalog"
+      },
+      "testFile": ".claude/contracts/reverse-common.readCatalog.contract.js",
+      "author": "app-architect",
+      "status": "active"
+    },
+    {
+      "id": "CT-0004",
+      "must": {
+        "doc": "01",
+        "section": "6.5",
+        "quote": "生成済みとカタログが主張する項目に実ファイルが無い場合、検査は検出漏れ0件を安全側に倒すのではなく、gapsとして報告しなければならない"
+      },
+      "target": {
+        "module": ".claude/lib/verify.js",
+        "function": "computeGenerationGaps"
+      },
+      "testFile": ".claude/contracts/lib-verify.computeGenerationGaps.contract.js",
+      "author": "app-architect",
+      "status": "active"
+    }
+  ]
+}

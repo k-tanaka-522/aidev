@@ -28,6 +28,13 @@
  * `docs/05_テスト/.claude/skills/traceability-reverse/scripts/static-analysis-run.js`、
  * `.claude/skills/doc-link-check/scripts/check-links.js`、
  * `.claude/skills/gate-check/scripts/gate-check.js`。
+ *
+ * 【契約】
+ * 未設定。16.6節の選別基準（分母・分子集計への関与／入力形式のバージョン分岐／複数エントリの
+ * 横断集計／fail-closedの挙動／「無効化」と「正しく0件」の区別不能性）に該当するかどうかの
+ * 判定はapp-architectの所管であり、M7（16.9節）時点ではCT-0001〜CT-0004の4件のみが契約化
+ * 済みである。本ファイルは対象内・対象外いずれの判定もまだ行われていない（契約が無いことを
+ * 隠さないための明記、16.3.3節・16.10節）。
  */
 
 const { appendRow, readTableAsObjects } = require('./markdown-table');

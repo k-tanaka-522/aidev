@@ -34,6 +34,14 @@
  *   node gate-check.js --kind=ticket --ref=TICKET-0001 [--ticket=TICKET-0001] [--ids=HB-0001,...] \
  *     [--findings=<path to {critical,high,guardPass}.json>]
  *   node gate-check.js --kind=zone3-hotfix --ref=ZH-0001 --ids=HB-0002 [--findings=...]
+ *
+ * 【契約】
+ * CT-0001（.claude/contracts/gate-check.countTestCoverage.contract.js）。
+ * 対象関数: countTestCoverage(cwd, ids)。出典MUST: 01文書6.5節「skip/fixme、例外処理の
+ * 握りつぶしを含むテストは分子に数えない」。16.7節。契約対象化に伴い、本ファイル末尾に
+ * `module.exports`（`require.main === module` ガード付き）を新設し、CLIとしての動作
+ * （`node gate-check.js ...`）を変えずにcountTestCoverageを外部から`require`可能にした
+ * （16.7節CT-0001コメントが指示するトリビアルな変更、M7でcoderが対応）。
  */
 
 const fs = require('fs');
@@ -321,4 +329,13 @@ function main() {
   if (result.judgement === 'HOLD') process.exitCode = 2;
 }
 
-main();
+// CT-0001（16.7節）が`countTestCoverage`を`require`できることを前提とするため、
+// `require.main === module`（`node gate-check.js`として直接実行された場合のみ）で
+// `main()`を呼ぶよう変更した。契約テストが本ファイルを`require`した際に、CLI引数
+// （`process.argv`）を誤って解釈して`process.exit`が呼ばれる事故を防ぐ（挙動自体は
+// 直接実行時と変わらない、トリビアルな変更。16.4節コメント・PMへの報告事項）。
+module.exports = { countTestCoverage };
+
+if (require.main === module) {
+  main();
+}

@@ -24,6 +24,12 @@
  *   明記があるが、NFR/BAT-standaloneには対応する明記が無い）。本タスクは`tests/`配下全体を
  *   走査する実装判断を採用した（`static-analysis.js`の`scanNfrTestLinks`/`scanBatTestLinks`
  *   参照）。この判断はPMへ報告する設計上の解釈である。
+ *
+ * 【契約】
+ * CT-0002（.claude/contracts/zone-gate-conditions.checkCatalogSection.contract.js）。
+ * 対象関数: checkCatalogSection(cwd, {sections, excludePrefixes})。出典MUST: 02文書9.4.3節
+ * （9列スキーマの正本化）、catalog-schema.jsのUNKNOWN_SCHEMA_WARNINGが述べるfail closed
+ * の原則。16.7節。
  */
 
 const fs = require('fs');

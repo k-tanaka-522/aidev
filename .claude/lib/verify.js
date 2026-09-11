@@ -22,6 +22,11 @@
  * 定める判定方法）。ファイル名ベースの素朴な突合であり、動的ルーティング等
  * `.claude/lib/static-analysis.js`が対応できない範囲は検出対象に含めない
  * （限界は同モジュールのコメントを参照）。
+ *
+ * 【契約】
+ * CT-0004（.claude/contracts/lib-verify.computeGenerationGaps.contract.js）。
+ * 対象関数: computeGenerationGaps(cwd)。出典MUST: 01文書6.5節「逆差分」定義の周辺、
+ * 02文書9.3節「生成漏れ検査」（検出漏れ0件を安全側に倒さず、gapsとして報告する）。16.7節。
  */
 
 const fs = require('fs');
