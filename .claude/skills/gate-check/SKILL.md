@@ -44,6 +44,22 @@ disable-model-invocation: true
 
 `00-05_同期点記録台帳.md`はミニゲート判定、および`GZ0`の分母集計（同期点由来の項目が含まれる場合）の出典として参照する（10.1.5節）。
 
+## decision-checkとのインターフェース（M1で実装済み、M3で配線）
+
+`GZ0`判定は`decision-check`が集計した決定ログの分母・分子を用いる（8.3節）。
+`decision-check`（M1実装済み）は次のコマンドで機械可読なJSONレポートを返す。
+
+```bash
+node .claude/skills/decision-check/scripts/check.js --json
+```
+
+M3で`gate-check`本体を実装する際は、このJSONの`zone0.numerator`/`zone0.denominator`
+（9項目充足数）、`hbId.numerator`/`hbId.denominator`（HB-ID単位4スロット）、
+`decisionWarnings.unresolved`（未解消警告件数。0でなければ`GZ0`はGOと判定しない、
+8.2.5節）、`processOption.consistent`（`false`の場合はブロック、8.7節）を入力として
+GO/NG/HOLD判定を組み立てること。出力フィールドの詳細は
+`.claude/skills/decision-check/SKILL.md`を参照。
+
 <!-- M3で実装: 上記の分母・分子の実grep処理、GO/NG/HOLD判定ロジック、GZ{0,2,3}-99台帳への記録 -->
 
 ## 引数
