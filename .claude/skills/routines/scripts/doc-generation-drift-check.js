@@ -17,6 +17,14 @@
  * 方針、SHOULD）、本スクリプトを両エントリの実行主体として共用する。
  *
  * 【影響範囲】読み取りのみ（`.claude/lib/verify.js`が読む範囲と同一）。
+ *
+ * 【契約】
+ * `.claude/skills/gate-check/scripts/verify-reverse.js`のヘッダーコメント【契約】欄と
+ * 同一の判定である（coderの一次判定、PMへ報告）。本ファイルは同じ`computeReverseDiff`・
+ * `computeGenerationGaps`（`.claude/lib/verify.js`）を呼ぶ薄いラッパーであり、
+ * `computeGenerationGaps`は既存の登録済み契約の対象内、`computeReverseDiff`
+ * （16.6節(c)・(e)に該当しうる）は未契約である。二重管理を避けるため詳細は
+ * `verify-reverse.js`側を正とする。
  */
 
 const { computeReverseDiff, computeGenerationGaps } = require('../../../lib/verify');

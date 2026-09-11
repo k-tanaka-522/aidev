@@ -18,6 +18,16 @@
  * ことを明示する（実装から真の可否を偽らない、MUST）。
  *
  * 【影響範囲】読み取りのみ（`git diff`、`.claude-state/current-zone.json`）。
+ *
+ * 【契約】
+ * 対象内と判定した（coderの一次判定、PMへ報告）。`zone3_freeze_tag`が未設定の場合に
+ * `status: "skipped"`を明示し、`git diff`が「差分0件」だった場合の`status`と区別して
+ * いる（下記実装）。これは16.6節(e)「無効化（基準点が無く検査自体が成立していない
+ * 状態）と、正しく0件（差分が本当に無い）の区別不能性」に直接該当する挙動であり、
+ * 現状の実装は意図的にこれを区別しているが、対応する契約テストが無いため退行検知の
+ * 保証が無い。(a)分母・分子集計そのものではないが、本質は登録済み契約の一つ
+ * （`.claude/lib/verify.js`の`computeGenerationGaps`向け、`.claude/contracts/
+ * MANIFEST.json`参照）と同型の観点である。app-architectへの発注として報告する。
  */
 
 const { execFileSync } = require('child_process');

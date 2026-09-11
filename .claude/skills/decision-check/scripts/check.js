@@ -26,6 +26,17 @@
  * 【使い方】
  *   node check.js            # 人間可読サマリ + JSON詳細を標準出力へ
  *   node check.js --json     # JSON詳細のみ
+ *
+ * 【契約】
+ * 対象内と判定した（coderの一次判定、PMへ報告）。`computeZone0`・`computeHbSlots`・
+ * `computeOps`はいずれも01文書4.7.3節・02文書8.3節が定めるGZ0判定の分母・分子を
+ * `decisions/DL-*.md`複数ファイルを横断して機械集計する処理であり、16.6節(a)「分母・
+ * 分子集計への関与」・(c)「複数エントリの横断集計」の双方に該当する（`zone-gate-conditions.js`の
+ * `checkCatalogSection`・`reverse-common.js`の`readCatalog`向けに既に登録済みの契約と
+ * 同型の性質）。`computeProcessOption`は
+ * DL-0000とミラーJSONの整合判定であり、(b)入力形式の解釈規則に近い。現時点では
+ * `.claude/contracts/MANIFEST.json`に対応する契約が無い。app-architectへの発注として
+ * 報告する。
  */
 
 const fs = require('fs');

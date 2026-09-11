@@ -24,6 +24,18 @@
  *   node impact-analysis.js --ticket-file=/path/to/ticket.json [--mode=...] [--cr]
  *   node impact-analysis.js --title="..." --body="..." --ids=HB-0001,API-0002
  *   node impact-analysis.js --ids=HB-0001 --mode=zone3-hotfix --hotfix-id=ZH-0001
+ *
+ * 【契約】
+ * 対象内（委譲）と判定した（coderの一次判定、PMへ報告）。本ファイル自体はCLI入出力の
+ * 薄いラッパーであり判定ロジックを持たないが、呼び出す`analyzeImpact`
+ * （`.claude/lib/impact-analysis.js`）が算出する直接影響・連動影響のHB-ID/API-ID集合は、
+ * `gate-check/scripts/gate-check.js`の`judge`が`denominatorIds`（01文書6.5節条件6の
+ * トレーサビリティ分母）としてそのまま再利用しており、16.6節(a)「分母・分子集計への
+ * 関与」に該当する。現時点で`analyzeImpact`を対象とする契約は無い。加えて本ファイルは
+ * `--cr`指定時に`.claude/lib/cr-ledger.js`の`registerCr`を呼ぶが、そちらの重複起票防止
+ * ロジックについては`cr-ledger.js`のヘッダーコメント【契約】欄を参照（本タスクの
+ * 別件・台帳重複蓄積バグ修正で判定済み）。`analyzeImpact`分についてはapp-architectへの
+ * 発注として報告する。
  */
 
 const fs = require('fs');

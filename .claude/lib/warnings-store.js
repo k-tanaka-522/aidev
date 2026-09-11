@@ -20,12 +20,35 @@
  * `cwd` 引数はテスト時に本番リポジトリを汚さず疑似リポジトリ（scratchpad配下）を
  * 対象にできるよう、明示的に渡せるようにしている（既定値は `process.cwd()`）。
  *
+ * 【M-dup調査（重複蓄積バグ、PMからの委譲）】
+ * `.claude/lib/issue-ledger.js`（00-13）の重複蓄積バグを受け、`addWarning`の呼び出し元
+ * 3箇所（`decision-log-guard.js`・`decision-stop-check.js`・`task-boundary-guard.js`）を
+ * 確認した。`decision-stop-check.js`は元から`existingUnresolvedPaths`で未解消の同一パスを
+ * 除外してから`addWarning`を呼んでおり重複しない。`task-boundary-guard.js`は
+ * `path_or_task`に`agentType`（例: "coder"）を使っており、これはTask呼び出しのたびに
+ * 異なりうる`task_summary`/`agent_id`を持つ**別々の事象**を束ねる識別子に過ぎない。
+ * 同じ`agentType`で決定ブロックを書き忘れる違反が2回起きた場合、それは同じ問題の
+ * 重複検出ではなく**別々の違反**であるため、ここでの重複除去は行わない（issue-ledger.js
+ * の「同じ検出の再登録を防ぐ」とは異なる性質。誤ってdedupすると2回目以降の違反が
+ * 記録から消え、後退になる）。
+ * 一方`decision-log-guard.js`は、同一ファイルへの複数回のEdit呼び出し（1つの変更を
+ * 完成させる過程でありがちな挙動）のたびに無条件で`addWarning`しており、`decision-check`
+ * の8.3節分母計算（8.2.5節）に使われる未解消件数を同一原因のまま水増しする、
+ * issue-ledger.jsと同型の重複蓄積バグだった。呼び出し元（`decision-log-guard.js`）側で
+ * 是正した（`findUnresolvedWarning`を新設し、同一`type`・同一`path_or_task`の未解消
+ * 警告が既にあれば`addWarning`を呼ばない）。`addWarning`自体は3者で意味が異なる
+ * `path_or_task`を扱う共通APIであるため、ライブラリ側で一律にdedupを強制せず、
+ * 呼び出し元がオプトインする方式とした（`task-boundary-guard.js`の挙動を変えないため）。
+ *
  * 【契約】
- * 未設定。16.6節の選別基準（分母・分子集計への関与／入力形式のバージョン分岐／複数エントリの
- * 横断集計／fail-closedの挙動／「無効化」と「正しく0件」の区別不能性）に該当するかどうかの
- * 判定はapp-architectの所管であり、M7（16.9節）時点ではCT-0001〜CT-0004の4件のみが契約化
- * 済みである。本ファイルは対象内・対象外いずれの判定もまだ行われていない（契約が無いことを
- * 隠さないための明記、16.3.3節・16.10節）。
+ * 対象外と判定した（coderの一次判定、PMへ報告）。本ファイル自体（`addWarning`等の
+ * 読み書きプリミティブ）はGate判定の分母・分子計算を行わない。分母計算
+ * （`.claude/skills/decision-check/scripts/check.js`が`unresolved.length`を数え、
+ * `.claude/lib/zone-gate.js`がそれをGZ0判定の理由に使う）は呼び出し側の責務であり、
+ * 既に登録済みの契約群と同様の観点で16.6節に該当しうるのは
+ * `decision-check`/`zone-gate.js`側である（本ファイルのAPI自体はブラックボックスの
+ * 入出力として素直で、既知のサイレント故障パターンには該当しない）。M7（16.9節）時点では
+ * 既存の登録済み契約4件（`.claude/contracts/MANIFEST.json`参照）のみが契約化済みである。
  */
 
 const fs = require('fs');
@@ -89,6 +112,17 @@ function addWarning(data, { type, path_or_task, extra }) {
   return entry;
 }
 
+/**
+ * 同一`type`・同一`path_or_task`で`resolved: false`の既存エントリを探す（重複登録防止、
+ * M-dup新設）。呼び出し側がオプトインして使うヘルパーであり、`addWarning`自体はこれを
+ * 内部で呼ばない（上記ヘッダーコメント【M-dup調査】参照。呼び出し元ごとに`path_or_task`の
+ * 意味が異なり、一律のdedupは`task-boundary-guard.js`の挙動を誤って変えてしまうため）。
+ * 見つからなければ`undefined`を返す。
+ */
+function findUnresolvedWarning(data, { type, path_or_task }) {
+  return data.warnings.find((w) => w.type === type && w.path_or_task === path_or_task && !w.resolved);
+}
+
 module.exports = {
   WARNINGS_RELATIVE_PATH,
   warningsPath,
@@ -96,4 +130,5 @@ module.exports = {
   writeWarnings,
   nextWarningId,
   addWarning,
+  findUnresolvedWarning,
 };

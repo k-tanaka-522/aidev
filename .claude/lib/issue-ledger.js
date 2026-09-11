@@ -29,12 +29,37 @@
  * `.claude/skills/doc-link-check/scripts/check-links.js`、
  * `.claude/skills/gate-check/scripts/gate-check.js`。
  *
+ * 【M-dup修正（重複蓄積バグ、PMからの委譲）】
+ * `registerIssue`は従来、既存行との照合を一切せず`nextIssueId`で採番して無条件に
+ * `appendRow`していた。この結果、`doc-link-check`等の検出系Skillを同じ入力に対して
+ * 2回実行すると、1回目の検出と全く同じ内容が2回目にも「新規課題」として登録され、
+ * 台帳が増殖する（実機確認済み・PMへ報告済みの不具合）。本節はこれを是正する。
+ *
+ * 【重複判定の設計】
+ * 03文書3.2.6節の列のうち、`種別`・`検出元`・`内容`・`関連ID`の4列が一致し、かつ
+ * 既存行の`対応状況`が`解消済み`でない場合に「同じ課題」とみなし、新規登録せず
+ * 既存行の`課題ID`を返す（`appendRow`を呼ばない）。
+ * - `検出日時`は照合対象に**含めない**（実行のたびに変わる値であり、含めると重複検出が
+ *   機能しなくなるため。PMからの委譲指示のとおり）
+ * - `課題ID`は生成対象自体であるため照合に使わない
+ * - `対応状況`・`解消日時・対応内容`は照合条件ではなく「除外フィルタ」として使う。
+ *   `解消済み`の既存行と内容が一致する場合は**再発**とみなし、新規登録する（MUST）。
+ *   同じ問題が再び起きたという事実は記録に値するためであり、「解消済みだから無視する」
+ *   という誤読を避ける。`未対応`・`対応中`・`リスク管理台帳(00-12)へdefer登録済み`は
+ *   いずれも「未解消」として重複防止の対象に含める（defer登録済みでも問題自体が
+ *   解決したわけではないため）
+ * - 既存行の書き換えは行わない（02文書10.1.4節が定める追記専用方式を維持する。複数の
+ *   機構が並行して同じ台帳へ書き込むため、既存行の書き換えは競合のリスクがある）
+ *
  * 【契約】
- * 未設定。16.6節の選別基準（分母・分子集計への関与／入力形式のバージョン分岐／複数エントリの
- * 横断集計／fail-closedの挙動／「無効化」と「正しく0件」の区別不能性）に該当するかどうかの
- * 判定はapp-architectの所管であり、M7（16.9節）時点ではCT-0001〜CT-0004の4件のみが契約化
- * 済みである。本ファイルは対象内・対象外いずれの判定もまだ行われていない（契約が無いことを
- * 隠さないための明記、16.3.3節・16.10節）。
+ * 対象外と判定した（coderの判断、PMへ報告）。00-13課題管理表は`gate-check`等いずれの
+ * Gateからも読み取られず、GO/NG判定の分母・分子計算には組み込まれていない（`registerIssue`
+ * の呼び出しはHOLD遷移時の記録・Routineの検出結果着地点としての書き込み専用であり、
+ * 16.6節(a)「分母・分子集計への関与」には該当しない。02文書16.6節の他の基準（b〜e）にも
+ * 該当しない）。したがって本修正（重複防止ロジック）を契約テスト化する必要性は無いと判断した。
+ * なお16.6節の選別基準に該当するかどうかの最終判定はapp-architectの所管であり、本記載は
+ * coderの一次判定に留まる。M7（16.9節）時点では既存の登録済み契約4件（`.claude/contracts/MANIFEST.json`
+ * 参照）のみが契約化済みである。
  */
 
 const { appendRow, readTableAsObjects } = require('./markdown-table');
@@ -60,10 +85,15 @@ const STATUS = {
   deferred: (riskId) => `リスク管理台帳(00-12)へdefer登録済み（参照${riskId}）`,
 };
 
-function nextIssueId(cwd) {
-  const rows = readTableAsObjects(ledger0013Path(cwd));
+/**
+ * `rows`（`readTableAsObjects`の戻り値）を渡せば再読み込みを省略できる。
+ * `registerIssue`が同一ファイルを2度読むことを避けるための内部最適化であり、
+ * 単体で使う場合は省略してよい（`cwd`から自前で読み込む）。
+ */
+function nextIssueId(cwd, rows) {
+  const list = rows || readTableAsObjects(ledger0013Path(cwd));
   let max = 0;
-  for (const r of rows) {
+  for (const r of list) {
     const m = /^ISS-(\d{4})$/.exec(r['課題ID'] || '');
     if (m) max = Math.max(max, parseInt(m[1], 10));
   }
@@ -71,13 +101,44 @@ function nextIssueId(cwd) {
 }
 
 /**
+ * 既存行の中から「同じ課題」とみなせる未解消エントリを探す（重複登録防止）。
+ * 【目的・理由】上記ヘッダーコメント「重複判定の設計」を参照。
+ * 【前提条件・制約】`検出日時`・`課題ID`は照合に使わない。`対応状況`が`解消済み`の
+ * 行は対象から除外する（再発は新規登録すべきであるため、ここではマッチさせない）。
+ */
+function findDuplicateOpenIssue(rows, { kind, detectedBy, content, relatedIds }) {
+  const normalizedRelatedIds = relatedIds || '(なし)';
+  return rows.find(
+    (r) =>
+      r['種別'] === kind &&
+      r['検出元'] === detectedBy &&
+      r['内容'] === content &&
+      r['関連ID'] === normalizedRelatedIds &&
+      r['対応状況'] !== STATUS.RESOLVED
+  );
+}
+
+/**
  * 00-13へ1件登録する（03文書3.2.6節の列定義に厳密に従う）。
  * `{ kind, detectedBy, content, relatedIds, status }`。`status`省略時は`未対応`。
+ *
+ * 【重複蓄積バグの修正（PMからの委譲、M-dup）】既存の未解消エントリ（`対応状況`が
+ * `解消済み`以外）で`種別`・`検出元`・`内容`・`関連ID`が完全一致するものがあれば、
+ * 新規登録せずその既存行の`課題ID`をそのまま返す（`appendRow`を呼ばない）。
+ * 解消済みの同内容が再発した場合は新規登録する（ヘッダーコメント参照）。
  */
 function registerIssue(cwd, { kind, detectedBy, content, relatedIds, status }) {
-  const id = nextIssueId(cwd);
+  const ledgerPath = ledger0013Path(cwd);
+  const rows = readTableAsObjects(ledgerPath);
+
+  const duplicate = findDuplicateOpenIssue(rows, { kind, detectedBy, content, relatedIds });
+  if (duplicate) {
+    return duplicate['課題ID'];
+  }
+
+  const id = nextIssueId(cwd, rows);
   appendRow(
-    ledger0013Path(cwd),
+    ledgerPath,
     HEADER,
     [id, kind, detectedBy, content, relatedIds || '(なし)', new Date().toISOString(), status || STATUS.OPEN, ''],
     { title: '00-13 課題管理表', description: '> 列定義の正本: `docs/v2/03_成果物体系定義書.md` 3.2.6節' }
@@ -85,4 +146,4 @@ function registerIssue(cwd, { kind, detectedBy, content, relatedIds, status }) {
   return id;
 }
 
-module.exports = { HEADER, KIND, STATUS, nextIssueId, registerIssue };
+module.exports = { HEADER, KIND, STATUS, nextIssueId, registerIssue, findDuplicateOpenIssue };

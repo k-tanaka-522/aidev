@@ -32,18 +32,25 @@
  * - `.claude-state/decision-warnings.json` が存在しない場合は新規作成する。
  * - settings.json未登録の段階では発火しない（M3でsettings.jsonが昇格するまで無害）。
  *
+ * 【M-dup修正（重複蓄積バグ、PMからの委譲）】
+ * 同一ファイルへの複数回のEdit呼び出しのたびに無条件で`addWarning`していたため、
+ * `decision-warnings.json`の未解消件数（`decision-check`が8.3節の分母計算に組み込む、
+ * 8.2.5節）が同一原因で水増しされていた。`.claude/lib/warnings-store.js`の
+ * `findUnresolvedWarning`で同一`type`・同一`path_or_task`の未解消警告の有無を確認し、
+ * あれば再利用（新規追加しない）するよう修正した。
+ *
  * 【契約】
- * 未設定。16.6節の選別基準（分母・分子集計への関与／入力形式のバージョン分岐／複数エントリの
- * 横断集計／fail-closedの挙動／「無効化」と「正しく0件」の区別不能性）に該当するかどうかの
- * 判定はapp-architectの所管であり、M7（16.9節）時点ではCT-0001〜CT-0004の4件のみが契約化
- * 済みである。本ファイルは対象内・対象外いずれの判定もまだ行われていない（契約が無いことを
- * 隠さないための明記、16.3.3節・16.10節）。
+ * 対象外と判定した（coderの一次判定、PMへ報告）。本ファイル自体は`addWarning`を呼ぶ
+ * 側であり分母計算そのものは行わない（分母計算は`decision-check`/`zone-gate.js`側、
+ * `.claude/lib/warnings-store.js`のヘッダーコメント【契約】参照）。16.6節の選別基準の
+ * 他項目（b〜e）にも該当しない。M7（16.9節）時点では既存の登録済み契約4件
+ * （`.claude/contracts/MANIFEST.json`参照）のみが契約化済みである。
  */
 
 const fs = require('fs');
 const path = require('path');
 const { classifyPath } = require('../lib/architecture-patterns');
-const { readWarnings, writeWarnings, addWarning } = require('../lib/warnings-store');
+const { readWarnings, writeWarnings, addWarning, findUnresolvedWarning } = require('../lib/warnings-store');
 
 function readHookPayload() {
   try {
@@ -104,19 +111,31 @@ function main() {
   }
 
   const data = readWarnings(cwd);
-  const entry = addWarning(data, {
-    type: 'file_change',
-    path_or_task: relPath,
-    extra: { kind, agent_type: payload.agent_type || null },
-  });
-  writeWarnings(data, cwd);
+
+  // 【M-dup修正・重複蓄積バグ】同一ファイルへの複数回のEdit呼び出し（1つの変更を完成
+  // させる過程でありがちな挙動）のたびに無条件でaddWarningすると、decision-checkの
+  // 8.3節分母計算（8.2.5節）が同一原因の警告で水増しされる（issue-ledger.jsの00-13と
+  // 同型のバグ、PMからの委譲で発見・是正）。同一type・同一pathの未解消警告が既にあれば
+  // 新規追加せず、既存warning_idを再利用する。
+  const existing = findUnresolvedWarning(data, { type: 'file_change', path_or_task: relPath });
+  const entry =
+    existing ||
+    addWarning(data, {
+      type: 'file_change',
+      path_or_task: relPath,
+      extra: { kind, agent_type: payload.agent_type || null },
+    });
+  if (!existing) {
+    writeWarnings(data, cwd);
+  }
 
   console.error(
     `[decision-log-guard] ${relPath} はアーキテクチャ関連の変更（分類: ${kind}）ですが、` +
       `直近${Math.round(windowMs / 60000)}分以内の決定ログ更新が見つかりません。`
   );
   console.error(
-    `[decision-log-guard] 対応する決定ログが必要か確認してください（警告のみ・ブロックしません）。 warning_id=${entry.id}`
+    `[decision-log-guard] 対応する決定ログが必要か確認してください（警告のみ・ブロックしません）。 warning_id=${entry.id}` +
+      (existing ? '（既存の未解消警告を再利用。重複登録はしていない）' : '')
   );
 
   process.exit(0);

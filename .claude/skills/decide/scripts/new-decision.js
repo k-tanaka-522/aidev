@@ -47,6 +47,16 @@
  *   opsHearing ({escalation, businessImpactCriteria, externalReporting,
  *                prodChangeApprover, disposalTrigger}. 条件B相当決定時、04文書6.3節の5項目)
  *   resolve (配列。明示的に消し込む decision-warnings.json の警告ID)
+ *
+ * 【契約】
+ * 対象外と判定した（coderの一次判定、PMへ報告。02文書16.3.3節の対象拡張に伴う
+ * 判定、以後同様）。本ファイルは決定ログ1件を指定書式で新規作成する単純な
+ * writerであり、複数エントリを横断集計する処理（16.6節(c)）ではない
+ * （集計側は`decision-check/scripts/check.js`に分離されている）。分母・分子計算
+ * （(a)）・入力形式のバージョン分岐（(b)）・fail-closed判定（(d)）・無効化と
+ * 正常0件の区別不能性（(e)）のいずれにも該当しない。`resolve`引数による
+ * `decision-warnings.json`の消し込みは指定IDの`resolved`更新のみで判定ロジックを
+ * 持たない。
  */
 
 const fs = require('fs');

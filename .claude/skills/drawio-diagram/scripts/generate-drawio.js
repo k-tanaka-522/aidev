@@ -8,6 +8,12 @@
  *   node generate-drawio.js --nodes=<jsonファイル> --out=<出力先.drawio> [--mermaid-out=<出力先.mmd>]
  *
  * nodes.json形式: { "nodes": [{"id":"a","label":"A"}], "edges": [{"from":"a","to":"b","label":"..."}] }
+ *
+ * 【契約】
+ * 対象外と判定した（coderの一次判定、PMへ報告）。渡された`nodes`/`edges`をmermaid/
+ * drawio形式へ機械的に変換して書き出すだけの処理であり、Gate判定の分母・分子集計
+ * （16.6節(a)）、複数エントリの横断集計（(c)）、fail-closedの判定（(d)）のいずれにも
+ * 該当しない。
  */
 
 const fs = require('fs');

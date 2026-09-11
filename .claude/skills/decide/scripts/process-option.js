@@ -25,6 +25,13 @@
  *   node process-option.js --mode=requirements-first --contract-form="準委任・中間検収あり" \
  *        --reason="契約上、要件定義書が中間検収物として指定されているため" \
  *        --scope="プロジェクト全体"
+ *
+ * 【契約】
+ * 対象外と判定した（coderの一次判定、PMへ報告）。DL-0000と`process-option.json`の
+ * 2ファイルを同一操作内で同期して書くだけの単純な処理であり、複数エントリを
+ * 横断集計・解釈する判定ロジックを持たない。両者の整合性チェック（16.6節(b)〜(c)に
+ * 近い性質）は`decision-check/scripts/check.js`の`computeProcessOption`側の責務で
+ * あり、本ファイルではない。
  */
 
 const fs = require('fs');

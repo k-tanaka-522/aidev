@@ -33,6 +33,22 @@
  *
  *   # バッチ版
  *   node sync-check.js --kind=batch --job-name=nightly-batch --spec=decisions/DL-0010_batch-spec-nightly.md
+ *
+ * 【契約】
+ * 対象内と判定した（coderの一次判定、PMへ報告）。本ファイルが採番・登録する`HB-ID`
+ * （`00-02_HBトレーサビリティ台帳.md`）・`BAT-ID`（`00-03`）は、01文書6.5節条件6
+ * 「トレーサビリティが充足していること」の**分母そのもの**であり
+ * （`gate-check/scripts/gate-check.js`の`judge`が`denominatorIds`として`HB-ID`全件を
+ * 数える）、16.6節(a)「分母・分子集計への関与」に該当する。現時点で対応する契約は無い。
+ * 【関連する未修正の懸念・別件として報告】本タスクの主題である台帳重複蓄積バグ
+ * （`.claude/lib/issue-ledger.js`・`cr-ledger.js`）の調査中に、本ファイルの
+ * `runScreenMode`が同一`screen`に対し再実行された場合の重複登録防止（同一scrIdに
+ * 既にHB-IDが登録済みかどうかの照合）を一切持たないことを発見した（`'HB-' +
+ * nextIdFromFiles(...)`を無条件に採番・追記している）。issue-ledger.js/cr-ledger.jsと
+ * 同型の問題だが、「同一検出内容の重複」ではなく「同一画面への重複ID発行」という別の
+ * 形であり、`00-02`はGZ2/GZ3の分母に直結するため影響はより大きい可能性がある。本タスクの
+ * 委譲範囲（台帳ライブラリの重複防止修正、および本欄の追加）には含まれないため実装修正は
+ * 行っていない。別タスクとしてPM/app-architectへの報告を強く推奨する。
  */
 
 const fs = require('fs');

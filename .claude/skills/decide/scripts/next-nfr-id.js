@@ -24,6 +24,12 @@
  * 【使い方】
  *   node next-nfr-id.js
  *   → "NFR-0001" のように次のIDのみを標準出力する
+ *
+ * 【契約】
+ * 対象外と判定した（coderの一次判定、PMへ報告）。既存の最大連番+1を返すだけの
+ * ID採番ユーティリティであり（`.claude/lib/issue-ledger.js`の`nextIssueId`等と
+ * 同型）、Gate判定の分母・分子集計そのもの（16.6節(a)）ではない。入力形式のバージョン
+ * 分岐・fail-closed・無効化と正常0件の区別不能性のいずれにも該当しない。
  */
 
 const { listDecisionFiles } = require('../../../lib/decisions');

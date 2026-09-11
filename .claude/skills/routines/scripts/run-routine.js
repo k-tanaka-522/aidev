@@ -17,6 +17,15 @@
  *   node run-routine.js --list                 # 定義済みRoutine一覧を表示
  *   node run-routine.js --name=doc-link-check   # 指定Routineを1件実行
  *   node run-routine.js --all                   # 定義済み全Routineを順に実行（重複スクリプトは1回のみ）
+ *
+ * 【契約】
+ * 対象外と判定した（coderの一次判定、PMへ報告）。個々のRoutineスクリプトを起動し
+ * 結果を素通しするだけのディスパッチャであり、分母・分子の解釈・集計ロジック自体は
+ * 持たない（各Routineスクリプト側の責務。本ファイルの並びにある
+ * `artifact-emptiness-fullscan.js`・`dependency-update-check.js`・
+ * `doc-generation-drift-check.js`・`iac-drift-check.js`は個別に判定済み）。
+ * `status: "error"`（例外）と`status: "executed"`（正常終了、内容は各Routine次第）を
+ * 区別しており、実行失敗を握りつぶして正常出力に見せることはしていない。
  */
 
 const fs = require('fs');

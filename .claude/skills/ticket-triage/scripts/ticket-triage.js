@@ -21,6 +21,15 @@
  *   node ticket-triage.js --title="..." --body="..." --labels=bug,critical [--number=42]
  *   node ticket-triage.js --ticket-file=<path>
  *   node ticket-triage.js --ticket=TICKET-0001   # 既存ローカルticketの再判定
+ *
+ * 【契約】
+ * 対象内と判定した（coderの一次判定、PMへ報告）。ラベル一致・キーワード一致のいずれにも
+ * 該当しない場合に、機構が独断で既定カテゴリへ寄せず`needsHumanJudgement: true`を
+ * 明示する設計（ヘッダー冒頭）は、16.6節(d)「fail-closedの挙動」（判定不能な入力を
+ * 安全側＝要人手確認に倒し、黙って何らかのカテゴリに分類しない）に該当する。
+ * 現時点で対応する契約は無い（「ラベルもキーワードも一致しない入力を渡すと
+ * `needsHumanJudgement: true`になり、いずれかの`category`に静かに丸められない」ことを
+ * 検証する契約をapp-architectへ発注することを提案する）。
  */
 
 const fs = require('fs');
