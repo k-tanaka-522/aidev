@@ -241,6 +241,63 @@ function scanContractApiIds(cwd) {
 }
 
 // ---------------------------------------------------------------------------
+// gate-check向け: skip/fixme/握りつぶし検知（本タスクで新設）
+// ---------------------------------------------------------------------------
+
+/**
+ * 01文書6.5節「skip/fixme、例外処理の握りつぶしを含むテストは分子に数えない（MUST NOT）」
+ * を機械的に判定する。AST解析を持たない本プロジェクトの制約（static-analysis.js冒頭の
+ * 【正直な限界表明】参照）を踏まえ、正規表現ベースのヒューリスティックとする。
+ *
+ * 判定方法:
+ * 1. ファイル内の全テスト宣言（`test`/`it`/`describe`とその`.skip`/`.fixme`/`.todo`修飾子、
+ *    および`xit`/`xdescribe`）を収集する
+ * 2. `idIndex`（IDのdocblockマッチ位置）に最も近いテスト宣言を「そのIDが属するテスト」と
+ *    みなす（docblockがテスト宣言の直前・直後どちらに置かれる書き方でも拾えるよう、
+ *    前後どちらの宣言も候補にする簡易な近傍ヒューリスティック。複数テストが密集するファイルでは
+ *    誤対応の余地があることを明記する、限界として15章相当の要検証事項）
+ * 3. 最寄りのテスト宣言が`.skip`/`.fixme`/`.todo`/`x`接頭辞であれば除外対象とする
+ * 4. `idIndex`の前後2000文字以内に空の`catch`ブロック（例外の握りつぶし。
+ *    `catch (e) {}` / `catch (e) => {}` 等）があれば、テスト宣言の状態にかかわらず除外対象とする
+ *
+ * 戻り値: 除外すべきなら`true`。
+ */
+function isDeadTestContext(text, idIndex) {
+  const declRe = /\b(test|it|describe)(\.(skip|fixme|todo|only))?\s*\(/g;
+  const xDeclRe = /\b(xit|xdescribe|xtest)\s*\(/g;
+  const decls = [];
+  let m;
+  while ((m = declRe.exec(text))) {
+    const modifier = m[3];
+    decls.push({ start: m.index, skip: modifier === 'skip' || modifier === 'fixme' || modifier === 'todo' });
+  }
+  while ((m = xDeclRe.exec(text))) {
+    decls.push({ start: m.index, skip: true });
+  }
+  let nearest = null;
+  let nearestDist = Infinity;
+  for (const d of decls) {
+    const dist = Math.abs(d.start - idIndex);
+    if (dist < nearestDist) {
+      nearestDist = dist;
+      nearest = d;
+    }
+  }
+  if (nearest && nearest.skip) return true;
+
+  const swallowRe = /catch\s*\([^)]*\)\s*(=>)?\s*\{\s*\}/g;
+  while ((m = swallowRe.exec(text))) {
+    if (Math.abs(m.index - idIndex) <= 2000) return true;
+  }
+  return false;
+}
+
+/** `excluded: true`（skip/fixme/握りつぶし判定済み）の要素を除外した配列を返す。 */
+function filterExecutable(list) {
+  return list.filter((item) => !item.excluded);
+}
+
+// ---------------------------------------------------------------------------
 // E2Eテスト: HB-IDのdocblockとナビゲーション先
 // ---------------------------------------------------------------------------
 
@@ -272,7 +329,7 @@ function scanE2eHbLinks(cwd) {
     // （同一テストブロック内にある、という簡易な位置関係のヒューリスティック）。
     for (const hb of hbPositions) {
       const nav = navPositions.find((n) => n.index > hb.index);
-      results.push({ hbId: hb.hbId, urlPath: nav ? nav.urlPath : null, file: rel });
+      results.push({ hbId: hb.hbId, urlPath: nav ? nav.urlPath : null, file: rel, excluded: isDeadTestContext(text, hb.index) });
     }
   }
   return results;
@@ -288,7 +345,46 @@ function scanIntegrationApiLinks(cwd) {
     const rel = path.relative(cwd, file).replace(/\\/g, '/');
     const text = readSafe(file);
     let m;
-    while ((m = apiRe.exec(text))) results.push({ apiId: m[1], file: rel });
+    while ((m = apiRe.exec(text))) results.push({ apiId: m[1], file: rel, excluded: isDeadTestContext(text, m.index) });
+  }
+  return results;
+}
+
+/**
+ * ST（システムテスト、非機能検証）向け: `tests/`配下全体から`NFR-ID: NFR-0001`形式の
+ * docblockを抽出する。02文書10.1.2節「STは非機能検証テストのdocblockのNFR-ID」を数える
+ * ための分子集計に用いる。専用ディレクトリ（`tests/nfr/`等）を設計書は指定していないため、
+ * `tests/`全体を対象とする（本タスクの実装判断としてPMへ報告する）。
+ */
+function scanNfrTestLinks(cwd) {
+  const dir = path.join(cwd, 'tests');
+  const files = walkFiles(dir, /\.(spec|test)\.(tsx?|jsx?|py)$/);
+  const results = [];
+  const nfrRe = /NFR-ID:\s*(NFR-\d+)/g;
+  for (const file of files) {
+    const rel = path.relative(cwd, file).replace(/\\/g, '/');
+    const text = readSafe(file);
+    let m;
+    while ((m = nfrRe.exec(text))) results.push({ nfrId: m[1], file: rel, excluded: isDeadTestContext(text, m.index) });
+  }
+  return results;
+}
+
+/**
+ * 画面非経由の`BAT-ID`向け: `tests/`配下全体から`BAT-ID: BAT-0001`形式のdocblockを抽出する。
+ * 専用ディレクトリ（`tests/batch/`等）を設計書は指定していないため、`tests/`全体を対象とする
+ * （NFR同様、本タスクの実装判断としてPMへ報告する）。
+ */
+function scanBatTestLinks(cwd) {
+  const dir = path.join(cwd, 'tests');
+  const files = walkFiles(dir, /\.(spec|test)\.(tsx?|jsx?|py)$/);
+  const results = [];
+  const batRe = /BAT-ID:\s*(BAT-\d+)/g;
+  for (const file of files) {
+    const rel = path.relative(cwd, file).replace(/\\/g, '/');
+    const text = readSafe(file);
+    let m;
+    while ((m = batRe.exec(text))) results.push({ batId: m[1], file: rel, excluded: isDeadTestContext(text, m.index) });
   }
   return results;
 }
@@ -481,6 +577,10 @@ module.exports = {
   scanContractApiIds,
   scanE2eHbLinks,
   scanIntegrationApiLinks,
+  scanNfrTestLinks,
+  scanBatTestLinks,
+  isDeadTestContext,
+  filterExecutable,
   buildHbReverseLinks,
   scanOrmTables,
   scanRepositoryCrud,

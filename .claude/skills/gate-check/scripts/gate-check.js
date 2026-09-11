@@ -40,11 +40,13 @@ const fs = require('fs');
 const path = require('path');
 const { analyzeImpact } = require('../../../lib/impact-analysis');
 const { loadTicket } = require('../../../lib/ticket-store');
-const { scanE2eHbLinks, scanIntegrationApiLinks } = require('../../../lib/static-analysis');
+const { scanE2eHbLinks, scanIntegrationApiLinks, filterExecutable } = require('../../../lib/static-analysis');
 const ticketRetry = require('../../../lib/ticket-retry');
 const zone3Hotfix = require('../../../lib/zone3-hotfix');
 const { ledger0012Path } = require('../../../lib/ledger-paths');
 const { registerIssue, KIND } = require('../../../lib/issue-ledger');
+const { resetHold } = require('../../../lib/gate-records');
+const { judgeZoneGate } = require('../../../lib/zone-gate');
 
 function parseArgs(argv) {
   const args = {};
@@ -68,10 +70,15 @@ function readFindings(cwd, args) {
   }
 }
 
-/** 分母IDに対する分子（テストdocblock記載件数）を数える。skip/fixme付近の行は除外する。 */
+/**
+ * 分母IDに対する分子（テストdocblock記載件数）を数える。skip/fixme・握りつぶしは除外する
+ * （01文書6.5節。本タスクで`filterExecutable`によるskip/fixme検知を`static-analysis.js`に
+ * 新設し、本関数のコメントが元々主張していた「除外する」を実際に実装した。旧実装は
+ * コメントのみでこの除外を行っていなかったバグであり、本タスクで是正した。PMへ報告する）。
+ */
 function countTestCoverage(cwd, ids) {
-  const e2e = scanE2eHbLinks(cwd);
-  const it = scanIntegrationApiLinks(cwd);
+  const e2e = filterExecutable(scanE2eHbLinks(cwd));
+  const it = filterExecutable(scanIntegrationApiLinks(cwd));
   const covered = [];
   const uncovered = [];
   for (const id of ids) {
@@ -195,13 +202,73 @@ function judge(cwd, args, kind) {
   };
 }
 
+/**
+ * ゾーンゲート（GZ0/GZ2/GZ3、Mode A側）本体の判定。本タスクで新設した
+ * `.claude/lib/zone-gate.js`へ委譲する薄いラッパー（Mode Bの`judge()`と対称の構成）。
+ *
+ * 【使い方】
+ *   node gate-check.js --kind=zone-gate --gate=GZ0 [--findings=<path>]
+ *   node gate-check.js --kind=zone-gate --gate=GZ2 [--findings=<path>]
+ *   node gate-check.js --kind=zone-gate --gate=GZ3 [--findings=<path>]
+ *
+ * `--findings`のJSON形式は`readFindings()`と同じ（critical/high/guardPass）に加え、
+ * `hardeningComplete`（GZ2向け、全機能の硬化完了。既定true）を追加で読む。
+ */
+function runZoneGate(cwd, args) {
+  const gate = args.gate;
+  if (!['GZ0', 'GZ2', 'GZ3'].includes(gate)) {
+    console.error('[gate-check] --kind=zone-gate には --gate=GZ0|GZ2|GZ3 が必須');
+    process.exit(2);
+  }
+  // readFindings()はJSONファイル全体をdefaultsへObject.assignするため、`hardeningComplete`が
+  // ファイルに含まれていればfindingsBaseに既に反映されている（二重読み込みしない）。
+  const findingsBase = readFindings(cwd, args);
+  const findings = Object.assign({ hardeningComplete: true }, findingsBase);
+  if (!args.findings) {
+    findings.hardeningCompleteSource = 'default(未確認扱い、hardeningComplete=trueで通す)';
+  }
+  const result = judgeZoneGate(cwd, gate, { findings });
+  console.log(JSON.stringify({ status: 'done', result }, null, 2));
+  if (result.judgement === 'NG') process.exitCode = 1;
+  if (result.judgement === 'HOLD') process.exitCode = 2;
+}
+
+/**
+ * 10.2.2節「HOLD解除手順」ステップ4のCLIエントリ。
+ *   node gate-check.js --reset-hold=GZ2 --decision=DL-0050
+ */
+function runResetHold(cwd, args) {
+  const gate = args['reset-hold'];
+  if (!['GZ0', 'GZ2', 'GZ3'].includes(gate)) {
+    console.error('[gate-check] --reset-hold には GZ0|GZ2|GZ3 のいずれかを指定すること');
+    process.exit(2);
+  }
+  if (!args.decision) {
+    console.error('[gate-check] --reset-hold には --decision=<DL-ID> がMUST（10.2.2節HOLD解除手順ステップ4）');
+    process.exit(2);
+  }
+  const result = resetHold(gate, args.decision, cwd);
+  console.log(JSON.stringify({ status: 'done', reset: result }, null, 2));
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const cwd = process.cwd();
+
+  if (args['reset-hold']) {
+    runResetHold(cwd, args);
+    return;
+  }
+
+  if (args.kind === 'zone-gate') {
+    runZoneGate(cwd, args);
+    return;
+  }
+
   const kind = args.kind === 'zone3-hotfix' ? 'zone3-hotfix' : args.kind === 'ticket' ? 'ticket' : null;
 
   if (!kind) {
-    console.error('[gate-check] --kind=ticket|zone3-hotfix のみ実装している。GZ0/GZ2/GZ3（ゾーンゲート、Mode A側）はM5のスコープ外であり未実装（PMへ報告）。');
+    console.error('[gate-check] --kind=ticket|zone3-hotfix|zone-gate のいずれかを指定すること（zone-gateは--gate=GZ0|GZ2|GZ3も併せて指定）。');
     process.exit(2);
   }
 
