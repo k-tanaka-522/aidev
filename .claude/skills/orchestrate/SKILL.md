@@ -84,6 +84,35 @@ infra静的解析 → 04番一式
 
 <!-- M4で実装: DAGに基づくTask起動順序の自動決定ロジック -->
 
+## Mode B（Zone4）のフルループ（M5実装、12章）
+
+```
+GitHub Issue → ticket-triage → impact-analysis → src/*:execute → Pull Request
+  → /code-review → CI → (CI失敗 → pr-subscription設計に基づきcoder自動修正 → PRへ追加コミット)
+  → gate-check --kind=ticket → GO → merge / NG → execute差し戻し / HOLD → ユーザー確認
+```
+
+`ticket-triage`が経路（Mode B通常／Zone3内ミニチケット／チケット化しない／HOLD）を判定し、
+`impact-analysis`が波及先を機械算出する（`unresolved`は黙って無視せず人手確認へ回す）。
+GitHub MCP連携は`ticket-triage`/`impact-analysis`のSKILL.mdが定める「MCP利用可能時は
+Claudeが直接MCPツールを呼びJSON化して渡す、不可時はローカルJSON（`.claude-state/tickets/`）
+で代替する」という2経路設計に従う（MCPが無いと何もできない作りにしない、MUST）。
+
+## Zone3内ミニチケットの経路（10.4節、M5実装）
+
+`.claude-state/current-zone.json`の`zone3_hotfix_active`が`true`の間、`ticket-triage`は
+自動的にZone3内ミニチケット経路（`ZH-{4桁}`採番、`.claude/lib/zone3-hotfix.js`）へ振り分ける。
+Mode B通常ループとの違いは、差し戻しカウンタが完全に独立している点（`zone3-hotfix-count.json`
+がゾーンゲート側の累積カウンタを汚染しない、01文書4.6.2節）と、`impact-analysis --mode=zone3-hotfix`
+が対象ID種別をHB/SCR/API/NFRの4種に限定する点である（詳細は各SkillのSKILL.md参照）。
+
+## Routinesの呼び出し（M5実装、12章）
+
+定期タスク（依存更新チェック・IaCドリフト検知・文書陳腐化チェック・文書間リンク検査・
+生成可能性検査）は`.claude/skills/routines/SKILL.md`が定める。この環境にスケジューラが
+無いため、`orchestrate`（またはPM）が周期の目安に従って`node .claude/skills/routines/scripts/run-routine.js`
+を手動で呼ぶ運用とする。
+
 ## モデルティアの参照（13章）
 
 各Skill・Subagentのモデル選択は13章のティア表記（上位/中位/下位）に従う。`orchestrate`は委譲時にこの表を参照し、Task起動時の`model`指定に反映する（具体的なモデル名は本ファイルに記載しない）。

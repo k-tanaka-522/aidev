@@ -20,12 +20,15 @@
  * - `http(s)://`で始まる外部リンクは実在確認をしない（本プロジェクトはネットワーク
  *   アクセスを要さない実行を優先するため。外部参照切れの実例は02文書14.2節M6で
  *   別途扱われる）
+ *
+ * 【M5修正】03文書版1.5・3.2.6節が`00-13_課題管理表.md`の列を正本化したため、
+ * `.claude/lib/issue-ledger.js`（正本スキーマの共有実装）へ差し替えた。「参照切れ」は
+ * 列挙値`リンク切れ`に、「未リンク言及」は列挙値に該当項目が無いため`その他`に対応させる。
  */
 
 const fs = require('fs');
 const path = require('path');
-const { appendRow } = require('../../../lib/markdown-table');
-const { govDir } = require('../../../lib/ledger-paths');
+const { registerIssue, KIND } = require('../../../lib/issue-ledger');
 
 function parseArgs(argv) {
   const args = {};
@@ -91,13 +94,13 @@ function fileExists(baseDir, target) {
   return fs.existsSync(resolved);
 }
 
-function registerIssue(cwd, { kind, file, detail }) {
-  appendRow(
-    path.join(govDir(cwd), '00-13_課題管理表.md'),
-    ['項番', '起票日', '種別', '内容', '起票元', 'ステータス'],
-    ['-', new Date().toISOString(), kind, `${file}: ${detail}`, 'doc-link-check', '未対応'],
-    { title: '00-13 課題管理表' }
-  );
+function registerLinkIssue(cwd, { kind, file, detail }) {
+  registerIssue(cwd, {
+    kind,
+    detectedBy: 'doc-link-check',
+    content: `${file}: ${detail}`,
+    relatedIds: file,
+  });
 }
 
 function main() {
@@ -143,10 +146,11 @@ function main() {
     // 【注意】detail文字列に`[text](target)`形式をそのまま書くと、00-13課題管理表.md
     // 自身が次回検査時に「参照切れリンクを含む文書」として再検出されてしまう
     // （自己言及によるノイズ）。角括弧を全角に変換して回避する。
-    registerIssue(cwd, { kind: '参照切れ', file: b.file, detail: `リンク先が実在しない: ${b.text}（${b.target}）` });
+    registerLinkIssue(cwd, { kind: KIND.BROKEN_LINK, file: b.file, detail: `リンク先が実在しない: ${b.text}（${b.target}）` });
   }
   for (const u of unlinkedMentions) {
-    registerIssue(cwd, { kind: '未リンク言及', file: u.file, detail: `項番「${u.itemNo}」への言及があるが実リンクが無い（候補: ${u.suggestedTarget}）` });
+    // 03文書3.2.6節の列挙値に「未リンク言及」に相当する専用項目が無いため`その他`を用いる。
+    registerLinkIssue(cwd, { kind: KIND.OTHER, file: u.file, detail: `未リンク言及: 項番「${u.itemNo}」への言及があるが実リンクが無い（候補: ${u.suggestedTarget}）` });
   }
 
   console.log(

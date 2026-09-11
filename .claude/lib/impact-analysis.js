@@ -283,9 +283,12 @@ function analyzeImpact(cwd, input) {
   );
 
   // 非機能影響（できない範囲: 厳密な対応付けは不可、弱いヒューリスティックのみ）。
-  const moduleKeywords = resolved
-    .map((r) => r.row && r.row['モジュール（逆引き）'])
-    .filter((v) => v && v !== UNRESOLVED);
+  // モジュールのフルパス（例: backend/routes/products）だけでなく、決定ログ本文が
+  // 自然文で言及しがちな末尾セグメント（例: products）も候補語彙に加える
+  // （完全一致のみだと実運用上ほぼ一致しないため。それでも意味的対応の保証はできない
+  // ヒューリスティックであることは変わらない、10.3節15章#3と同種の限界）。
+  const moduleValues = resolved.map((r) => r.row && r.row['モジュール（逆引き）']).filter((v) => v && v !== UNRESOLVED);
+  const moduleKeywords = Array.from(new Set(moduleValues.concat(moduleValues.map((v) => path.basename(v)))));
   const nfr = findNfrCandidates(cwd, moduleKeywords);
 
   // 設計書候補（できない範囲: 00-02にはRTM上の「設計書項番」列が存在しないための近似）。

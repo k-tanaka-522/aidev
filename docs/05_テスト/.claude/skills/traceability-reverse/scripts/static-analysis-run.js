@@ -28,25 +28,29 @@
  * (2) `tests/e2e/`のdocblockでHB-ID自体への言及が無く静的解析を試行すらできなかった
  * HB-IDについても、3列すべてに`unresolved`を書き込み、理由付きで00-13へ登録するよう
  * 拡張した（旧版は後者を「対象外」として黙って無視していた）。
+ *
+ * 【M5修正2】03文書版1.5・3.2.6節が`00-13_課題管理表.md`の列を正本化した
+ * （`課題ID|種別|検出元|内容|関連ID|検出日時|対応状況|解消日時・対応内容`）。
+ * 旧版は`項番|起票日|種別|内容|起票元|ステータス`という暫定スキーマを直書きしていたため、
+ * `.claude/lib/issue-ledger.js`（正本スキーマの共有実装）へ差し替えた。種別は列挙値に
+ * `静的解析unresolved`に相当する項目が無いため`その他`を用いる（03文書の列挙値は
+ * `未記載`をZone3のリバース生成における「決定ログに根拠が無い判断」専用としており、
+ * Mode B入口ゲート向け静的解析の未解決とは意味が異なるため、無理に当てはめない）。
  */
 
-const fs = require('fs');
-const path = require('path');
-const { readTableAsObjects, upsertRow, appendRow } = require('../../../../../../.claude/lib/markdown-table');
-const { ledger0002Path, govDir } = require('../../../../../../.claude/lib/ledger-paths');
 const { buildHbReverseLinks } = require('../../../../../../.claude/lib/static-analysis');
+const { readTableAsObjects, upsertRow } = require('../../../../../../.claude/lib/markdown-table');
+const { ledger0002Path } = require('../../../../../../.claude/lib/ledger-paths');
+const { registerIssue, KIND } = require('../../../../../../.claude/lib/issue-ledger');
 
 function registerUnresolved(cwd, unresolved) {
-  if (unresolved.length === 0) return;
-  const issuesPath = path.join(govDir(cwd), '00-13_課題管理表.md');
-  const header = ['項番', '起票日', '種別', '内容', '起票元', 'ステータス'];
   for (const u of unresolved) {
-    appendRow(
-      issuesPath,
-      header,
-      ['-', new Date().toISOString(), '静的解析unresolved', `${u.hbId || u.table || ''}: ${u.reason}（${u.file || ''}）`, 'traceability-reverse(static-analysis)', '未対応'],
-      { title: '00-13 課題管理表' }
-    );
+    registerIssue(cwd, {
+      kind: KIND.OTHER,
+      detectedBy: 'traceability-reverse(static-analysis)',
+      content: `静的解析unresolved: ${u.reason}（${u.file || ''}）`,
+      relatedIds: u.hbId || u.table || '',
+    });
   }
 }
 

@@ -68,6 +68,11 @@ function ledger0014Path(cwd = process.cwd()) {
   return path.join(govDir(cwd), '00-14_変更管理台帳.md');
 }
 
+/** 02文書4.2節が挙げるリスク管理台帳。defer登録の確認先（01文書6.5節「分母-分子=defer件数」）。 */
+function ledger0012Path(cwd = process.cwd()) {
+  return path.join(govDir(cwd), '00-12_リスク管理台帳.md');
+}
+
 function prototypesDir(cwd = process.cwd()) {
   return path.join(cwd, 'prototypes');
 }
@@ -98,6 +103,7 @@ module.exports = {
   ledger0003Path,
   ledger0004Path,
   ledger0005Path,
+  ledger0012Path,
   ledger0013Path,
   ledger0014Path,
   prototypesDir,
