@@ -2,13 +2,17 @@
 'use strict';
 
 /**
- * task-boundary-guard.js（段3、新設・最重要、M1実装）
+ * task-boundary-guard.js（段3、新設・最重要、M1実装 → M3で実機確認済みの確定実装に更新）
  *
  * 設計書: docs/v2/02_実行基盤アーキテクチャ.md 7.3節#7・8.2.4節
  *
- * 【イベント】PostToolUse（`Task`ツール）
+ * 【イベント】PostToolUse（サブエージェント呼び出しツール。実機確認の結果、
+ *   `tool_name` は `"Task"` ではなく **`"Agent"`** であった。M3でPMが
+ *   `task-payload-observer.js`により実機のペイロードを取得して確認した事実であり、
+ *   推測ではない。matcherは`settings.json`側で`"Task|Agent"`として両対応させている
+ *   ため、本ファイルは`tool_name`の値そのものでは分岐しない）
  * 【検知内容】
- *   1. Task完了時の返り値テキストに `## 決定ブロック` 見出しが存在するかを
+ *   1. サブエージェント完了時の返り値テキストに `## 決定ブロック` 見出しが存在するかを
  *      正規表現で検査する。存在しなければ警告し `decision-warnings.json` へ
  *      `{type: "task_boundary_missing", agent_type, task_summary, timestamp}` を追記する
  *   2. 見出しが存在し内容が「決定なし」以外の場合、decisions/ 配下に未コミットの
@@ -18,23 +22,37 @@
  *   （判断の裁量、誤検知コスト）。
  *
  * 【目的・理由】
- * ファイル変更ではなく Task 境界という会話内の出来事を検知対象にする点が
+ * ファイル変更ではなく Task（Agent）境界という会話内の出来事を検知対象にする点が
  * 段1・段2と根本的に異なり、8.2.1節で指摘した構造的な盲点
  * （会話のみで完結しファイル変更を伴わない決定）を直接埋める。
  * orchestrate自身の「決定ブロックが空でない場合は次Task起動前にdecideを呼ぶ」
  * という遵守（8.2.4節）は自己申告であり検証手段が無いため、これを機構的に補強する。
  * 【影響範囲】
- * 全Subagentへの `Task` ツール呼び出し完了。
+ * 全Subagentへの `Agent` ツール呼び出し完了。
  * 【前提条件・制約】
+ * - 【実機確認済み・M3、推測ではない】`task-payload-observer.js`が記録した実サンプル
+ *   （`.claude-state/hook-payload-samples/task-2026-09-11T03-34-55-464Z-z9pqb0.json`）
+ *   により、次のフィールド構造を確定した。
+ *     - `tool_name`: `"Agent"`（`"Task"`ではない）
+ *     - `tool_response.status`: `"completed"` 等
+ *     - `tool_response.agentId` / `tool_response.agentType`: **camelCase**。
+ *       02文書7.4節が言う`agent_id`/`agent_type`（snake_case・ペイロード直下）は
+ *       実際には存在せず、`tool_response`配下にcamelCaseで入っていた
+ *       （02文書側の記述誤りとしてPM経由でApp-Architectへ報告済み）
+ *     - `tool_response.content`: 配列。要素は`{type: "text", text: "..."}`の形。
+ *       **完了報告テキストの本体はここに入る**
+ *     - `tool_input.subagent_type`: サブエージェント種別（`tool_response.agentType`と
+ *       同値になることを確認済み。フォールバックとして利用する）
+ *   これに基づき、旧実装の防御的多候補抽出（`tool_response`直接文字列化、`result`、
+ *   `output`等）を廃止し、`tool_response.content`を正とする確定実装に変更した。
  * - 【要検証（15章#20）】サブエージェントが見出しの書式を微妙に変えて返した場合の
  *   検出漏れ。本実装は `#`〜`###` の見出しレベル・前後の空白揺れは吸収するが、
  *   「決定ブロック」という文言自体の表記揺れ（英語表記等）までは吸収しない。
- * - 【新たに直面した不確実性・PMへの報告事項】PostToolUse（Task）のペイロードにおける
- *   Task完了報告テキストの実際のフィールド名は、02文書側の要検証項目にも明記が無く
- *   本実装では未確認である。本実装は `tool_response`（文字列 or {content|text} or 配列）、
- *   `result`、`output` を順に試す防御的実装とし、実際のフィールド名が異なる場合は
- *   常に `task_boundary_missing` を誤検知し続ける（＝安全側だが警告過多になる）リスクを
- *   残す。これは動作確認結果として報告する。
+ * - 【残る未確認事項】実機確認は`subagent_type: "Explore"`という汎用エージェントの
+ *   1件のみで行った。v2固有のエージェント（`coder`/`app-architect`等、
+ *   `.claude/v2-staging/agents/*.md`の`name`フロントマター）を実際に`Agent`ツールで
+ *   呼び出した際も`tool_response.agentType`に同じ値（例: `"coder"`）が載るかは
+ *   引き続き実機確認が必要（M6の`.claude/agents/`昇格時に再確認すべき事項）。
  * - decisions/ 配下の「Task完了以降に新規追加されたか」は、正確な開始時刻を
  *   hookペイロードから取得できないため、「現時点でdecisions/配下に未コミットの
  *   変更が存在するか」で近似する（15章#20と同種の精度限界）。
@@ -58,25 +76,25 @@ function readHookPayload() {
 }
 
 /**
- * PostToolUse(Task) ペイロードから、Subagentが返したテキストを取り出そうと試みる。
- * 【前提条件・制約】上部のコメント参照。フィールド名は防御的に複数候補を試す。
+ * PostToolUse(Agent) ペイロードから、Subagentが返したテキストを取り出す。
+ * 【前提条件・制約】上部のコメント参照。`tool_response.content`（配列、要素は
+ * `{type, text}`）を正としつつ、実機確認していない将来のバリエーション
+ * （contentが文字列そのものの場合等）にも最小限のフォールバックで対応する。
  */
 function extractTaskResultText(payload) {
-  const candidates = [
-    payload && payload.tool_response,
-    payload && payload.tool_response && payload.tool_response.content,
-    payload && payload.tool_response && payload.tool_response.text,
-    payload && payload.result,
-    payload && payload.output,
-  ];
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.length > 0) return c;
-    if (Array.isArray(c)) {
-      const text = c
-        .map((part) => (typeof part === 'string' ? part : (part && part.text) || ''))
-        .join('\n');
-      if (text.trim().length > 0) return text;
-    }
+  const content = payload && payload.tool_response && payload.tool_response.content;
+
+  if (typeof content === 'string') {
+    return content;
+  }
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === 'string') return part;
+        if (part && typeof part.text === 'string') return part.text;
+        return '';
+      })
+      .join('\n');
   }
   return '';
 }
@@ -103,10 +121,14 @@ function main() {
   const payload = readHookPayload();
   const cwd = process.cwd();
 
+  // 【実機確認済み・M3】agent_type/agent_id（snake_case・ペイロード直下）は存在しない。
+  // tool_response.agentType（camelCase）を正とし、tool_input.subagent_type
+  // （実機確認でtool_response.agentTypeと同値であることを確認済み）をフォールバックとする。
   const agentType =
-    payload.agent_type ||
+    (payload.tool_response && payload.tool_response.agentType) ||
     (payload.tool_input && payload.tool_input.subagent_type) ||
     'unknown';
+  const agentId = (payload.tool_response && payload.tool_response.agentId) || null;
   const taskSummary = ((payload.tool_input && payload.tool_input.description) || '').slice(0, 200);
   const text = extractTaskResultText(payload);
 
@@ -117,7 +139,7 @@ function main() {
     addWarning(data, {
       type: 'task_boundary_missing',
       path_or_task: agentType,
-      extra: { agent_type: agentType, task_summary: taskSummary },
+      extra: { agent_type: agentType, agent_id: agentId, task_summary: taskSummary },
     });
     changed = true;
     console.error(
@@ -135,7 +157,7 @@ function main() {
         addWarning(data, {
           type: 'task_boundary_unrecorded',
           path_or_task: agentType,
-          extra: { agent_type: agentType, task_summary: taskSummary },
+          extra: { agent_type: agentType, agent_id: agentId, task_summary: taskSummary },
         });
         changed = true;
         console.error(
