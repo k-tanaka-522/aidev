@@ -1,0 +1,62 @@
+{
+  "_note": "M0雛形。docs/v2/02_実行基盤アーキテクチャ.md 7.1節・7.3節に基づく。M3で .claude/settings.json へ昇格するまでは効力を持たない（.claude/v2-staging/README.md 参照）。",
+  "permissions": {
+    "allow": [
+      "Bash(terraform plan*)",
+      "Bash(cdk diff*)",
+      "Bash(*apply*env=dev*)",
+      "Bash(npm test*)",
+      "Bash(pytest*)",
+      "Bash(npm run build*)"
+    ],
+    "ask": [
+      "Bash(*apply*env=prod*)",
+      "Bash(*deploy*env=prod*)"
+    ],
+    "deny": [
+      "Bash(terraform destroy *)",
+      "Bash(cdk destroy *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Read(.env)",
+      "Read(**/*secret*)"
+    ]
+  },
+  "hooks": {
+    "_note": "各command配下のパス条件（例: docs/0[2-7]_**、.claude-state/current-zone.json）はmatcherではなくhookスクリプト内部で判定する（02文書7.3節の各行を参照）。M0段階の全hookはprocess.exit(0)で素通りする骨格のみ。artifact-emptiness-guard.jsは『定期実行（Routine）またはPostToolUse』が起動契機（7.3節#8）だが、Routines機構自体がM5実装対象であり、ここでは登録トリガーを確定させず未登録とした（PMへの確認事項）。",
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": ".claude/hooks/role-boundary-guard.js" },
+          { "type": "command", "command": ".claude/hooks/gate-transition-guard.js" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": ".claude/hooks/lint-guard.js" },
+          { "type": "command", "command": ".claude/hooks/doc-header-guard.js" },
+          { "type": "command", "command": ".claude/hooks/decision-log-guard.js" },
+          { "type": "command", "command": ".claude/hooks/ops-item-guard.js" },
+          { "type": "command", "command": ".claude/hooks/sync-ledger-guard.js" }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          { "type": "command", "command": ".claude/hooks/task-boundary-guard.js" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": ".claude/hooks/decision-stop-check.js" }
+        ]
+      }
+    ]
+  }
+}
