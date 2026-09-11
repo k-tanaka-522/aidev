@@ -20,7 +20,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { parseFrontmatter } = require('./frontmatter');
+const { parseFrontmatter, stringifyFrontmatter } = require('./frontmatter');
 
 const DECISIONS_DIR_SEGMENTS = ['docs', '00_プロジェクト管理・ガバナンス', 'decisions'];
 
@@ -75,4 +75,57 @@ function nextDecisionId(cwd = process.cwd()) {
   return String(max + 1).padStart(4, '0');
 }
 
-module.exports = { DECISIONS_DIR_SEGMENTS, decisionsDir, listDecisionFiles, nextDecisionId };
+function slugify(raw) {
+  const base = (raw || 'untitled')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return base || 'untitled';
+}
+
+/**
+ * 【M4追加】機構（`decide` Skill経由ではなくスクリプトから直接）が決定ログを起票する
+ * ための最小ヘルパー。`sync-check --force`（02文書10.3節、版1.8）が「差分ゼロ未達での
+ * 迂回」を不可逆度「低」の決定として記録する場合など、対話的なヒアリングを介さず
+ * 機構が自律的に決定ログを残す必要がある箇所で使う。
+ * `decide` Skill本体（`.claude/skills/decide/scripts/new-decision.js`）はユーザー対話・
+ * decision-warnings.jsonの消し込みを伴うため、そちらとは別の軽量版として独立させる
+ * （対話を伴わない機構発の決定ログという性質が異なるため、共通化はしない）。
+ */
+function createDecisionFile(cwd, { category, title, slug, content, rationale, irreversibility, irreversibilityReason, disposition, roles = [], lanes = [] }) {
+  if (!['高', '中', '低'].includes(irreversibility)) {
+    throw new Error('createDecisionFile: irreversibility must be 高|中|低');
+  }
+  const id = 'DL-' + nextDecisionId(cwd);
+  const dir = decisionsDir(cwd);
+  fs.mkdirSync(dir, { recursive: true });
+  const fileName = `${id}_${slugify(slug || title)}.md`;
+  const filePath = path.join(dir, fileName);
+  const fm = {
+    決定ID: id,
+    決定内容: content,
+    不可逆度: irreversibility,
+    状態: '確定',
+    決定日時: new Date().toISOString(),
+    決定者: '機構（自動記録）',
+    決定に関与したロール: roles.join(', '),
+    影響レーン: lanes.join(', '),
+    対象カテゴリ: category || '',
+  };
+  const body =
+    `# ${id}: ${title}\n\n` +
+    `## 決定内容\n${content}\n\n` +
+    `## 根拠\n${rationale || '(未記載)'}\n\n` +
+    `## 不可逆性の理由\n${irreversibilityReason || '(未記載)'}\n\n` +
+    `## 覆す場合の扱い\n${disposition || '(01文書4.8節のゾーン別戻りコスト表の該当区分に従う)'}\n`;
+  fs.writeFileSync(filePath, stringifyFrontmatter(fm, body), 'utf-8');
+  return { id, file: path.relative(cwd, filePath) };
+}
+
+module.exports = {
+  DECISIONS_DIR_SEGMENTS,
+  decisionsDir,
+  listDecisionFiles,
+  nextDecisionId,
+  createDecisionFile,
+};

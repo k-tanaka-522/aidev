@@ -7,12 +7,25 @@
  * 設計書: docs/v2/02_実行基盤アーキテクチャ.md 7.4節・15章#19
  * （PM指示: `role-boundary-guard.js`の前提そのものの検証、M3追加委譲）
  *
- * 【イベント】PostToolUse（Edit|Write）
+ * 【イベント】PreToolUse（Edit|Write）および PostToolUse（Edit|Write）の両方
+ *   （PM指示により追加登録、M3で拡張）。
  * 【検知内容】なし（検知・判定は一切行わない）。
  * 【動作】常に exit 0。受け取ったペイロードをそのまま
- *   `.claude-state/hook-payload-samples/edit-{ISO8601風タイムスタンプ}-{連番}.json`
+ *   `.claude-state/hook-payload-samples/{pre|post}-edit-{ISO8601風タイムスタンプ}-{連番}.json`
  *   へ保存するだけの、副作用のない観測専用フックである。`task-payload-observer.js`
- *   と全く同じ作り（保存先のファイル名接頭辞のみ`edit-`に変更）。
+ *   と全く同じ作り。
+ *
+ * 【版1.1（M3追加委譲）】`role-boundary-guard.js`は`PreToolUse`（Edit|Write）として
+ * 動作する（02文書7.3節#2）。`PostToolUse`ではファイルが既に書き終わっているため、
+ * 書込を止められない。したがって、`PostToolUse`のペイロードでエージェント識別子が
+ * 確認できても、それだけでは「`role-boundary-guard.js`が実際に機能する」ことの
+ * 証明にはならない。**`PreToolUse`側でも同じ識別子が載ることを別途確認する必要がある**
+ * ため、本フックを`PreToolUse`の`Edit|Write`にも追加登録した。
+ * 保存ファイル名の接頭辞を`pre-edit-`/`post-edit-`とし、`hook_event_name`フィールドの
+ * 値（`"PreToolUse"`/`"PostToolUse"`）を正規化して用いることで、ファイル名だけで
+ * どちらのイベントかを判別できるようにした（PM確認の迅速化）。`hook_event_name`が
+ * 取得できない・想定外の値の場合は`unknown-edit-`を接頭辞とし、誤って`pre`/`post`と
+ * ラベル付けしない（安全側）。
  *
  * 【目的・理由】
  * `task-payload-observer.js`の実機観測（M3、PM実施）により、`Agent`ツール
@@ -34,18 +47,20 @@
  * 削除は一切行わない。他のいかなる処理もブロックしない（常にexit 0）。
  *
  * 【前提条件・制約】
- * - 本フックは`.claude/settings.json`（M3の安全な有効化版）の`PostToolUse`
- *   `Edit|Write`エントリに**追加登録**する（既存の`decision-log-guard.js`・
- *   `sync-ledger-guard.js`はそのまま維持し、置き換えない）。
+ * - 本フックは`.claude/settings.json`（M3の安全な有効化版）の`PreToolUse`と
+ *   `PostToolUse`の両方の`Edit|Write`エントリに**追加登録**する（`PostToolUse`側の
+ *   既存の`decision-log-guard.js`・`sync-ledger-guard.js`はそのまま維持し、
+ *   置き換えない）。
  * - `task-payload-observer.js`と同様、書込に失敗しても例外を投げず必ずexit 0で
  *   終了する（観測専用フックが本来の処理を妨げてはならないため）。
+ * - **`.claude-state/hook-payload-samples/`配下は観測データの蓄積先であり、本フックは
+ *   新規ファイルの作成のみを行う。既存ファイルの削除・上書きは一切行わない（MUST NOT）。**
  * - サブエージェント自身が自分の`Edit`/`Write`呼び出しの結果を確認することはできない
- *   点は`task-payload-observer.js`と同じ制約ではない。**`Edit`/`Write`は
- *   PostToolUseの時点で当該ツール呼び出し自体が完了しているため、`Edit`/`Write`を
- *   行った当のサブエージェント自身が、同一ターン内で発火したこのフックの結果
- *   （保存されたサンプル）を直接は読めない。ただしPM（メインスレッド）は、
- *   サブエージェントの作業完了後に`.claude-state/hook-payload-samples/edit-*.json`
- *   を確認できる**。
+ *   点は`task-payload-observer.js`と同じ制約ではない。**`PostToolUse`は当該ツール
+ *   呼び出し自体が完了した後に発火するため、`Edit`/`Write`を行った当のサブエージェント
+ *   自身が、同一ターン内で発火したこのフックの結果（保存されたサンプル）を直接は
+ *   読めない。ただしPM（メインスレッド）は、サブエージェントの作業完了後に
+ *   `.claude-state/hook-payload-samples/{pre,post}-edit-*.json`を確認できる**。
  */
 
 const fs = require('fs');

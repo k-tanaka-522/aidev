@@ -43,7 +43,7 @@ const {
   extractExistingApiIds,
   diffFieldNames,
 } = require('../../../lib/field-extract');
-const { readTableAsObjects, appendRow, findTable } = require('../../../lib/markdown-table');
+const { readTableAsObjects, appendRow, appendRowUnderHeading, findTable } = require('../../../lib/markdown-table');
 const { nextIdFromFiles } = require('../../../lib/id-registry');
 const {
   screenIndexPath,
@@ -54,6 +54,10 @@ const {
   decisionsDir,
 } = require('../../../lib/ledger-paths');
 const { readZoneState, unlockSrc } = require('../../../lib/zone-state');
+const { createDecisionFile } = require('../../../lib/decisions');
+
+/** 00-02台帳「経路追加ログ」（03文書3.2.2節）の見出し。appendRowUnderHeadingが対象を探す鍵。 */
+const ROUTE_LOG_HEADING = '## 経路追加ログ';
 
 function parseArgs(argv) {
   const args = {};
@@ -95,12 +99,45 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function appendSyncLedger(cwd, { kind, participants, confirmationSummary, relatedIds }) {
+/**
+ * 00-05台帳への追記（03文書3.2.5節の列定義、版1.4）。`override`/`未解消差分の要約`は
+ * `sync-check --force`（10.3節）による迂回時のみ値を持つ（既定`false`/空欄）。
+ */
+function appendSyncLedger(cwd, { kind, participants, confirmationSummary, relatedIds, override = false, diffSummary = '' }) {
   appendRow(
     ledger0005Path(cwd),
-    ['通過日時', '同期点種別（A⇔B/B⇔C/A⇔C、バッチ版は`batch`）', '参加レーン（担当エージェント）', '確認項目', '関連ID（DL-/HB-/SCR-/RPT-/API-）'],
-    [nowIso(), kind, participants, confirmationSummary, relatedIds.join(', ')]
+    [
+      '通過日時',
+      '同期点種別（A⇔B/B⇔C/A⇔C、バッチ版は`batch`）',
+      '参加レーン（担当エージェント）',
+      '確認項目',
+      '関連ID（DL-/HB-/SCR-/RPT-/API-）',
+      'override',
+      '未解消差分の要約',
+    ],
+    [nowIso(), kind, participants, confirmationSummary, relatedIds.join(', '), override ? 'true' : 'false', diffSummary]
   );
+}
+
+/**
+ * `sync-check --force`（02文書10.3節、版1.8）迂回時の記録（MUST、両方を記録する）。
+ * (1) 呼び出し元で00-05へ`override:true`＋差分要約を記録する（appendSyncLedgerが担う）。
+ * (2) 本関数が不可逆度「低」の決定ログを起票する（01文書4.7.2節「不可逆度『低』は
+ *     記録のみ、承認不要」に該当する運用として位置づける）。
+ */
+function recordForceOverrideDecision(cwd, { hbId, diffSummary }) {
+  return createDecisionFile(cwd, {
+    category: 'sync-check迂回（--force）',
+    title: `${hbId}: sync-check --force による差分未解消のままの同期点通過`,
+    slug: `sync-check-force-${hbId}`,
+    content: `${hbId}の同期点通過を、レーンA/B間の差分が残った状態で --force により強行した。`,
+    rationale: `未解消差分: ${diffSummary}`,
+    irreversibility: '低',
+    irreversibilityReason: '02文書10.3節が定めるsync-check --force迂回であり、Zone2以降の軽微修正で追随可能なため不可逆度「低」とする。',
+    disposition: '記録のみ。承認不要（01文書4.7.2節）。',
+    roles: ['designer', 'app-architect', 'qa'],
+    lanes: ['A', 'B'],
+  });
 }
 
 function runScreenMode(cwd, args) {
@@ -228,14 +265,27 @@ function runScreenMode(cwd, args) {
     [hbId, routeIds, '(Zone3で変換)', '', '', '', '登録済み']
   );
 
+  const diffSummary = hasDiff
+    ? `画面のみ=${diff.onlyInA.join('/') || 'なし'}, レーンBのみ=${diff.onlyInB.join('/') || 'なし'}`
+    : '';
+
   appendSyncLedger(cwd, {
     kind: 'A⇔B',
     participants: 'designer, app-architect, qa',
     confirmationSummary: hasDiff
-      ? `--force指定により差分ありで通過（残差分: 画面のみ=${diff.onlyInA.join('/')||'なし'}, レーンBのみ=${diff.onlyInB.join('/')||'なし'}）`
+      ? `--force指定により差分ありで通過（残差分: ${diffSummary}）`
       : '画面項目とレーンB項目の完全一致を確認',
     relatedIds: [hbId, scrId, ...apiIds].filter(Boolean),
+    override: hasDiff,
+    diffSummary,
   });
+
+  // 【10.3節「--forceによる迂回」、両方の記録をMUST】00-05へのoverride記録（上記）に加え、
+  // 不可逆度「低」の決定ログを起票する。いずれか一方のみは不可（02文書10.3節）。
+  let forceDecision = null;
+  if (hasDiff) {
+    forceDecision = recordForceOverrideDecision(cwd, { hbId, diffSummary });
+  }
 
   // 【版1.8対応、10.2.1節】最初のHB-ID/API-ID採番に成功した時点でsrc_unlockedをtrueに
   // 固定する（単調・冪等）。app-architect（およびcoder、role-boundary-guard.js参照）の
@@ -244,6 +294,7 @@ function runScreenMode(cwd, args) {
 
   report.status = 'passed';
   report.hbId = hbId;
+  if (forceDecision) report.forceDecision = forceDecision;
   console.log(JSON.stringify(report, null, 2));
 }
 
@@ -259,26 +310,42 @@ function runBatchMode(cwd, args) {
   }
   const relSpec = path.relative(cwd, absSpec).replace(/\\/g, '/');
 
+  // 03文書3.2.3節（版1.4）: 「経由HB-ID」列は登録時点で判明している場合に限り一度だけ記入
+  // する（同一操作内の追記であり競合しない）。正式ID列（F-BAT-{連番}）はZone3の
+  // traceability-reverseが変換するため、登録時点では空欄のままにする。
   const batId = 'BAT-' + nextIdFromFiles('BAT', [ledger0003Path(cwd)]);
   appendRow(
     ledger0003Path(cwd),
-    ['BAT-ID', 'ジョブ名', '入出力仕様参照（decisions/配下）', '経由HB-ID（画面経由の場合）', '状態', '登録日時'],
-    [batId, args['job-name'], relSpec, args['hb-id'] || '', '登録済み', nowIso()]
+    [
+      'BAT-ID',
+      'ジョブ名',
+      '入出力仕様参照（decisions/配下）',
+      '経由HB-ID（画面経由の場合）',
+      '正式ID（F-BAT-{連番}）',
+      '状態',
+      '登録日時',
+    ],
+    [batId, args['job-name'], relSpec, args['hb-id'] || '', '', '登録済み', nowIso()]
   );
 
   if (args['hb-id']) {
-    // 画面を経由するバッチ: 00-02台帳の経路欄にもBAT-IDを追記する（MUST拡張、03文書3.10.2節）。
+    // 【03文書3.2.3節の役割分担】ここでの`--hb-id`指定は「登録時点で判明している」場合
+    // （00-03側の「経由HB-ID」列へ一度だけ記入、上記appendRowで完了）であるが、対象の
+    // HB-IDが00-02台帳に実在するかは別途確認が必要である。加えて、事後判明分（今回のような
+    // 登録時点判明分と異なり後から分かったケース）は00-02側を書き換えず「経路追加ログ」
+    // （3.2.2節）へ追記する。ここでは「登録時点判明」でも、Mode Bの逆引き（9.1.1節）が
+    // 00-02側からもBAT-IDを辿れるよう、経路追加ログにも同時記録する（追記のみで完結し
+    // 00-02本体行は書き換えないため、02文書10.1.4節の競合回避原則を破らない）。
     const rows = readTableAsObjects(ledger0002Path(cwd));
     const target = rows.find((r) => r['HB-ID'] === args['hb-id']);
     if (!target) {
       console.error(`[sync-check] 警告: 指定された HB-ID (${args['hb-id']}) が00-02台帳に見つかりません。`);
     } else {
-      // 簡易実装: 既存行を書き換えず、経路欄の拡張は追記コメント行として別途残す
-      // （00-02の行更新はmarkdown-table.jsが単純追記のみをサポートするため、
-      //  既存行の書き換えはM2のスコープ外としてPMへ報告する）。
-      console.error(
-        `[sync-check] 注記: HB-ID ${args['hb-id']} の経路欄への ${batId} 追記は、` +
-          '既存行の書き換えロジックが未実装のため手動確認が必要です（PMへの報告事項）。'
+      appendRowUnderHeading(
+        ledger0002Path(cwd),
+        ROUTE_LOG_HEADING,
+        ['HB-ID', 'additional_id', 'added_at', 'added_by'],
+        [args['hb-id'], batId, nowIso(), 'sync-check --kind=batch']
       );
     }
   }

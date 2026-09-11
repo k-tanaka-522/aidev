@@ -4,6 +4,7 @@
 **現在進行中のv1セッションを破壊せずに配置できない資産**を一時的に置く場所である。
 M0の作業指示（PMからの委譲）に基づき新設した。
 
+
 **M3更新（本ファイル）**: M3の委譲において、`.claude/settings.json` の切替を
 **2段階に分ける**ことが明示的なPM判断として指示された（設計書14.2節の記載順序とは
 異なる。理由は下記「なぜ2段階に分けるか」参照）。本ファイルはその2段階の切替手順を
@@ -35,8 +36,9 @@ M0の作業指示（PMからの委譲）に基づき新設した。
 
 - `permissions` キーを含まない（権限変更は段階2まで行わない）
 - 登録した hook は `decision-log-guard.js`・`sync-ledger-guard.js`・
-  `decision-stop-check.js`・`task-payload-observer.js`（M3新設の観測専用フック）の
-  4件のみ。いずれも`process.exit(0)`固定（何もブロックしない）
+  `decision-stop-check.js`・`task-payload-observer.js`・`edit-payload-observer.js`
+  （後者2件はM3新設の観測専用フック）の5件のみ。いずれも`process.exit(0)`固定
+  （何もブロックしない）
 - `role-boundary-guard.js`・`gate-transition-guard.js`・`doc-header-guard.js`・
   `lint-guard.js`・`task-boundary-guard.js`・`artifact-emptiness-guard.js`・
   `ops-item-guard.js` は **実装は完成させたが、実配置の`settings.json`には登録していない**
@@ -69,27 +71,91 @@ M0の作業指示（PMからの委譲）に基づき新設した。
 `"command": "node .claude/hooks/{新規hook}.js"`の形式で登録すること（MUST）。
 `.claude/hooks/*.js`単体（`node`前置なし）での登録は行わないこと（MUST NOT）。**
 
-### 未確定事項: `settings.json`の変更は同一セッション内で反映されるか（要PM再検証）
+### 【解消済み・実測確認済み】`settings.json`の変更はセッション再起動なしで反映される
 
-`command`を`node `前置に修正した後、**この修正が同一セッション内でhookとして
-反映されるかどうかは、本タスク（Coder）の実行中には確認できていない**。
-確認できない理由: Coderは自分自身のセッション内でTaskツールを呼び出せない
-（サブエージェントを自ら起動する権限を持たない）ため、`node`前置修正後にhookが
-実際に発火するかどうかを試すには、PMが別のサブエージェントを起動する必要がある。
+`command`を`node `前置に修正した直後、PMが同一セッション内でサブエージェントを
+起動したところ hook が実際に発火し、`.claude-state/hook-payload-samples/`へ
+サンプルが記録された（実測。推測ではない）。**したがって、M6の切替手順に
+「セッション再起動が必要」という懸念は無い。** 段階2の手順3（下記）はこの実測結果を
+反映済み。
 
-**この検証結果には次の重大な分岐がある**（PM再検証で確定する）。
+### 【M3で実機観測により判明した事実】サブエージェント呼び出しペイロードの実際の構造
 
-- **反映される場合**: 段階2（M6）の切替後、追加の作業なしにhookが有効化される
-- **反映されない場合（`settings.json`の変更がセッション起動時にのみ読み込まれる場合）**:
-  M6の切替手順に**「`.claude/settings.json`を完全版に差し替えた後、Claude Codeの
-  セッションを再起動する」という手順が追加で必要になる**。この場合、段階2の手順3
-  （`.claude/settings.json`の全面差し替え）の直後に、PMは必ずセッションを再起動し、
-  再起動後の最初の数回のツール呼び出しで`role-boundary-guard.js`等が意図通りに
-  動作しているかを確認しなければならない（手順3の「最初の数回のツール呼び出しを
-  慎重に確認する」に「セッション再起動後に」という条件が追加される）
+`task-payload-observer.js`が記録した実サンプル
+（`.claude-state/hook-payload-samples/task-2026-09-11T03-34-55-464Z-z9pqb0.json`）
+から、02文書7.4節の前提の一部が事実と異なることが判明した（推測ではなく実測）。
 
-**M3時点ではこの分岐を確定できていない。PMが実機で再検証済みかどうかを段階2着手前に
-必ず確認すること（下記チェックリストにも反映）。**
+1. **`tool_name`は`"Task"`ではなく`"Agent"`である。** `settings.json`のmatcherは
+   `"Task|Agent"`に修正済み（`.claude/settings.json`・`.claude/v2-staging/settings.json`
+   両方）。
+2. **`Agent`ツール自身のPostToolUseペイロードに限っては、`agent_id`/`agent_type`
+   （snake_case・ペイロード直下）は存在しない。** 代わりに`tool_response.agentId`/
+   `tool_response.agentType`（**camelCase**、`tool_response`配下）に格納されている。
+   `tool_response.content`（配列、要素は`{type:"text", text:"..."}`）に完了報告本文が
+   入る。`task-boundary-guard.js`はこの実測に基づく確定実装に更新済み（防御的な
+   多候補抽出は廃止した）。
+3. **重要: この「camelCase・`tool_response`配下」という構造は`Agent`ツール自身の
+   完了イベントに限った特殊な形であり、`Edit`/`Write`イベントには当てはまらない
+   （下記「解消済み」参照）。**
+
+### 【解消済み・実測確認済み】`role-boundary-guard.js`の前提は正しかった
+
+M3当初、`role-boundary-guard.js`が実際に判定に使う`Edit`/`Write`イベント自体に
+エージェント識別子が載るかどうかは未検証であり、**「載らなければ7.4節のロール境界の
+機構化は前提から成立しない」という最重要の懸念**として残っていた。
+
+`edit-payload-observer.js`を`.claude/settings.json`の`PostToolUse`（`Edit|Write`）に
+登録した後、Coder自身（本タスクを実行している私自身）が`.claude/v2-staging/README.md`
+（本ファイル）を`Edit`ツールで編集した際に実際に発火したペイロードを確認したところ、
+**`Edit`イベントのペイロードは、ペイロード直下に`agent_id`/`agent_type`（snake_case）を
+そのまま持っていた**。
+
+```json
+{
+  "session_id": "fec7ed83-9967-5ad5-9109-be4909715053",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Edit",
+  "agent_id": "afd54d1ea4e8c8398",
+  "agent_type": "coder",
+  "tool_input": { "file_path": "...", "old_string": "...", "new_string": "...", "replace_all": false },
+  "tool_response": { "filePath": "...", "oldString": "...", "newString": "..." }
+}
+```
+
+`agent_type`の値は`"coder"`であり、これは私自身の実際のロール（本タスクをCoderとして
+実行している）と一致する。**すなわち02文書7.4節が当初から述べていた
+「`agent_id`/`agent_type`という共通入力フィールドが存在する」という記述は、
+`Edit`/`Write`系のツールについては正しかった。** 実測で覆っていたのは、
+`Agent`ツール自身の完了イベント（`tool_response`配下にcamelCaseで格納される特殊形）
+だけである。
+
+**結論**: `role-boundary-guard.js`（本実装は`payload.agent_type`をそのまま参照する
+設計、M3で実装済み）は**そのままの前提で成立する**。作り直しは不要である。ただし
+次の2点はなお未確認であり、M6着手前に確認することが望ましい（MAY、必須ではない）。
+
+- 本実測は`PostToolUse`（`Edit`）1件のみであり、`role-boundary-guard.js`が実際に
+  使う`PreToolUse`（Edit\|Write）でも同一の`agent_id`/`agent_type`構造が载るかは、
+  Pre/Post間でペイロード構造が対称であるという一般的な期待からの推測に留まる
+  （直接の実測ではない）
+- `coder`以外のロール（`app-architect`・`designer`等）でも`agent_type`が
+  期待どおりの値（各Subagentの`name`フロントマターと一致する文字列）になるかも
+  未確認である
+
+**旧version（PMの依頼時点）ではこの検証をPMが別のサブエージェントを起動して行う想定
+だったが、Coder自身の`Edit`呼び出しでも同一の証跡が得られたため、上記のとおり本タスク
+内で解決した。** 参考として、`.claude-state/hook-payload-samples/`には実サンプル
+（`task-*.json`2件、`edit-*.json`1件）を保存済みである。
+
+（以下、上記対応の経緯として残す）
+**対応（M3で実施済み）**: `edit-payload-observer.js`（`task-payload-observer.js`と
+同じ作り、常に`exit 0`、保存先`.claude-state/hook-payload-samples/edit-*.json`）を
+新設し、`.claude/settings.json`の`PostToolUse`の`Edit|Write`エントリに追加登録した
+（既存の`decision-log-guard.js`・`sync-ledger-guard.js`はそのまま維持）。上記のとおり
+この観測により懸念は解消済みであり、`active-agent.json`方式への作り直しは不要と
+判断した。`edit-payload-observer.js`自体は`task-payload-observer.js`と同様、M3限定の
+診断用フックであり、7.3節の正式な10 hookには含まれない（M6完全版
+`.claude/v2-staging/settings.json`には登録していない。恒久的に残す価値があると
+PMが判断した場合は別途登録を検討すること）。
 
 ## 段階2（M6で実施）: 完全版への切替
 
@@ -98,14 +164,20 @@ M6（旧資産削除・`.claude/agents/*.md`の昇格と**同時**）に、以�
 1. **前提条件の確認**
    - [ ] M4・M5が完了し、`artifact-emptiness-guard.js` が実際に `reverse-doc` 群と
          組み合わせて動作確認済みであること
-   - [ ] `task-boundary-guard.js` が、M3で確認したTask完了ペイロードのフィールド名で
-         実際に警告を出せることを再確認していること（実機のサブエージェント名
-         `agent_type` が `consultant`/`app-architect`/`infra-architect`/`designer`/
-         `coder`/`qa`/`sre` のいずれかと一致することも合わせて確認する）
+   - [ ] `task-boundary-guard.js` が、M3で確定した`tool_response.agentType`/
+         `tool_response.content`を参照する実装で実際に警告を出せることを再確認して
+         いること（実機のサブエージェント名`tool_response.agentType`が
+         `consultant`/`app-architect`/`infra-architect`/`designer`/`coder`/`qa`/`sre`
+         のいずれかと一致することも合わせて確認する。M3の実測は`Explore`という
+         汎用エージェント1件のみであり、v2固有エージェントでの確認はまだ済んで
+         いない）
    - [ ] `.claude/v2-staging/agents/*.md`（7ファイル）の内容が確定していること
-   - [ ] **上記「未確定事項: `settings.json`の変更は同一セッション内で反映されるか」が
-         PMにより再検証済みであること。** 反映されない（セッション起動時のみ読込）と
-         判明している場合は、次の手順3の直後に**必ずセッション再起動**を行う
+   - [x] **【解消済み】`role-boundary-guard.js`がPostToolUse(Edit)のペイロードから
+         実際にエージェント識別子（`agent_id`/`agent_type`、snake_case・ペイロード
+         直下）を取得できることをM3で実機確認済み（上記「【解消済み・実測確認済み】
+         `role-boundary-guard.js`の前提は正しかった」参照）。ただし`PreToolUse`側と
+         `coder`以外のロールでの確認は未実施のため、M6着手前に余裕があれば
+         追加確認することが望ましい（MAY）
 2. **`.claude/agents/` の昇格**
    - `.claude/agents/<name>/AGENT.md`（v1、ディレクトリ形式）を削除する
    - `.claude/v2-staging/agents/<name>.md`（フラット形式）を `.claude/agents/<name>.md`
@@ -113,13 +185,14 @@ M6（旧資産削除・`.claude/agents/*.md`の昇格と**同時**）に、以�
 3. **`.claude/settings.json` の全面差し替え**
    - `.claude/v2-staging/settings.json`（本ディレクトリの完全版）の内容を
      `.claude/settings.json` としてコミットする（`permissions` 2表＋7章の全hookを含む。
-     すべての`command`が`node `前置済みであることを再確認すること、MUST）
-   - **「未確定事項」でセッション再起動が必要と判明している場合、この時点で
-     Claude Codeのセッションを再起動する（MUST）。** 再起動せずに続行すると、
-     新しいhookが発火しないまま「有効化された」と誤認するリスクがある
-   - 差し替え（および必要な場合は再起動）後、**最初の数回のツール呼び出しをPM自身が
-     慎重に確認する**（`role-boundary-guard.js`が意図せずPM自身の `docs/00_.../` 書込
-     までブロックしていないか等）
+     すべての`command`が`node `前置済みであること、matcherが`Task|Agent`に
+     なっていることを再確認すること、MUST）
+   - `settings.json`の変更はセッション再起動なしで反映されることを実測確認済みのため
+     （上記参照）、再起動は不要である
+   - 差し替え後、**最初の数回のツール呼び出しをPM自身が慎重に確認する**
+     （`role-boundary-guard.js`が意図せずPM自身の `docs/00_.../` 書込までブロックして
+     いないか、また前提条件確認済みのはずの`Edit|Write`でのエージェント識別子取得が
+     実際に機能しているか等）
 4. **v1の`CLAUDE.md`の置き換え**
    - v1の `.claude/CLAUDE.md`（338行、フェーズ順次型の記述）を、v2の軽量CLAUDE.md
      （6.2節、150〜180行目安、ゾーン/レーン型のオーケストレーション定義）に置き換える
@@ -150,19 +223,21 @@ M6（旧資産削除・`.claude/agents/*.md`の昇格と**同時**）に、以�
 ## 各マイルストーンでの並行作業（参考、02文書14.2節）
 
 M0で新設した `.claude/skills/*`（横断スキル16種）と `.claude/hooks/*.js`（hook 10種＋
-M3新設の観測専用フック1種）は、v1と名前が衝突しないため既にこのセッションでも
+M3新設の観測専用フック2種）は、v1と名前が衝突しないため既にこのセッションでも
 読み込まれる実配置に置いてある（`.claude/skills/`, `.claude/hooks/`）。M3時点の状態は
 次のとおり。
 
 - 横断スキル: 大半に`disable-model-invocation: true`または`user-invocable: false`を
   付与済みのため、ユーザーが明示的に呼ばない限り起動しない
 - hook: `.claude/settings.json`（段階1の安全な有効化版）には
-  `decision-log-guard.js`・`sync-ledger-guard.js`・`decision-stop-check.js`・
-  `task-payload-observer.js`の4件が`command`を`node `前置の形で登録されている
-  （M3でPMが発見した`Permission denied`不具合の修正済み。上記「hookの`command`記法に
-  関する重要な注意」参照）。いずれも`process.exit(0)`固定でブロックしない設計だが、
-  **本セッション内でこの修正後に実際に発火するかどうかはPMの再検証待ちである**
-  （Coder自身はTaskツールを持たず検証できない）。それ以外の`.claude/hooks/*.js`
+  `decision-log-guard.js`・`sync-ledger-guard.js`・`edit-payload-observer.js`
+  （`PostToolUse`の`Edit|Write`）、`task-payload-observer.js`
+  （`PostToolUse`の`Task|Agent`）、`decision-stop-check.js`（`Stop`）の5件が
+  `command`を`node `前置・matcherを実測（`Agent`）に対応させた形で登録されている
+  （M3でPMが発見した`Permission denied`不具合の修正、および`tool_name`実測結果の
+  反映済み）。いずれも`process.exit(0)`固定でブロックしない設計であり、**この修正後に
+  実際に発火することはPMの実機確認により確認済み**（`task-payload-observer.js`が
+  実サンプルを記録した。上記参照）。それ以外の`.claude/hooks/*.js`
   （`role-boundary-guard.js`等）は実装済みだが未登録のため一切発火しない
 - `.claude/settings.local.json`が登録する`prevent-pm-layer-violation.sh`（v1）は
   そのまま有効に動作し続けている
@@ -173,8 +248,13 @@ M3新設の観測専用フック1種）は、v1と名前が衝突しないため
 ## 移行時のチェックリスト（PM向け、更新版）
 
 - [ ] M3完了時点で、本タスクの最終報告に記載された「Task完了ペイロードのフィールド名」
-      確定結果（確定できた／できなかった）を確認する。できていない場合はM4着手前に
-      再度サブエージェントを起動して確認すること
+      は確定済み（`tool_name: "Agent"`、`tool_response.agentId`/`agentType`/`content`）。
+      ただしv2固有エージェント名（`coder`等）での確認はまだのため、M4着手前に
+      v2固有エージェントを1件起動して`tool_response.agentType`の値を再確認すること
+- [x] **`edit-payload-observer.js`によるPostToolUse(Edit)実機確認は完了・解消済み
+      （最重要事項）。** Coder自身の`Edit`呼び出しで`agent_type: "coder"`が
+      ペイロード直下（snake_case）に載ることを確認した。`role-boundary-guard.js`は
+      作り直し不要。`PreToolUse`側・`coder`以外のロールでの追加確認はMAY（必須ではない）
 - [ ] M4着手前に、`.claude/hooks/artifact-emptiness-guard.js`・`ops-item-guard.js`が
       M3で採用した暫定パターン・暫定スキーマ（`00-01`成果物構成カタログの列定義等）を
       04文書・03文書の正本が確定次第、差し替えること

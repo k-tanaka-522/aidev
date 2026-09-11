@@ -31,6 +31,10 @@ function contractsDir(cwd = process.cwd()) {
   return path.join(decisionsDir(cwd), 'contracts');
 }
 
+function ledger0001Path(cwd = process.cwd()) {
+  return path.join(govDir(cwd), '00-01_成果物構成カタログ.md');
+}
+
 function ledger0002Path(cwd = process.cwd()) {
   return path.join(govDir(cwd), '00-02_HBトレーサビリティ台帳.md');
 }
@@ -72,6 +76,7 @@ module.exports = {
   govDir,
   decisionsDir, // decisions.js からの再エクスポート（利用側の require 先を1本化するため）
   contractsDir,
+  ledger0001Path,
   ledger0002Path,
   ledger0003Path,
   ledger0004Path,

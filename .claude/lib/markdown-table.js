@@ -22,6 +22,14 @@
  *   `|---|...`のセパレータ行）のみを「本体テーブル」とみなす。台帳フォーマットは
  *   本ライブラリの利用者（各scripts/*.js）が単一テーブル構成になるよう設計する。
  * - セル内に`|`を含む値は想定しない（decisions.jsのfrontmatter同様、フラットな運用を前提）。
+ *
+ * 【M4追加】
+ * `00-02_HBトレーサビリティ台帳.md`の「経路追加ログ」（03文書3.2.2節）のように、1ファイルに
+ * 見出し（`## 経路追加ログ`）で区切られた2本目以降のテーブルを持つ台帳に対応するため、
+ * `findNamedTable`/`appendRowUnderHeading`を追加した。既存の`findTable`/`appendRow`は
+ * 「ファイル内最初のテーブル」のみを扱う既存動作のまま変更しない（後方互換）。
+ * また、`00-01_成果物構成カタログ.md`のように「同一キーの行を上書き更新する」運用を
+ * 要する台帳向けに`upsertRow`を追加した（キー列が一致する既存行があれば置換、無ければ追記）。
  */
 
 const fs = require('fs');
@@ -125,4 +133,117 @@ function appendRow(filePath, headerCols, rowValues, { title, description } = {})
   fs.writeFileSync(filePath, newLines.join('\n').replace(/\n*$/, '\n'), 'utf-8');
 }
 
-module.exports = { findTable, readTable, readTableAsObjects, appendRow, splitRow };
+/**
+ * `heading`（例: "## 経路追加ログ"）の行以降に現れる最初のテーブルを見つける。
+ * 見出し自体が無ければ `headingIndex: -1` を返す。見出しはあるがテーブルが無い場合は
+ * `header: null, headingIndex: (見出し行番号)` を返す。
+ */
+function findNamedTable(content, heading) {
+  const lines = content.split(/\r?\n/);
+  const headingIndex = lines.findIndex((l) => l.trim() === heading.trim());
+  if (headingIndex === -1) {
+    return { header: null, rows: [], startLine: -1, endLine: -1, lines, headingIndex: -1 };
+  }
+  for (let i = headingIndex + 1; i < lines.length - 1; i++) {
+    if (lines[i].trim().startsWith('|') && isSeparatorRow(lines[i + 1])) {
+      const header = splitRow(lines[i]);
+      let end = i + 1;
+      const rows = [];
+      for (let j = i + 2; j < lines.length; j++) {
+        if (!lines[j].trim().startsWith('|')) break;
+        rows.push(splitRow(lines[j]));
+        end = j;
+      }
+      return { header, rows, startLine: i, endLine: end, lines, headingIndex };
+    }
+  }
+  return { header: null, rows: [], startLine: -1, endLine: -1, lines, headingIndex };
+}
+
+/**
+ * `heading`配下のテーブルに1行追記する。見出し自体が無ければファイル末尾に
+ * 見出し＋テーブルを新設する。見出しはあるがテーブルがまだ無ければ見出し直後に新設する。
+ */
+function appendRowUnderHeading(filePath, heading, headerCols, rowValues, { description } = {}) {
+  let content = '';
+  try {
+    content = fs.readFileSync(filePath, 'utf-8');
+  } catch (_err) {
+    content = '';
+  }
+  const rowLine = '| ' + rowValues.map((v) => (v === undefined || v === null ? '' : String(v))).join(' | ') + ' |';
+  const found = findNamedTable(content, heading);
+
+  if (found.headingIndex === -1) {
+    const parts = [content.replace(/\n+$/, ''), '', heading, ''];
+    if (description) parts.push(description, '');
+    parts.push('| ' + headerCols.join(' | ') + ' |');
+    parts.push('|' + headerCols.map(() => '---').join('|') + '|');
+    parts.push(rowLine);
+    fs.writeFileSync(filePath, parts.join('\n').replace(/^\n+/, '') + '\n', 'utf-8');
+    return;
+  }
+
+  if (!found.header) {
+    const insertAt = found.headingIndex + 1;
+    const inserted = ['', '| ' + headerCols.join(' | ') + ' |', '|' + headerCols.map(() => '---').join('|') + '|', rowLine];
+    const newLines = found.lines.slice(0, insertAt).concat(inserted, found.lines.slice(insertAt));
+    fs.writeFileSync(filePath, newLines.join('\n').replace(/\n*$/, '\n'), 'utf-8');
+    return;
+  }
+
+  const newLines = found.lines
+    .slice(0, found.endLine + 1)
+    .concat([rowLine], found.lines.slice(found.endLine + 1));
+  fs.writeFileSync(filePath, newLines.join('\n').replace(/\n*$/, '\n'), 'utf-8');
+}
+
+/**
+ * ファイル内最初のテーブルに対し、`keyCol`の値が`keyValue`と一致する既存行を置換するか
+ * （無ければ）末尾に追記する。`docs/00_.../00-01_成果物構成カタログ.md`のように
+ * 「生成主体が自身の担当行を都度更新する」運用（03文書8.1節）を持つ台帳向け。
+ * 台帳・ファイルが存在しない場合は`appendRow`と同じ挙動で新規作成する。
+ */
+function upsertRow(filePath, headerCols, keyCol, keyValue, rowValues, { title, description } = {}) {
+  let content = '';
+  try {
+    content = fs.readFileSync(filePath, 'utf-8');
+  } catch (_err) {
+    content = '';
+  }
+  if (!content) {
+    appendRow(filePath, headerCols, rowValues, { title, description });
+    return;
+  }
+  const { header, rows, startLine, endLine, lines } = findTable(content);
+  if (!header) {
+    appendRow(filePath, headerCols, rowValues, { title, description });
+    return;
+  }
+  const keyIdx = header.indexOf(keyCol);
+  if (keyIdx === -1) {
+    appendRow(filePath, headerCols, rowValues, { title, description });
+    return;
+  }
+  const newRowLine = '| ' + rowValues.map((v) => (v === undefined || v === null ? '' : String(v))).join(' | ') + ' |';
+  const existingIdx = rows.findIndex((r) => r[keyIdx] === keyValue);
+  const bodyLines = lines.slice(startLine + 2, endLine + 1);
+  if (existingIdx === -1) {
+    bodyLines.push(newRowLine);
+  } else {
+    bodyLines[existingIdx] = newRowLine;
+  }
+  const newLines = lines.slice(0, startLine + 2).concat(bodyLines, lines.slice(endLine + 1));
+  fs.writeFileSync(filePath, newLines.join('\n').replace(/\n*$/, '\n'), 'utf-8');
+}
+
+module.exports = {
+  findTable,
+  readTable,
+  readTableAsObjects,
+  appendRow,
+  splitRow,
+  findNamedTable,
+  appendRowUnderHeading,
+  upsertRow,
+};
