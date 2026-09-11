@@ -53,7 +53,7 @@ const {
   ledger0005Path,
   decisionsDir,
 } = require('../../../lib/ledger-paths');
-const { readZoneState } = require('../../../lib/zone-state');
+const { readZoneState, unlockSrc } = require('../../../lib/zone-state');
 
 function parseArgs(argv) {
   const args = {};
@@ -132,8 +132,14 @@ function runScreenMode(cwd, args) {
   let apiIds = [];
   const zoneState = readZoneState(cwd);
   const explicitSource = args.source;
+  // 【版1.8対応】current-zone.jsonのスキーマ正本化（10.2.1節）により`zone`は0/1/3/4の
+  // 4値のみを取り、`2`は存在しなくなった。旧実装は`zone >= 2`でZone2到達を判定していたが、
+  // これは常にfalseになり実装切替が機能しなくなる（過去の判定ロジックが02文書の
+  // スキーマ確定によって無効化された箇所。PMへの報告事項）。10.3節「`--source=impl`の
+  // 切替は`src_unlocked`を参照して自動選択する」の記述どおり、`src_unlocked`で判定する。
   const effectiveSource =
-    explicitSource || (zoneState.zone >= 2 && fs.existsSync(path.join(cwd, 'src', 'backend')) ? 'impl' : 'contract');
+    explicitSource ||
+    (zoneState.src_unlocked && fs.existsSync(path.join(cwd, 'src', 'backend')) ? 'impl' : 'contract');
 
   if (effectiveSource === 'impl') {
     // Zone2以降: src/backend配下の素朴なフィールド抽出（本格的なORM静的解析は9.1.1節がZone3向けに別途定める）。
@@ -230,6 +236,11 @@ function runScreenMode(cwd, args) {
       : '画面項目とレーンB項目の完全一致を確認',
     relatedIds: [hbId, scrId, ...apiIds].filter(Boolean),
   });
+
+  // 【版1.8対応、10.2.1節】最初のHB-ID/API-ID採番に成功した時点でsrc_unlockedをtrueに
+  // 固定する（単調・冪等）。app-architect（およびcoder、role-boundary-guard.js参照）の
+  // src/**書込許可がこのタイミングで解放される。
+  unlockSrc(cwd, 'sync-check');
 
   report.status = 'passed';
   report.hbId = hbId;
