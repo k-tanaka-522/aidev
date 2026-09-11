@@ -15,7 +15,7 @@
  * 1箇所に集約する。
  *
  * 【影響範囲】
- * `docs/{02,03,04,06,07}_*/.claude/skills/reverse-doc/scripts/*.js`、
+ * `docs/{02,03,04,06,07}_(各項番名)/.claude/skills/reverse-doc/scripts/*.js`、
  * `docs/05_テスト/.claude/skills/traceability-reverse/scripts/*.js`。
  *
  * 【前提条件・制約】

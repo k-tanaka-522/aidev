@@ -76,6 +76,19 @@ function readRawStdin() {
   }
 }
 
+/**
+ * ペイロードの`hook_event_name`から、保存ファイル名の接頭辞（`pre-edit`/`post-edit`/
+ * `unknown-edit`）を決める。ファイル名だけでPreToolUse/PostToolUseを判別できるように
+ * するための分類であり、`parsed.hook_event_name`の値そのものは`parsed`にそのまま
+ * 保存されるため、本関数の分類が誤っていても実体データは失われない（安全側）。
+ */
+function classifyEventPrefix(parsed) {
+  const name = parsed && typeof parsed.hook_event_name === 'string' ? parsed.hook_event_name : '';
+  if (/^PreToolUse$/i.test(name)) return 'pre-edit';
+  if (/^PostToolUse$/i.test(name)) return 'post-edit';
+  return 'unknown-edit';
+}
+
 function main() {
   const cwd = process.cwd();
   const raw = readRawStdin();
@@ -84,23 +97,25 @@ function main() {
     const dir = path.join(cwd, SAMPLES_DIR_RELATIVE);
     fs.mkdirSync(dir, { recursive: true });
 
-    const ts = new Date().toISOString().replace(/[:.]/g, '-');
-    const rand = Math.random().toString(36).slice(2, 8);
-    const filePath = path.join(dir, `edit-${ts}-${rand}.json`);
-
     let pretty = null;
     try {
       pretty = JSON.stringify(JSON.parse(raw), null, 2);
     } catch (_err) {
       pretty = null;
     }
+    const parsedForNaming = pretty ? JSON.parse(pretty) : null;
+
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const rand = Math.random().toString(36).slice(2, 8);
+    const prefix = classifyEventPrefix(parsedForNaming);
+    const filePath = path.join(dir, `${prefix}-${ts}-${rand}.json`);
 
     const content = JSON.stringify(
       {
         observed_at: new Date().toISOString(),
         raw_stdin: raw,
-        parsed: pretty ? JSON.parse(pretty) : null,
-        top_level_keys: pretty ? Object.keys(JSON.parse(pretty)) : [],
+        parsed: parsedForNaming,
+        top_level_keys: parsedForNaming ? Object.keys(parsedForNaming) : [],
       },
       null,
       2
