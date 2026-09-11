@@ -51,6 +51,23 @@ function ledger0005Path(cwd = process.cwd()) {
   return path.join(govDir(cwd), '00-05_同期点記録台帳.md');
 }
 
+/**
+ * 【M5追加】`00-13_課題管理表.md`・`00-14_変更管理台帳.md`は、M4までは各スクリプトが
+ * `path.join(govDir(cwd), '00-13_課題管理表.md')`をその都度直書きしていた（`static-analysis-run.js`
+ * `generate-rtm.js`・`check-links.js`等）。M5で`impact-analysis`/`ticket-triage`/
+ * `gate-check`が新たに`00-14`（変更管理台帳、01文書5.2節手順6・02文書4.2節）へ書く必要が
+ * 生じたため、他の台帳と同じくここに集約する（既存の直書き箇所は後方互換のため変更しない）。
+ * `00-14`の列スキーマは02文書15章が「03文書の正本化対象から漏れている」と指摘済みの
+ * 未確定事項であるため、本実装は`00-13`と同型の暫定スキーマを採用する（PMへ報告）。
+ */
+function ledger0013Path(cwd = process.cwd()) {
+  return path.join(govDir(cwd), '00-13_課題管理表.md');
+}
+
+function ledger0014Path(cwd = process.cwd()) {
+  return path.join(govDir(cwd), '00-14_変更管理台帳.md');
+}
+
 function prototypesDir(cwd = process.cwd()) {
   return path.join(cwd, 'prototypes');
 }
@@ -81,6 +98,8 @@ module.exports = {
   ledger0003Path,
   ledger0004Path,
   ledger0005Path,
+  ledger0013Path,
+  ledger0014Path,
   prototypesDir,
   screenIndexPath,
   reportIndexPath,

@@ -44,6 +44,11 @@ argument-hint: "[--scope=<ID>]"
 `generate-rtm.js`実行時に出力される`unresolved`一覧は`00-13_課題管理表.md`へ登録すること
 （MUST、実装から推測して埋めない）。
 
+**unresolvedの明示方針（版2.1、MUST。M5でstatic-analysis-run.jsへ遡って適用）**: 解決できな
+かった逆引き列は空欄のまま残さず、リテラル値`unresolved`を明記する。Mode Bの
+`impact-analysis`（M5実装）はこの値を「機械的な逆引きが不能な領域」の判定に用いるため、
+空欄と`unresolved`を区別できることが前提になる。
+
 ## 実行方法
 
 ```bash
