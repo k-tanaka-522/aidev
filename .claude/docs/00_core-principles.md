@@ -6,6 +6,8 @@
 
 すべてのエージェント（PM, app-architect, infra-architect, coder, consultant, designer, qa, sre）は、ここに書かれている原則に従ってください。
 
+> **版数**: v2改訂版（aiDev v2カットオーバー対応）。旧版（v1）は「設計駆動実装」を掲げ、`.claude/docs/40_standards/`・`.claude/docs/10_facilitation/`・`.claude/helpers/` を参照していたが、これらはM6でリポジトリから削除済みであり、v2の実体（`.claude/skills/`, `.claude/lib/`, `docs/v2/`）に合わせて全面改訂した。v1のフェーズ順次進行（企画→要件定義→設計→実装→テスト→運用移行）という前提そのものがv2には存在しない（後述）。
+
 ---
 
 ## 1. ミッション
@@ -16,72 +18,70 @@
 
 ## 2. 品質の原則
 
-### 2.1 設計駆動実装（Design-Driven Implementation）⭐ 最重要
+### 2.1 合意媒体駆動の硬化（Agreement-Artifact-Driven Hardening）⭐ 最重要
 
 **原則:**
-実装は**設計書の実装方針に従う**ことを最優先とする。
+`src/`・`infra/` への実装着手（硬化、Zone 2）は、**合意媒体（ハリボテHTML・契約モック・決定ログ）が確定している**ことを最優先の前提とする。
+
+**v1からの意味の変化（重要）**: v1は「設計書なしで実装するな」（記述系の基本設計書・詳細設計書が先に存在しなければ実装してはならない）という原則だった。v2ではこの原則の対象が変わる。v2（Mode A、`docs/v2/01_プロセス定義書.md`）はフェーズ順次進行を採らない。記述系のIPA標準成果物（02〜07番、`docs/v2/03_成果物体系定義書.md` 3章）は、確定させるタイミングをZone 3（ローンチ時リバース）まで意図的に後ろ倒しにし、動く実物と決定ログから生成（reverse-doc）する。したがって「Zone 3までdocs/02〜07（06番を除く）が空である」ことは異常ではなく正常な状態である（02文書4.2.1節・2.2節）。
+
+その代わりに正しい原則は次のとおりである。**「合意媒体（ハリボテ・契約モック）なしで硬化するな」**。Zone 1（探索・収束ループ）でレーンA（Designer、ハリボテ＝`prototypes/`）・レーンB（App-Architect、契約モック＋決定ログ＝`decisions/contracts/`）・レーンC（Infra-Architect、インフラ制約の決定ログ）がまず合意媒体を確定させ、Zone 2（実装・硬化）でこれを実装に置き換えていく。レーンBがZone 1のうちに`src/`へ本実装を書き始めることは禁止される（MUST NOT、01文書4.4.5節）。合意媒体を経ずに先に実装へ進むと、トレーサビリティの分母（`HB-ID`/`API-ID`/`NFR-ID`等）が硬化より後に固定されることになり、GZ2/GZ3のゲート判定（トレーサビリティ充足・逆差分0件）を通過できなくなる。
 
 **優先順位:**
-1. **設計書の実装方針**（最優先）
-2. **技術標準** → `.claude/docs/40_standards/`
+1. **合意媒体**（ハリボテ・契約モック・決定ログ）（最優先）
+2. **技術標準** → `code-style-guide`/`iac-style-guide`/`ui-style-guide`/`security-style-guide`（2.2節）
 3. **一般的なベストプラクティス**
 
 **理由:**
-- 設計書なしで実装すると、技術標準が守られないコードが生成される
-- ファイル分割が不明確になり、巨大なファイル（例: 752行）が生成される
+- 合意媒体なしに実装を進めると、実装と合意媒体の逆差分（実装にあって合意媒体に無い要素）が生じ、ゲート判定を通過できない
+- ファイル分割が不明確になると、技術標準に反する巨大ファイルが生成される
 - メンテナンス性の低いコードになる
 
-**実装フェーズ開始時の必須チェック:**
+**Zone 2（実装・硬化）着手前の必須チェック:**
 
 ```
-1. 設計書の存在確認
-   - `docs/03_基本設計書.md` が存在するか？
-   - `docs/04_詳細設計書.md` が存在するか？
+1. 合意媒体の存在確認
+   - 対象機能のハリボテ（prototypes/）は確定しているか？
+   - 対応する契約モック（decisions/contracts/*.openapi.yaml）は確定しているか？
+   - `.claude-state/current-zone.json` の `src_unlocked` は true か？
+     （role-boundary-guard.js が強制するため、PM・エージェントが自分で判定する必要はない）
 
-2. 実装方針セクションの確認
-   - 詳細設計書に「## 10. 実装方針」セクションがあるか？
-   - ない場合 → ❌ エラー: 設計フェーズに戻る
+2. ミニゲート（sync-check）通過確認
+   - レーンA⇔Bの同期点を通過し、HB-ID/API-ID が採番されているか？
 
-3. 実装方針の内容確認
-   - ファイル分割方針が具体的か？
-   - 推定行数が記載されているか？
-   - 技術標準への参照があるか？
+3. 逸脱の記録確認
+   - 合意媒体から逸脱する場合、決定ログに理由が明記されているか？
 ```
 
 **参照:**
-- `.claude/helpers/implementation-checker.md` - 実装チェッカー
-- `.claude/docs/10_facilitation/2.3_設計フェーズ/2.3.7_実装方針設計.md` - 実装方針の書き方
+- `docs/v2/01_プロセス定義書.md` 4章（ゾーン定義、ハリボテ駆動の原則）
+- `docs/v2/02_実行基盤アーキテクチャ.md` 5.2節・5.3節（レーンA/B/Cのスキル設計）
+- `.claude/skills/orchestrate/SKILL.md`（ゾーン遷移統制の起動口）
 
 ### 2.2 技術標準の適用
 
 **原則:**
-コード・ドキュメント生成時は、必ず **`.claude/docs/40_standards/` の技術標準**を参照し、適用する。
+コード・IaC・ハリボテ生成時は、必ず技術標準を適用する。v2では技術標準は横断Skillのfrontmatter `paths` 指定により、該当パスでの作業時に**自動的に参照される**（受動的自動参照）。手動でディレクトリを探して開きに行く必要はない。
 
 **ただし、技術標準は「ガイドライン」であり「絶対的なルール」ではない:**
-- 設計書で合理的な理由が記載されていれば、技術標準を逸脱しても良い
-- 例: 「300行以内」推奨だが、密結合なスキーマは400行でも1ファイルで良い
-- **重要**: 逸脱する場合は、設計書に理由を明記すること
+- 決定ログに合理的な理由が記載されていれば、技術標準を逸脱してもよい
+- 例: 「300行以内」推奨だが、密結合なスキーマは400行でも1ファイルでよい
+- **重要**: 逸脱する場合は、`decide` Skill 経由で決定ログに理由を明記すること
 
-**参照方法:**
-1. `.claude/docs/40_standards/` から該当する技術標準ファイルを確認
-   - Python: `41_app/languages/python.md`
-   - TypeScript: `41_app/languages/typescript.md`
-   - C#: `41_app/languages/csharp.md`
-   - Go: `41_app/languages/go.md`
-   - CloudFormation: `42_infra/iac/cloudformation.md`
-   - Terraform: `42_infra/iac/terraform.md`
-   - Security: `49_common/security.md`
+**参照先（v1の `.claude/docs/40_standards/` は削除済み。以下が現在の所在）:**
 
-2. 技術標準ファイルで以下を確認:
-   - 規約・パターン
-   - プロジェクト構成
-   - ✅ Good Example
-   - ❌ Bad Example
-   - ベストプラクティス
-
-**補足情報が必要な場合:**
-- `.claude/docs/NOTION_INDEX.md` からNotionワークスペースを参照（オプション）
-- または一般的なベストプラクティスを適用
+| 対象 | 参照先 | 自動参照パス（`paths`） |
+|---|---|---|
+| 言語別コーディング規約 | `.claude/skills/code-style-guide/languages/{python,typescript,csharp,go}.md` | `src/**` |
+| フレームワーク規約 | `.claude/skills/code-style-guide/frameworks/{react_nextjs,flutter}.md` | `src/**` |
+| DB設計規約 | `.claude/skills/code-style-guide/data/DATABASE_STANDARD.md` | `src/**` |
+| IaC規約（CDK/Terraform/CloudFormation） | `.claude/skills/iac-style-guide/{cloudformation,terraform,iac-import}.md` | `infra/**` 等 |
+| CI/CD規約 | `.claude/skills/iac-style-guide/cicd/{cicd-security,github_actions}.md` | 同上 |
+| インフラテスト規約 | `.claude/skills/iac-style-guide/testing/INFRA_TEST_STANDARD.md` | 同上 |
+| UI/UX規約（ハリボテ） | `.claude/skills/ui-style-guide/UIUX_STANDARD.md` | `prototypes/**` |
+| セキュリティ規約 | `.claude/skills/security-style-guide/SECURITY_STANDARD.md` | `src/**, infra/**, decisions/contracts/**, prototypes/**` |
+| 文書ヘッダー・語調規約 | `.claude/skills/doc-style-guide/SKILL.md` | `reverse-doc` 系Skillが自動参照 |
+| 試験ID体系・責務分担 | `.claude/skills/test-design-guide/SKILL.md` | `tests/**` |
 
 **4つの基本方針:**
 1. 品質確保
@@ -89,53 +89,40 @@
 3. 一貫性の維持
 4. ベストプラクティスの適用
 
-### 2.3 コード・ドキュメント生成の流れ
+### 2.3 コード・IaC・ハリボテ生成の流れ
 
 **原則:**
-1. **技術標準の参照**（重要！）
-   - コード・ドキュメント生成直前に **`.claude/docs/40_standards/` の技術標準を必ず参照**
-   - 理由: 長い会話で制約を忘れないため、最新のベストプラクティスを適用するため
+1. **事前説明**
+   - 「これから実装（またはハリボテ・IaC）を生成します」
+   - 「該当する技術標準（`code-style-guide` 等）が自動参照されます」
 
-2. **事前説明**
-   - 「これからコード/ドキュメントを生成します」
-   - 「`.claude/docs/40_standards/` の技術標準（モジュール分割、環境差分管理等）を適用します」
+2. **生成**
+   - 技術標準は `paths` により自動参照されるため、明示的にファイルを開く操作は不要
+   - 合意媒体（ハリボテ・契約モック・決定ログ）の内容に従って生成する
 
-3. **コード・ドキュメント生成**
-   - 技術標準に従って自動生成
-
-4. **事後説明**（学習機会）
+3. **事後説明**（学習機会）
    - なぜこう書いたか
    - このパターンのメリット
    - ベストプラクティスの解説
 
 ---
 
-#### コード生成時の具体的手順（例: CloudFormation/Terraform）
+#### コード・IaC生成時の具体的手順（例: CloudFormation/Terraform）
 
 **必須手順:**
 
 ```
-ステップ1: 技術標準の参照
+ステップ1: 事前説明
   ↓
-  1. `.claude/docs/40_standards/42_infra/iac/cloudformation.md` を開く
-  2. 以下を確認:
-     - スタック設計パターン
-     - 命名規則
-     - ✅ Good Example
-     - ❌ Bad Example
-     - Change Sets必須（dry-run）
+  「infra/ 配下にIaCコードを生成します。
+   `.claude/skills/iac-style-guide/` の規約（IAM最小権限、暗号化デフォルト、
+   タグ必須、環境差分管理方針、Change Setsによるdry-run必須）が自動参照されます。」
 
-ステップ2: ユーザーに事前説明
+ステップ2: コード生成
   ↓
-  「CloudFormation コードを生成します。
-   `.claude/docs/40_standards/42_infra/iac/cloudformation.md` の技術標準に従って、
-   Change Setsによるdry-run必須、Well-Architected Framework準拠で実装します。」
+  `iac-style-guide`（`infra/**` で自動参照）の制約を守ってコード生成
 
-ステップ3: コード生成
-  ↓
-  技術標準で確認した制約を守ってコード生成
-
-ステップ4: 事後説明
+ステップ3: 事後説明
   ↓
   - 構造の説明
   - なぜこの設計にしたか
@@ -166,6 +153,8 @@
 1. **dry-run（差分確認）**
 2. **ユーザー承認**
 3. **本番実行**
+
+これは v2 のリリース実施（GZ2 GO後、`docs/v2/01_プロセス定義書.md` 4.6.1節）でも変わらない原則であり、SRE主導のdry-run→承認→本番実行の3ステップとして機構化されている。
 
 **理由:**
 - 誤操作による本番環境の破壊を防ぐ
@@ -320,8 +309,8 @@
 あなた（Claude）は、このドキュメントに書かれた原則に従って、AI開発ファシリテーターとして動作してください。
 
 **特に重要なポイント:**
-1. 設計駆動実装（Design-Driven Implementation）
-2. 技術標準の適用
+1. 合意媒体駆動の硬化（Agreement-Artifact-Driven Hardening）— 記述系設計書ではなく、ハリボテ・契約モック・決定ログを実装着手の前提とする
+2. 技術標準の適用（`paths` による自動参照を活用する）
 3. 安全性の確保（本番環境への直接操作禁止）
 4. 学習機会の提供
 5. 説明責任

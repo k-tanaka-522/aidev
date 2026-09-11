@@ -1,0 +1,57 @@
+{
+  "_note": "02文書12章のRoutines一覧をスケジュール定義として機械可読化したもの。このリポジトリ実行環境にはcron等のスケジューラが無い（タスク指示: 『スケジュール定義と実行スクリプトを分離し、スケジューラが無くても手動実行できる形にすること』）ため、本ファイルは『いつ実行すべきか』のメタデータに留め、実際の起動はscripts/run-routine.jsによる手動実行、またはスケジューラが利用可能な環境ではこのJSONを読んで外部cron等に登録する運用を想定する。",
+  "routines": [
+    {
+      "name": "dependency-update-check",
+      "description": "依存更新チェック（02文書12章）",
+      "schedule": "weekly",
+      "script": "scripts/dependency-update-check.js",
+      "onFinding": "GitHub Issueとして起票（02文書12章フロー図のROUT→DRIFT→ISSUE）"
+    },
+    {
+      "name": "iac-drift-detection",
+      "description": "IaCドリフト検知（02文書12章。この環境では実クラウドAPIを叩けないため、コードフリーズ基準点からのgit diffによる代理指標に限定。README/SKILL.md参照）",
+      "schedule": "weekly",
+      "script": "scripts/iac-drift-check.js",
+      "onFinding": "GitHub Issueとして起票"
+    },
+    {
+      "name": "doc-staleness-check",
+      "description": "文書陳腐化チェック（reverse-docの差分検出モードを定期実行、02文書12章）",
+      "schedule": "monthly",
+      "script": "scripts/doc-generation-drift-check.js",
+      "onFinding": "00-13_課題管理表.mdへ登録"
+    },
+    {
+      "name": "generation-possibility-check",
+      "description": "生成可能性検査（reverse-doc差分検査モードの定期実行、四半期、03文書5.4節）",
+      "schedule": "quarterly",
+      "script": "scripts/doc-generation-drift-check.js",
+      "onFinding": "00-13_課題管理表.mdへ登録",
+      "sharesScriptWith": "doc-staleness-check"
+    },
+    {
+      "name": "doc-link-check",
+      "description": "文書間リンク検査（四半期、03文書8.2節・02文書9.6節）",
+      "schedule": "quarterly",
+      "script": "../doc-link-check/scripts/check-links.js",
+      "args": ["--dir=docs"],
+      "onFinding": "00-13_課題管理表.mdへ登録（check-links.js自身が行う）"
+    },
+    {
+      "name": "artifact-emptiness-fullscan",
+      "description": "IPA成果物カタログの未生成項目 定期全件走査（artifact-emptiness-guard.jsのPostToolUse差分検査を補助する追加機構、02文書7.3節#8・14.2節M5、MAY）",
+      "schedule": "weekly",
+      "script": "scripts/artifact-emptiness-fullscan.js",
+      "onFinding": "標準出力へ報告（既存hookと同じ『抑制条件はzone<3かつprototype-driven』ロジックを流用）"
+    },
+    {
+      "name": "contract-check",
+      "description": "設計⇔実装の契約検証 フル実行（新設・M7、02文書16.5.4節）。.claude/contracts/MANIFEST.jsonのstatus:active全件（CT-0001〜CT-0004）を一括実行し、あわせて.claude/lib・.claude/hooks・各Skill scripts/配下の【契約】欄の見える化レポート（タグ無し／MANIFEST未登録参照／未評価）を出力する（16.5.2節・16.6節）。contract-drift-guard.js（PostToolUse差分実行、16.5.1節）を補助する定期全件検査という位置づけは、artifact-emptiness-fullscanと同型（差分のみの軽量hook＋重い全件検査はRoutine、版1.6の二段構成）",
+      "schedule": "weekly",
+      "script": "../contract-check/scripts/contract-check.js",
+      "args": ["--json"],
+      "onFinding": "00-13_課題管理表.mdへ登録（contract-checkはWrite/Editを持たないため自身では登録しない。doc-staleness-check・generation-possibility-checkと同じ『登録は呼び出し側が行う』パターン。16.5.4節MUST）"
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "_comment": "設計⇔実装の契約検証機構（02文書16章）の対応表。実行時の合否(pass/fail)は保持しない（16.3.2節、静的passingフラグの陳腐化を避けるため。実行のたびにtestFileをnodeで走らせて都度判定する）。",
+  "contracts": [
+    {
+      "id": "CT-0001",
+      "must": {
+        "doc": "01",
+        "section": "6.5",
+        "quote": "skip/fixme、例外処理の握りつぶしを含むテストは分子に数えない"
+      },
+      "target": {
+        "module": ".claude/skills/gate-check/scripts/gate-check.js",
+        "function": "countTestCoverage"
+      },
+      "testFile": ".claude/contracts/gate-check.countTestCoverage.contract.js",
+      "author": "app-architect",
+      "status": "active"
+    },
+    {
+      "id": "CT-0002",
+      "must": {
+        "doc": "02",
+        "section": "9.4.3",
+        "quote": "未知スキーマは判定不能として扱う（fail closed。黙ってスキップしない）"
+      },
+      "target": {
+        "module": ".claude/lib/zone-gate-conditions.js",
+        "function": "checkCatalogSection"
+      },
+      "testFile": ".claude/contracts/zone-gate-conditions.checkCatalogSection.contract.js",
+      "author": "app-architect",
+      "status": "active"
+    },
+    {
+      "id": "CT-0003",
+      "must": {
+        "doc": "02",
+        "section": "9.4.3",
+        "quote": "00-01カタログはファイル内の全テーブルを走査して9列スキーマの行をすべて連結する"
+      },
+      "target": {
+        "module": ".claude/lib/reverse-common.js",
+        "function": "readCatalog"
+      },
+      "testFile": ".claude/contracts/reverse-common.readCatalog.contract.js",
+      "author": "app-architect",
+      "status": "active"
+    },
+    {
+      "id": "CT-0004",
+      "must": {
+        "doc": "01",
+        "section": "6.5",
+        "quote": "生成済みとカタログが主張する項目に実ファイルが無い場合、検査は検出漏れ0件を安全側に倒すのではなく、gapsとして報告しなければならない"
+      },
+      "target": {
+        "module": ".claude/lib/verify.js",
+        "function": "computeGenerationGaps"
+      },
+      "testFile": ".claude/contracts/lib-verify.computeGenerationGaps.contract.js",
+      "author": "app-architect",
+      "status": "active"
+    },
+    {
+      "id": "CT-0005",
+      "must": {
+        "doc": "03",
+        "section": "3.2.7（現状は重複防止のMUST未記載。本タスク報告3番の追記文案・提案先は3.2.7節および新設3.2.8節）",
+        "quote": "起票元・種別・対象ID・項番・内容・関連Ticketが一致し、既存行の承認状態が却下でない場合は同じCRとみなし新規起票しない（却下済みの再発は新規起票する）（.claude/lib/cr-ledger.js 冒頭コメントより。正式なMUST化前のため実装コメントを出典とする）"
+      },
+      "target": {
+        "module": ".claude/lib/cr-ledger.js",
+        "function": "registerCr"
+      },
+      "testFile": ".claude/contracts/cr-ledger.registerCr.contract.js",
+      "author": "app-architect",
+      "status": "active"
+    },
+    {
+      "id": "CT-0006",
+      "must": {
+        "doc": "03",
+        "section": "3.2.1・3.2.3（本タスク報告3番で3.2.1・3.2.3・新設3.2.8節への追記を提案。現状は明記無し）",
+        "quote": "00-02本体行は書き換えない（MUST NOT、3.2.1節）／00-03の状態・入出力仕様参照列は入出力仕様の変更時に更新する（3.2.3節列定義）。したがって同一入力の再実行はHB-ID/BAT-IDを重複採番せず、BAT-IDは内容変更時に新規採番ではなく既存行を更新しなければならない"
+      },
+      "target": {
+        "module": ".claude/skills/sync-check/scripts/sync-check.js",
+        "function": "runScreenMode / runBatchMode"
+      },
+      "testFile": ".claude/contracts/sync-check.registerRoute.contract.js",
+      "author": "app-architect",
+      "status": "active"
+    },
+    {
+      "id": "CT-0007",
+      "must": {
+        "doc": "02",
+        "section": "10.2（GZ3のGO条件「逆差分0件」）・9.3",
+        "quote": "逆差分検出: 実装 vs 合意媒体の比較に限定し、実装にのみ存在する要素を検出する。GZ3は逆差分0件をGO条件とする"
+      },
+      "target": {
+        "module": ".claude/lib/verify.js",
+        "function": "computeReverseDiff"
+      },
+      "testFile": ".claude/contracts/lib-verify.computeReverseDiff.contract.js",
+      "author": "app-architect",
+      "status": "active"
+    },
+    {
+      "id": "CT-0008",
+      "must": {
+        "doc": "01",
+        "section": "5.2",
+        "quote": "逆引き（波及先の導出）。実装ファイル・APIエンドポイントを検索キーに、RTM全体を逆引きして同一の実装ファイル・同一API・同一画面を共有する他の要件IDを機械抽出する。実装を読んで『影響がありそうな箇所』を主観的に洗い出す方法は禁止する（MUST NOT）"
+      },
+      "target": {
+        "module": ".claude/lib/impact-analysis.js",
+        "function": "analyzeImpact"
+      },
+      "testFile": ".claude/contracts/impact-analysis.analyzeImpact.contract.js",
+      "author": "app-architect",
+      "status": "active"
+    }
+  ]
+}
