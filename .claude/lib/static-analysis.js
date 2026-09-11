@@ -442,11 +442,23 @@ function buildCrudMatrix(cwd) {
   const matrix = {}; // { table: { featureId: Set('C','R','U','D') } }
   const unresolved = [];
 
+  // CRUD操作種別からHTTPメソッドを推測する簡易マッピング（同一ファイルに複数エンドポイント
+  // （GET/POST等）が定義されている場合の誤対応付けを避けるため）。R→GET、それ以外→
+  // GET以外、という粗い区分に留まる（POST/PUT/DELETEの区別まではしない、限界として明示）。
+  const opToMethodHint = { R: 'GET', C: 'POST', U: 'PUT', D: 'DELETE' };
+
   for (const op of crudOps) {
-    const route = beRoutes.find((r) => r.file === op.file);
+    const routesInFile = beRoutes.filter((r) => r.file === op.file);
+    const methodHint = opToMethodHint[op.operation];
+    const route =
+      routesInFile.find((r) => r.method === methodHint) ||
+      routesInFile.find((r) => (methodHint === 'GET' ? r.method === 'GET' : r.method !== 'GET')) ||
+      routesInFile[0];
     let featureId = null;
     if (route) {
-      const contract = contractApiIds.find((c) => c.routePath === route.routePath || paramMatch(c.routePath, route.routePath));
+      const contract = contractApiIds.find(
+        (c) => (c.routePath === route.routePath || paramMatch(c.routePath, route.routePath)) && c.method === route.method
+      ) || contractApiIds.find((c) => c.routePath === route.routePath || paramMatch(c.routePath, route.routePath));
       featureId = contract && contract.apiId ? contract.apiId : null;
     }
     if (!featureId) {
