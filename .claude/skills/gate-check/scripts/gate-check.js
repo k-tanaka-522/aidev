@@ -45,7 +45,7 @@ const ticketRetry = require('../../../lib/ticket-retry');
 const zone3Hotfix = require('../../../lib/zone3-hotfix');
 const { ledger0012Path } = require('../../../lib/ledger-paths');
 const { registerIssue, KIND } = require('../../../lib/issue-ledger');
-const { resetHold } = require('../../../lib/gate-records');
+const { resetHold, computeNextRetryState } = require('../../../lib/gate-records');
 const { judgeZoneGate } = require('../../../lib/zone-gate');
 
 function parseArgs(argv) {
@@ -113,7 +113,15 @@ function computeImpact(cwd, args, mode) {
   return analyzeImpact(cwd, { text, explicitIds, mode });
 }
 
-function judge(cwd, args, kind) {
+/**
+ * `dryRun`（本タスクで新設。読み取り専用モード）: `true`の場合、判定は通常どおり行うが
+ * `ticketRetry.recordReturn`/`zone3Hotfix.recordReturn`（差し戻しカウンタの永続化）・
+ * `registerIssue`（00-13への課題登録）を行わない。カウンタの「記録した場合の想定値」は
+ * `.claude/lib/gate-records.js`の`computeNextRetryState`（ゾーンゲート側と共用する純粋関数）
+ * で副作用なく計算する。詳細は`.claude/lib/zone-gate.js`の`judgeZoneGate`の`dryRun`コメント
+ * （同じ設計判断をMode B/Zone3内ミニチケットのGateにも適用したもの）を参照。
+ */
+function judge(cwd, args, kind, dryRun = false) {
   const mode = kind === 'zone3-hotfix' ? 'zone3-hotfix' : 'mode-b';
   const impact = computeImpact(cwd, args, mode);
   const findings = readFindings(cwd, args);
@@ -159,27 +167,46 @@ function judge(cwd, args, kind) {
   }
 
   let judgement;
+  let simulatedRetryState;
   if (retryState.hold) {
     judgement = 'HOLD';
     reasons.push('既にHOLD状態（差し戻し3回超過済み）。gate-recordsのHOLD解除手順(10.2.2節)に準じ、PM経由のユーザー承認と決定ログ起票を経てリセットすること。');
   } else if (ok) {
     judgement = 'GO';
   } else {
-    const after = kind === 'zone3-hotfix' ? zone3Hotfix.recordReturn(ref, cwd) : ticketRetry.recordReturn(ref, cwd);
+    const after = dryRun
+      ? computeNextRetryState(retryState)
+      : kind === 'zone3-hotfix'
+        ? zone3Hotfix.recordReturn(ref, cwd)
+        : ticketRetry.recordReturn(ref, cwd);
+    if (dryRun) simulatedRetryState = after;
     judgement = after.hold ? 'HOLD' : 'NG';
     if (after.hold) {
-      reasons.push('今回の差し戻しで3回を超過したためHOLDに遷移した（01文書7.4節）。');
-      // 03文書3.2.6節「差し戻し（要注意）・HOLD対応」: HOLD発生時、GZ系ゲート記録
-      // （GZ{0,2,3}-99、本kindには存在しない）とは別に、解消作業を追跡する課題として
-      // 00-13へ起票する（MUST）。二重登録を避けるため、hold未設定→設定に遷移した
-      // このタイミングでのみ登録する（既にhold状態での再判定時は登録しない）。
-      const issId = registerIssue(cwd, {
-        kind: KIND.RETURN_OR_HOLD,
-        detectedBy: `gate-check --kind=${kind}`,
-        content: `${kind === 'zone3-hotfix' ? 'Zone3内ミニチケット' : 'Mode Bチケット'}のGateが差し戻し3回超過によりHOLDした（ref=${ref}）。01文書7.4節・6.5節条件5に基づく。解消は本kindでのHOLD解除運用（PM経由のユーザー承認、決定ログ起票）による（10.2.2節のGZ向け手順を準用）。`,
-        relatedIds: ref,
-      });
-      reasons.push(`00-13へ課題登録した（${issId}）。`);
+      reasons.push(
+        `今回の差し戻し${dryRun ? '（--dry-run: シミュレーション）' : ''}で3回を超過したためHOLDに遷移した（01文書7.4節）。`
+      );
+      if (!dryRun) {
+        // 03文書3.2.6節「差し戻し（要注意）・HOLD対応」: HOLD発生時、GZ系ゲート記録
+        // （GZ{0,2,3}-99、本kindには存在しない）とは別に、解消作業を追跡する課題として
+        // 00-13へ起票する（MUST）。二重登録を避けるため、hold未設定→設定に遷移した
+        // このタイミングでのみ登録する（既にhold状態での再判定時は登録しない）。
+        const issId = registerIssue(cwd, {
+          kind: KIND.RETURN_OR_HOLD,
+          detectedBy: `gate-check --kind=${kind}`,
+          content: `${kind === 'zone3-hotfix' ? 'Zone3内ミニチケット' : 'Mode Bチケット'}のGateが差し戻し3回超過によりHOLDした（ref=${ref}）。01文書7.4節・6.5節条件5に基づく。解消は本kindでのHOLD解除運用（PM経由のユーザー承認、決定ログ起票）による（10.2.2節のGZ向け手順を準用）。`,
+          relatedIds: ref,
+        });
+        reasons.push(`00-13へ課題登録した（${issId}）。`);
+      } else {
+        reasons.push('（--dry-run: 00-13課題管理表への登録は行っていない）');
+      }
+    }
+    if (dryRun) {
+      reasons.push(
+        `（--dry-run: 差し戻しカウンタ(${
+          kind === 'zone3-hotfix' ? 'zone3-hotfix-count.json' : 'mode-b-ticket-retry.json'
+        })の更新は行っていない。実行前=${retryState.retryCount}回、記録した場合の想定値=${after.retryCount}回）`
+      );
     }
   }
 
@@ -193,8 +220,15 @@ function judge(cwd, args, kind) {
     numeratorCovered: covered,
     uncovered,
     deferred,
-    retryState: kind === 'zone3-hotfix' ? zone3Hotfix.getHotfix(ref, cwd) : ticketRetry.getTicketState(ref, cwd),
+    retryState: dryRun
+      ? retryState
+      : kind === 'zone3-hotfix'
+        ? zone3Hotfix.getHotfix(ref, cwd)
+        : ticketRetry.getTicketState(ref, cwd),
+    simulatedRetryState,
     impactUnresolved: impact.unresolved,
+    dryRun,
+    recorded: !dryRun,
     note:
       kind === 'zone3-hotfix'
         ? '差し戻しカウントは.claude-state/zone3-hotfix-count.jsonで管理し、GZ0/GZ2/GZ3の累積カウンタ(zone-gate-retry.json)とは独立している（01文書4.6.2節の累積対象外の原則）。'
@@ -213,6 +247,12 @@ function judge(cwd, args, kind) {
  *
  * `--findings`のJSON形式は`readFindings()`と同じ（critical/high/guardPass）に加え、
  * `hardeningComplete`（GZ2向け、全機能の硬化完了。既定true）を追加で読む。
+ *
+ * `--dry-run`（本タスクで新設）を付けると、判定は行うが`GZ{0,2,3}-99_ゲート記録.md`への
+ * 追記・`.claude-state/zone-gate-retry.json`の差し戻しカウンタ更新・HOLD時の00-13登録を
+ * 一切行わない（`judgeZoneGate`の`opts.dryRun`にそのまま委譲する）。`/status`・`/next`
+ * コマンドが状況確認のためにゲート判定を安全に呼べるようにする目的で新設した
+ * （PMへの報告事項。詳細は`.claude/lib/zone-gate.js`の`judgeZoneGate`コメント参照）。
  */
 function runZoneGate(cwd, args) {
   const gate = args.gate;
@@ -227,7 +267,8 @@ function runZoneGate(cwd, args) {
   if (!args.findings) {
     findings.hardeningCompleteSource = 'default(未確認扱い、hardeningComplete=trueで通す)';
   }
-  const result = judgeZoneGate(cwd, gate, { findings });
+  const dryRun = !!args['dry-run'];
+  const result = judgeZoneGate(cwd, gate, { findings, dryRun });
   console.log(JSON.stringify({ status: 'done', result }, null, 2));
   if (result.judgement === 'NG') process.exitCode = 1;
   if (result.judgement === 'HOLD') process.exitCode = 2;
@@ -272,7 +313,8 @@ function main() {
     process.exit(2);
   }
 
-  const result = judge(cwd, args, kind);
+  const dryRun = !!args['dry-run'];
+  const result = judge(cwd, args, kind, dryRun);
   console.log(JSON.stringify({ status: 'done', result }, null, 2));
 
   if (result.judgement === 'NG') process.exitCode = 1;

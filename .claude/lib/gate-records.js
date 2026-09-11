@@ -240,18 +240,37 @@ function writeRetryState(data, cwd = process.cwd()) {
 }
 
 /**
+ * 差し戻し1回分の状態遷移を副作用なく計算する（永続化しない、`state`も変更しない）。
+ * `recordReturnThroughGate`（実際に永続化する側）が本関数を使う。
+ *
+ * 【新設理由（本タスクで新設、`gate-check --dry-run`向け）】
+ * `gate-check`の読み取り専用モード（`--dry-run`、`.claude/lib/zone-gate.js`参照）は
+ * 「記録した場合どうなるか」をユーザーに提示したいが、`.claude-state/zone-gate-retry.json`
+ * を実際に書き換えてはならない。本関数を純粋関数として切り出すことで、
+ * `recordReturnThroughGate`（永続化する通常経路）と`--dry-run`（永続化しないシミュレーション
+ * 経路）が同一の遷移ロジック（3回超過でhold化）を共有し、カウンタの増分計算がズレる
+ * リスクを防ぐ。`{retryCount, hold, heldAt}`という同型構造を持つ`ticket-retry.js`・
+ * `zone3-hotfix.js`（Mode B / Zone3内ミニチケットのGate）の`--dry-run`実装
+ * （`.claude/skills/gate-check/scripts/gate-check.js`）も本関数を共用する。
+ */
+function computeNextRetryState(state) {
+  const base = state || { retryCount: 0, hold: false, heldAt: null };
+  const next = { retryCount: (base.retryCount || 0) + 1, hold: !!base.hold, heldAt: base.heldAt || null };
+  if (next.retryCount > 3 && !next.hold) {
+    next.hold = true;
+    next.heldAt = new Date().toISOString();
+  }
+  return next;
+}
+
+/**
  * 指定ゲートについて「差し戻し」を1件記録する（累計+1、3回超過でhold化）。
  * `data`はreadRetryStateの戻り値をそのまま渡すことを想定し、破壊的に更新して返す。
  */
 function recordReturnThroughGate(data, gate) {
-  const state = data[gate] || { retryCount: 0, hold: false, heldAt: null };
-  state.retryCount += 1;
-  if (state.retryCount > 3 && !state.hold) {
-    state.hold = true;
-    state.heldAt = new Date().toISOString();
-  }
-  data[gate] = state;
-  return state;
+  const next = computeNextRetryState(data[gate]);
+  data[gate] = next;
+  return next;
 }
 
 /**
@@ -295,6 +314,7 @@ module.exports = {
   retryStatePath,
   readRetryState,
   writeRetryState,
+  computeNextRetryState,
   recordReturnThroughGate,
   resetHold,
 };

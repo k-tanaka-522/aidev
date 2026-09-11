@@ -27,9 +27,16 @@
 const fs = require('fs');
 const path = require('path');
 const { readTableAsObjects } = require('./markdown-table');
-const { screenIndexPath, ledger0001Path } = require('./ledger-paths');
+const { screenIndexPath } = require('./ledger-paths');
 const { scanFrontendRoutes, scanBackendRoutes, scanContractApiIds } = require('./static-analysis');
-const { hasExecutionMarker } = require('./reverse-common');
+const { hasExecutionMarker, readCatalog } = require('./reverse-common');
+const {
+  V9_GENERATED_STATES,
+  V5_SCHEMA_WARNING,
+  UNKNOWN_SCHEMA_WARNING,
+  deriveSectionFromDocNo,
+  detectSchemaVersion,
+} = require('./catalog-schema');
 
 /** 02文書10.1節・9.3節: 実装 vs 合意媒体（ハリボテ・契約モック）の逆差分検出。 */
 function computeReverseDiff(cwd) {
@@ -61,15 +68,62 @@ function computeReverseDiff(cwd) {
   };
 }
 
-/** 02文書9.3節「生成漏れ検査」: 00-01カタログの「生成済み」行と実ファイル・マーカーの対応確認。 */
+/**
+ * 02文書9.3節「生成漏れ検査」: 00-01カタログの「生成済み」行と実ファイル・マーカーの対応確認。
+ *
+ * 【本タスクでの是正（PMへの報告事項）】
+ * 旧実装は`readTableAsObjects(ledger0001Path(cwd))`（＝`markdown-table.js`の`findTable`
+ * ベース、ファイル内最初の1テーブルのみを読む）でカタログを読み、02文書9.4.3節（版1.9）が
+ * 正本化した9列スキーマではなくM3暫定の5列スキーマの列名
+ * （`状態（未生成/生成済み/対象外）`・`区分（02〜07）`・`項番`）を直接参照していた。
+ * 9列カタログを渡すとこれらの列が存在しないため`gaps`が常に空配列になり、GZ3の
+ * 「生成漏れ検査」が**エラーにならないまま黙って無効化**されていた（`.claude/lib/
+ * zone-gate-conditions.js`の`checkCatalogSection`が既に是正済みの不整合と同種の
+ * サイレント故障。実測確認済み）。本関数は同ファイルと同じ判定基盤
+ * （`.claude/lib/catalog-schema.js`のスキーマ判定、`reverse-common.js`の`readCatalog`
+ * ＝`findAllTables`ベースの複数テーブル対応）を共有するよう是正した。
+ */
 function computeGenerationGaps(cwd) {
-  const catalog = readTableAsObjects(ledger0001Path(cwd));
+  const catalog = readCatalog(cwd);
+  const schemaVersion = detectSchemaVersion(catalog);
+
+  if (schemaVersion === 'empty') {
+    // カタログ自体が無い/空。`checkCatalogSection`の`catalogFound: false`と対称に、
+    // 呼び出し側（zone-gate.js）が既に「00-01が読めない場合は別条件でfail closed」を
+    // 行っているため、ここでは検査対象0件として扱う（このファイル自身のfail closedは
+    // 「読めたがスキーマ不明」の場合のみ行う。次の分岐参照）。
+    return [];
+  }
+  if (schemaVersion === 'unknown') {
+    console.error(`[verify] ${UNKNOWN_SCHEMA_WARNING}`);
+    // fail closed: 判定不能を「黙ってgaps=0件（検査パス）」にはしない。1件のギャップとして
+    // 報告し、GZ3を通過させない（`checkCatalogSection`が`catalogFound: false`でNGにする
+    // 設計と対称。02文書9.3節の慎重さの方針）。
+    return [{ itemNo: null, name: null, reason: UNKNOWN_SCHEMA_WARNING }];
+  }
+  if (schemaVersion === 'v5') {
+    console.error(`[verify] ${V5_SCHEMA_WARNING}`);
+  }
+
   const gaps = [];
   for (const row of catalog) {
-    const status = row['状態（未生成/生成済み/対象外）'];
-    if (status !== '生成済み') continue;
-    const itemNo = row['項番'];
-    const section = row['区分（02〜07）'];
+    let itemNo;
+    let name;
+    let section;
+    let isGenerated;
+    if (schemaVersion === 'v9') {
+      itemNo = (row['文書番号'] || '').trim();
+      name = (row['文書名'] || '').trim();
+      section = deriveSectionFromDocNo(itemNo);
+      isGenerated = V9_GENERATED_STATES.includes((row['生成状態'] || '').trim());
+    } else {
+      itemNo = row['項番'];
+      name = row['成果物名'];
+      section = row['区分（02〜07）'];
+      isGenerated = row['状態（未生成/生成済み/対象外）'] === '生成済み';
+    }
+    if (!isGenerated || !itemNo) continue;
+
     const zoneDirCandidates = fs.existsSync(path.join(cwd, 'docs'))
       ? fs.readdirSync(path.join(cwd, 'docs')).filter((d) => d.startsWith(`${section}_`))
       : [];
@@ -83,12 +137,12 @@ function computeGenerationGaps(cwd) {
       }
     }
     if (!found) {
-      gaps.push({ itemNo, reason: 'カタログは生成済みだが、対応するファイルが見つからない' });
+      gaps.push({ itemNo, name, reason: 'カタログは生成済みだが、対応するファイルが見つからない' });
       continue;
     }
     const content = fs.readFileSync(found, 'utf-8');
     if (!hasExecutionMarker(content)) {
-      gaps.push({ itemNo, reason: `ファイルは存在するが reverse-doc 実行時マーカーが無い（${path.relative(cwd, found)}）。手動編集の可能性` });
+      gaps.push({ itemNo, name, reason: `ファイルは存在するが reverse-doc 実行時マーカーが無い（${path.relative(cwd, found)}）。手動編集の可能性` });
     }
   }
   return gaps;

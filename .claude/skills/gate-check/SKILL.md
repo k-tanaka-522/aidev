@@ -95,6 +95,34 @@ node .claude/skills/gate-check/scripts/gate-check.js --kind=zone-gate --gate=GZ3
 「◯件中◯件パス」のような合格率のみの報告を受理しない（01文書6.5節・7.2節）という原則を、
 機構的に（読み取りコードが存在しない、という形で）担保している。
 
+### `--dry-run`（読み取り専用モード、本タスクで新設）
+
+```bash
+node .claude/skills/gate-check/scripts/gate-check.js --kind=zone-gate --gate=GZ2 --dry-run
+node .claude/skills/gate-check/scripts/gate-check.js --kind=ticket --ref=TICKET-0001 --dry-run
+node .claude/skills/gate-check/scripts/gate-check.js --kind=zone3-hotfix --ref=ZH-0001 --ids=HB-0002 --dry-run
+```
+
+判定（GO/NG/HOLDの算出）自体は通常どおり行うが、以下の**副作用を一切行わない**:
+
+- `GZ{0,2,3}-99_ゲート記録.md`への追記（`--kind=zone-gate`）
+- `.claude-state/zone-gate-retry.json`（`--kind=zone-gate`）・
+  `.claude-state/mode-b-ticket-retry.json`（`--kind=ticket`）・
+  `.claude-state/zone3-hotfix-count.json`（`--kind=zone3-hotfix`）の差し戻しカウンタ更新
+- HOLD遷移時の`00-13_課題管理表.md`への課題登録
+
+出力JSONには`dryRun: true`・`recorded: false`が明記され、`reasons`にも
+「`--dry-run`: ◯◯への記録は行っていない」という注記が追加される。NG/HOLD側では
+「記録した場合どうなるか」を`simulatedRetryState`（副作用なしのシミュレーション値、
+`.claude/lib/gate-records.js`の`computeNextRetryState`を通常経路と共用）として提示する。
+
+**新設理由（PMへの報告事項・設計書02文書10.2.2節等への反映が必要）**: 従来`gate-check`には
+判定を行うモードしか存在せず、`/status`・`/next`コマンドは状況確認のためだけに`gate-check`を
+呼ぶと差し戻しカウンタが実際に加算されてしまうため、「`gate-check`を実行しないこと」という
+運用上の禁止（MUST NOT）で対症療法的にこの副作用を避けていた。本フラグにより、
+`/status`・`/next`は`--dry-run`付きでのみ`gate-check`を呼んでよい（禁止から「読み取り専用
+モードでのみ許可」へ緩和。`.claude/commands/status.md`・`next.md`参照）。
+
 ### GZ0の判定条件
 
 1. `decision-check`が集計するZone0決定ログの必須9項目充足（8.3節(a)）

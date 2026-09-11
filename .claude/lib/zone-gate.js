@@ -39,11 +39,19 @@
  * 発生させないため）。この設計判断はPMへ報告する。
  */
 
-const { readRetryState, writeRetryState, recordReturnThroughGate, appendGateRecord, latestGateJudgement } = require('./gate-records');
+const {
+  readRetryState,
+  writeRetryState,
+  recordReturnThroughGate,
+  computeNextRetryState,
+  appendGateRecord,
+  latestGateJudgement,
+} = require('./gate-records');
 const {
   computeTraceabilityCoverage,
   findDeferredIds,
   checkCatalogSection,
+  formatMissingDocs,
   countUnapprovedCRs,
   runDecisionCheck,
   readProcessOptionMode,
@@ -143,7 +151,7 @@ function judgeGZ2(cwd, findings) {
   } else if (section06.applicable && !section06.complete) {
     ok = false;
     reasons.push(
-      `該当案件だが06番（移行・導入）の生成が未完了: ${section06.missing.map((r) => r['項番']).join(', ')}` +
+      `該当案件だが06番（移行・導入）の生成が未完了: ${formatMissingDocs(section06)}` +
         '（02文書10.2節版2.2「該当する案件では06番の生成完了」）'
     );
   }
@@ -186,7 +194,11 @@ function judgeGZ3(cwd, findings, processOptionMode) {
   const generationGaps = computeGenerationGaps(cwd);
   if (generationGaps.length > 0) {
     ok = false;
-    reasons.push(`生成漏れ検査でギャップが${generationGaps.length}件ある: ${generationGaps.map((g) => g.itemNo).join(', ')}`);
+    reasons.push(
+      `生成漏れ検査でギャップが${generationGaps.length}件ある: ${generationGaps
+        .map((g) => (g.name ? `${g.itemNo} ${g.name}` : g.itemNo || '(文書番号不明)'))
+        .join(', ')}`
+    );
   }
 
   const cov = computeTraceabilityCoverage(cwd);
@@ -204,9 +216,7 @@ function judgeGZ3(cwd, findings, processOptionMode) {
   } else if (section07.applicable && !section07.complete) {
     ok = false;
     reasons.push(
-      `07番（運用・保守。07-50は9.1.3節によりGZ3判定対象外）の生成が未完了: ${section07.missing
-        .map((r) => r['項番'])
-        .join(', ')}`
+      `07番（運用・保守。07-50は9.1.3節によりGZ3判定対象外）の生成が未完了: ${formatMissingDocs(section07)}`
     );
   }
 
@@ -217,7 +227,7 @@ function judgeGZ3(cwd, findings, processOptionMode) {
   if (allSections.catalogFound && !allSections.complete) {
     ok = false;
     reasons.push(
-      `IPA標準成果物一式（02〜07、07-50を除く）の生成が未完了: ${allSections.missing.map((r) => r['項番']).join(', ')}`
+      `IPA標準成果物一式（02〜07、07-50を除く）の生成が未完了: ${formatMissingDocs(allSections)}`
     );
   }
 
@@ -248,13 +258,32 @@ const JUDGES = { GZ0: judgeGZ0, GZ2: judgeGZ2, GZ3: judgeGZ3 };
  * ゾーンゲート（GZ0/GZ2/GZ3）の本体判定。`opts.findings`は`normalizeFindings`を通した
  * 生の値でよい（本関数内で正規化する）。
  *
+ * 【`opts.dryRun`（本タスクで新設。読み取り専用モード）】
+ * `true`の場合、判定（GO/NG/HOLDの算出）自体は通常どおり行うが、以下の**副作用を一切
+ * 行わない**（記録への書込み・カウンタ更新をしない）:
+ * - `GZ{0,2,3}-99_ゲート記録.md`への`appendGateRecord`（GO/NG/HOLDいずれの場合も）
+ * - `.claude-state/zone-gate-retry.json`の差し戻しカウンタ更新（`writeRetryState`）
+ * - HOLD遷移時の`00-13_課題管理表.md`への`registerIssue`
+ *
+ * 【新設理由（PMへの報告事項・設計書への反映が必要）】
+ * 従来`gate-check`には判定を行うモードしか存在せず、状況確認のためだけに1回実行しても
+ * 差し戻しカウンタが実際に加算されてしまっていた（`/status`・`/next`コマンドが
+ * `gate-check`実行を「MUST NOT」としていたのはこの副作用を規律で避けるための対症療法
+ * であり、機構の欠陥そのものは残っていた）。「規律をプロンプトの言い聞かせでなく機構で
+ * 強制する」というv2の方針に従い、副作用を伴わない安全な確認手段を機構として用意する。
+ * NG/HOLDの判定結果自体は`dryRun`時も計算する（`computeNextRetryState`で「実際に記録
+ * した場合どうなるか」を副作用なしにシミュレートする。`recordReturnThroughGate`と同じ
+ * 遷移ロジックを共有し、カウンタの増分計算がズレないようにする）。
+ *
  * 戻り値: { gate, judgement: 'GO'|'NG'|'HOLD', reasons, denominator, numerator,
- *           retryState, detail }
+ *           retryState, detail, dryRun, recorded }
+ * `recorded`は`!dryRun`（記録を実際に行ったかどうかを呼び出し側が一目で判定できるフラグ）。
  */
 function judgeZoneGate(cwd, gate, opts = {}) {
   if (!JUDGES[gate]) {
     throw new Error(`judgeZoneGate: 不正なゲート種別 "${gate}"（GZ0/GZ2/GZ3のいずれか）`);
   }
+  const dryRun = !!opts.dryRun;
   const findings = normalizeFindings(opts.findings);
   const retryState = readRetryState(cwd);
   const currentState = retryState[gate] || { retryCount: 0, hold: false, heldAt: null };
@@ -262,6 +291,8 @@ function judgeZoneGate(cwd, gate, opts = {}) {
   if (currentState.hold) {
     // 10.2.2節HOLD解除手順ステップ1: 以降そのゲートの再判定要求をブロックし続ける
     // （自動では解除しない）。--reset-holdを経由した後でなければGOにはならない。
+    // この分岐はそもそも読み取り（readRetryState）のみで副作用が無いため、dryRunの
+    // 有無にかかわらず同じ挙動でよい。
     return {
       gate,
       judgement: 'HOLD',
@@ -276,6 +307,8 @@ function judgeZoneGate(cwd, gate, opts = {}) {
       numerator: null,
       retryState: currentState,
       detail: { blocked: true },
+      dryRun,
+      recorded: false,
     };
   }
 
@@ -284,57 +317,86 @@ function judgeZoneGate(cwd, gate, opts = {}) {
   const outcome = gate === 'GZ3' ? judgeFn(cwd, findings, processOptionMode) : judgeFn(cwd, findings);
 
   if (outcome.ok) {
-    appendGateRecord(
-      gate,
-      {
-        judgement: 'GO',
-        retryCount: currentState.retryCount,
-        denominator: outcome.denominator,
-        numerator: outcome.numerator,
-        unresolvedWarnings: outcome.unresolvedWarnings != null ? outcome.unresolvedWarnings : undefined,
-        note: '全条件充足',
-      },
-      cwd
-    );
+    if (!dryRun) {
+      appendGateRecord(
+        gate,
+        {
+          judgement: 'GO',
+          retryCount: currentState.retryCount,
+          denominator: outcome.denominator,
+          numerator: outcome.numerator,
+          unresolvedWarnings: outcome.unresolvedWarnings != null ? outcome.unresolvedWarnings : undefined,
+          note: '全条件充足',
+        },
+        cwd
+      );
+    }
+    const reasons = dryRun
+      ? outcome.reasons.concat([
+          `（--dry-run: 判定はGOだが ${gate}-99_ゲート記録.md への記録は行っていない）`,
+        ])
+      : outcome.reasons;
     return {
       gate,
       judgement: 'GO',
-      reasons: outcome.reasons,
+      reasons,
       denominator: outcome.denominator,
       numerator: outcome.numerator,
       retryState: currentState,
       detail: outcome.detail,
       findings,
+      dryRun,
+      recorded: !dryRun,
     };
   }
 
-  const after = recordReturnThroughGate(retryState, gate);
-  writeRetryState(retryState, cwd);
+  // NG/HOLD側。dryRun時は`recordReturnThroughGate`と同じ遷移ロジック
+  // （`computeNextRetryState`）で「記録した場合どうなるか」を計算するのみで、
+  // 実際の永続化（`writeRetryState`）は行わない。
+  const after = dryRun ? computeNextRetryState(currentState) : recordReturnThroughGate(retryState, gate);
+  if (!dryRun) {
+    writeRetryState(retryState, cwd);
+  }
   const judgement = after.hold ? 'HOLD' : 'NG';
 
-  appendGateRecord(
-    gate,
-    {
-      judgement,
-      retryCount: after.retryCount,
-      denominator: outcome.denominator,
-      numerator: outcome.numerator,
-      unresolvedWarnings: outcome.unresolvedWarnings != null ? outcome.unresolvedWarnings : undefined,
-      note: outcome.reasons.join('; '),
-    },
-    cwd
-  );
+  if (!dryRun) {
+    appendGateRecord(
+      gate,
+      {
+        judgement,
+        retryCount: after.retryCount,
+        denominator: outcome.denominator,
+        numerator: outcome.numerator,
+        unresolvedWarnings: outcome.unresolvedWarnings != null ? outcome.unresolvedWarnings : undefined,
+        note: outcome.reasons.join('; '),
+      },
+      cwd
+    );
+  }
 
   const reasons = outcome.reasons.slice();
   if (after.hold) {
-    reasons.push(`今回の差し戻しで累計${after.retryCount}回となり3回を超過したためHOLDに遷移した（01文書7.4節）。`);
-    const issId = registerIssue(cwd, {
-      kind: KIND.RETURN_OR_HOLD,
-      detectedBy: `gate-check --kind=zone-gate --gate=${gate}`,
-      content: `${gate}が差し戻し3回超過によりHOLDした。理由: ${outcome.reasons.join('; ')}`,
-      relatedIds: gate,
-    });
-    reasons.push(`00-13へ課題登録した（${issId}）。`);
+    reasons.push(
+      `今回の差し戻し${dryRun ? '（--dry-run: シミュレーション）' : ''}で累計${after.retryCount}回となり` +
+        '3回を超過したためHOLDに遷移した（01文書7.4節）。'
+    );
+    if (!dryRun) {
+      const issId = registerIssue(cwd, {
+        kind: KIND.RETURN_OR_HOLD,
+        detectedBy: `gate-check --kind=zone-gate --gate=${gate}`,
+        content: `${gate}が差し戻し3回超過によりHOLDした。理由: ${outcome.reasons.join('; ')}`,
+        relatedIds: gate,
+      });
+      reasons.push(`00-13へ課題登録した（${issId}）。`);
+    } else {
+      reasons.push('（--dry-run: 00-13課題管理表への登録は行っていない）');
+    }
+  }
+  if (dryRun) {
+    reasons.push(
+      `（--dry-run: ${gate}-99_ゲート記録.md への記録・zone-gate-retry.jsonの差し戻しカウンタ更新は行っていない。` +
+        `実行前の差し戻し累計=${currentState.retryCount}回、記録した場合の想定値=${after.retryCount}回）`
+    );
   }
 
   return {
@@ -343,9 +405,14 @@ function judgeZoneGate(cwd, gate, opts = {}) {
     reasons,
     denominator: outcome.denominator,
     numerator: outcome.numerator,
-    retryState: after,
+    retryState: dryRun ? currentState : after,
+    // dryRun時のみ設定。「記録した場合どうなるか」を副作用なしに示す参考値
+    // （`retryState`は常に実際に永続化されている値を指す。混同を避けるため分離する）。
+    simulatedRetryState: dryRun ? after : undefined,
     detail: outcome.detail,
     findings,
+    dryRun,
+    recorded: !dryRun,
   };
 }
 
