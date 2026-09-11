@@ -35,20 +35,55 @@
  *   node sync-check.js --kind=batch --job-name=nightly-batch --spec=decisions/DL-0010_batch-spec-nightly.md
  *
  * 【契約】
- * 対象内と判定した（coderの一次判定、PMへ報告）。本ファイルが採番・登録する`HB-ID`
- * （`00-02_HBトレーサビリティ台帳.md`）・`BAT-ID`（`00-03`）は、01文書6.5節条件6
- * 「トレーサビリティが充足していること」の**分母そのもの**であり
- * （`gate-check/scripts/gate-check.js`の`judge`が`denominatorIds`として`HB-ID`全件を
- * 数える）、16.6節(a)「分母・分子集計への関与」に該当する。現時点で対応する契約は無い。
- * 【関連する未修正の懸念・別件として報告】本タスクの主題である台帳重複蓄積バグ
- * （`.claude/lib/issue-ledger.js`・`cr-ledger.js`）の調査中に、本ファイルの
- * `runScreenMode`が同一`screen`に対し再実行された場合の重複登録防止（同一scrIdに
- * 既にHB-IDが登録済みかどうかの照合）を一切持たないことを発見した（`'HB-' +
- * nextIdFromFiles(...)`を無条件に採番・追記している）。issue-ledger.js/cr-ledger.jsと
- * 同型の問題だが、「同一検出内容の重複」ではなく「同一画面への重複ID発行」という別の
- * 形であり、`00-02`はGZ2/GZ3の分母に直結するため影響はより大きい可能性がある。本タスクの
- * 委譲範囲（台帳ライブラリの重複防止修正、および本欄の追加）には含まれないため実装修正は
- * 行っていない。別タスクとしてPM/app-architectへの報告を強く推奨する。
+ * CT-0006（.claude/contracts/sync-check.registerRoute.contract.js）。対象:
+ * runScreenMode / runBatchMode（HB-ID採番＝00-02、BAT-ID採番＝00-03）。本ファイルが
+ * 採番・登録する`HB-ID`・`BAT-ID`は、01文書6.5節条件6「トレーサビリティが充足している
+ * こと」の**分母そのもの**であり（`gate-check/scripts/gate-check.js`の`judge`が
+ * `denominatorIds`として`HB-ID`全件を数える）、16.6節(a)「分母・分子集計への関与」に
+ * 該当する。契約はapp-architectがcontract-first（16.4節）で作成し、本M-dup2修正で
+ * PASSする（16.4節はcoder自身による契約作成を禁じるが、既存契約を満たす実装を行うことは
+ * 禁じられない）。
+ *
+ * 【M-dup2修正（HB-ID/BAT-ID無条件再採番バグ、PMからの委譲）】
+ * `runScreenMode`/`runBatchMode`は従来、同一`screen`（`scrId`）・同一バッチジョブに
+ * 対して再実行されるたびに`nextIdFromFiles`で無条件に新規`HB-ID`/`BAT-ID`を採番し、
+ * `00-02`/`00-03`へ追記していた（重複登録の実機確認済み）。`00-02`のHB-ID件数は
+ * 01文書6.5節条件6のE2Eカバレッジ分母そのものであるため、重複するとゲート判定の分母が
+ * 水増しされる。本節はこれをissue-ledger.js/cr-ledger.jsと同じ「既存行検出→再採番せず
+ * 既存IDを返す」方針で是正する。
+ *
+ * 【同一性キーの設計】
+ * - **HB-ID（00-02、3.2.1節・3.2.2節）**: `経路（SCR-ID/RPT-ID/BAT-ID/API-ID）`列の
+ *   **先頭エントリ**を同一性キーとする。3.2.1節は当該列を「当該HB-ID採番時点で判明して
+ *   いる経由ID一覧（初版）」と定義し、`runScreenMode`は常に`[scrId, ...apiIds]`の順で
+ *   書き込む（先頭は必ず対象画面/帳票の`scrId`）ため、先頭エントリ＝そのHB登録を発生
+ *   させた画面/帳票を一意に表す。同一画面への再実行は「同じHBの再確認」であり、新規の
+ *   HBとして扱うべきではない。`状態`列が`廃止`を含む行は対象から除外する（廃止済みの
+ *   HB-IDへ現在の同期点通過を紐づけるべきではないため。issue-ledger.jsの`解消済み`除外と
+ *   同型の判断）。
+ * - **BAT-ID（00-03、3.2.3節）**: `ジョブ名`列を同一性キーとする。3.2.3節は`BAT-ID`を
+ *   「バッチジョブ1本の粒度のトレーサビリティ起点ID」と定義しており、ジョブ名がその
+ *   1本のバッチジョブを識別する自然な業務キーである。HB-ID同様、`状態`が`廃止`を含む
+ *   行は除外する。
+ * - いずれも`appendRow`が対象とする本体行そのもの（`登録日時`等の実行毎に変わる値を
+ *   除く）は照合に使わない。
+ *
+ * 【既存行の内容が変わっている場合の扱い（例: 経由APIが増えた／入出力仕様が変わった）】
+ * `HB-ID`（00-02）と`BAT-ID`（00-03）で扱いが異なる（列定義上の許容範囲が異なるため）。
+ * - **00-02（HB-ID）**: 3.2.1節・3.2.2節は「本体行は書き換えない（MUST NOT）」「経路の
+ *   事後追加は追記専用の『経路追加ログ』へ記録する」と定めているため、「既存行の更新」は
+ *   本体行の書き換えではなく、**新たに判明した経路ID（`apiIds`の差分）を経路追加ログへ
+ *   追記する**形で実装する。既に経路追加ログへ記録済みの`additional_id`は再度追記しない
+ *   （`collectKnownRouteIds`/`routeLogHasEntry`が二重追記を防止し、同一入力の2回目実行を
+ *   完全に冪等にする）。
+ * - **00-03（BAT-ID）**: 3.2.3節の列定義は「入出力仕様参照」列の記入・更新タイミングを
+ *   「入出力仕様の変更時」としており、00-02のMUST NOTとは異なり列の更新を許容する設計と
+ *   読める。ジョブ名（同一性キー）が同じまま入出力仕様参照が変わった場合は、新規BAT-IDを
+ *   追記せず`upsertRow`で既存行を更新する（BAT-IDは不変）。この解釈はCT-0006
+ *   （`.claude/contracts/sync-check.registerRoute.contract.js`、app-architectによる
+ *   contract-first契約）が固定化している。ただし「重複採番防止」自体のMUSTは03文書に
+ *   現状明記が無いため、3.2.1節・3.2.3節（またはCT-0006が言及する新設3.2.8節案）への
+ *   MUST追記を設計側（app-architect）に提案する（PMへの報告、自らは03文書を編集しない）。
  */
 
 const fs = require('fs');
@@ -59,7 +94,14 @@ const {
   extractExistingApiIds,
   diffFieldNames,
 } = require('../../../lib/field-extract');
-const { readTableAsObjects, appendRow, appendRowUnderHeading, findTable } = require('../../../lib/markdown-table');
+const {
+  readTableAsObjects,
+  appendRow,
+  appendRowUnderHeading,
+  findTable,
+  findNamedTable,
+  upsertRow,
+} = require('../../../lib/markdown-table');
 const { nextIdFromFiles } = require('../../../lib/id-registry');
 const {
   screenIndexPath,
@@ -154,6 +196,77 @@ function recordForceOverrideDecision(cwd, { hbId, diffSummary }) {
     roles: ['designer', 'app-architect', 'qa'],
     lanes: ['A', 'B'],
   });
+}
+
+/**
+ * `00-02`「経路追加ログ」（3.2.2節）を読み取る（見出しが無い/テーブルが無い場合は
+ * `header: null`）。`collectKnownRouteIds`・`routeLogHasEntry`が共有する内部ヘルパー。
+ */
+function readRouteLog(cwd) {
+  let content = '';
+  try {
+    content = fs.readFileSync(ledger0002Path(cwd), 'utf-8');
+  } catch (_err) {
+    return { header: null, rows: [] };
+  }
+  const table = findNamedTable(content, ROUTE_LOG_HEADING);
+  return { header: table.header, rows: table.rows };
+}
+
+/**
+ * 00-02本体テーブルの`経路`列（3.2.1節）の先頭エントリ（sync-checkが画面/帳票に対して
+ * 発行する主経路ID＝SCR-ID/RPT-ID）を同一性キーとして、既存のHB-ID登録を探す
+ * （重複再採番防止、M-dup2。根拠はファイル冒頭コメント「同一性キーの設計」参照）。
+ * 【前提条件・制約】`状態`列が`廃止`を含む行は対象から除外する。
+ */
+function findExistingHbRowByScrId(rows, scrId) {
+  return rows.find((r) => {
+    const routeCol = r['経路（SCR-ID/RPT-ID/BAT-ID/API-ID）'] || '';
+    const primary = routeCol.split(',')[0].trim();
+    const state = r['状態'] || '';
+    return primary === scrId && !/廃止/.test(state);
+  });
+}
+
+/**
+ * 既存HB行について、初版の経路列＋既に経路追加ログへ記録済みの`additional_id`を
+ * 合わせた「既知の経路ID集合」を返す。新規検出した経路IDのうちこの集合に無いものだけを
+ * 経路追加ログへ追記することで、同一入力での再実行を冪等にする。
+ */
+function collectKnownRouteIds(cwd, hbRow) {
+  const known = new Set(
+    (hbRow['経路（SCR-ID/RPT-ID/BAT-ID/API-ID）'] || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
+  const { header, rows } = readRouteLog(cwd);
+  if (!header) return known;
+  const hbIdx = header.indexOf('HB-ID');
+  const addIdx = header.indexOf('additional_id');
+  if (hbIdx === -1 || addIdx === -1) return known;
+  for (const r of rows) {
+    if (r[hbIdx] === hbRow['HB-ID']) known.add((r[addIdx] || '').trim());
+  }
+  return known;
+}
+
+/** 経路追加ログに`{hbId, additionalId}`の組が既に存在するか（BAT側の二重追記防止）。 */
+function routeLogHasEntry(cwd, hbId, additionalId) {
+  const { header, rows } = readRouteLog(cwd);
+  if (!header) return false;
+  const hbIdx = header.indexOf('HB-ID');
+  const addIdx = header.indexOf('additional_id');
+  if (hbIdx === -1 || addIdx === -1) return false;
+  return rows.some((r) => r[hbIdx] === hbId && r[addIdx] === additionalId);
+}
+
+/**
+ * 00-03本体テーブルの`ジョブ名`列（3.2.3節）を同一性キーとして、既存のBAT-ID登録を
+ * 探す（重複再採番防止、M-dup2）。`状態`列が`廃止`を含む行は対象から除外する。
+ */
+function findExistingBatRowByJobName(rows, jobName) {
+  return rows.find((r) => r['ジョブ名'] === jobName && !/廃止/.test(r['状態'] || ''));
 }
 
 function runScreenMode(cwd, args) {
@@ -264,22 +377,44 @@ function runScreenMode(cwd, args) {
     process.exit(0);
   }
 
-  // 整合確認済み（またはforce）: HB-IDを採番し00-02へ登録、同一操作内で00-05へ追記する。
-  const hbId = 'HB-' + nextIdFromFiles('HB', [ledger0002Path(cwd)]);
+  // 整合確認済み（またはforce）: 既存HB行が無ければHB-IDを採番し00-02へ登録する。
+  // 既存であれば再採番せず、新たに判明した経路IDのみ経路追加ログへ追記する（M-dup2）。
+  const existingHbRows = readTableAsObjects(ledger0002Path(cwd));
+  const existingHbRow = findExistingHbRowByScrId(existingHbRows, scrId);
   const routeIds = [scrId, ...apiIds].filter(Boolean).join(', ');
-  appendRow(
-    ledger0002Path(cwd),
-    [
-      'HB-ID',
-      '経路（SCR-ID/RPT-ID/BAT-ID/API-ID）',
-      '正式要件ID',
-      '実装ファイル（逆引き）',
-      'API-ID（逆引き）',
-      'モジュール（逆引き）',
-      '状態',
-    ],
-    [hbId, routeIds, '(Zone3で変換)', '', '', '', '登録済み']
-  );
+  let hbId;
+  let reused = false;
+  if (existingHbRow) {
+    hbId = existingHbRow['HB-ID'];
+    reused = true;
+    const known = collectKnownRouteIds(cwd, existingHbRow);
+    const newlyDiscovered = apiIds.filter((id) => id && !known.has(id));
+    for (const additionalId of newlyDiscovered) {
+      // 本体行(3.2.1節、MUST NOT書き換え)は変更せず、追記専用の経路追加ログ(3.2.2節)へ
+      // 差分のみ記録する。
+      appendRowUnderHeading(
+        ledger0002Path(cwd),
+        ROUTE_LOG_HEADING,
+        ['HB-ID', 'additional_id', 'added_at', 'added_by'],
+        [hbId, additionalId, nowIso(), 'sync-check（同一画面の再実行による経路差分検知）']
+      );
+    }
+  } else {
+    hbId = 'HB-' + nextIdFromFiles('HB', [ledger0002Path(cwd)]);
+    appendRow(
+      ledger0002Path(cwd),
+      [
+        'HB-ID',
+        '経路（SCR-ID/RPT-ID/BAT-ID/API-ID）',
+        '正式要件ID',
+        '実装ファイル（逆引き）',
+        'API-ID（逆引き）',
+        'モジュール（逆引き）',
+        '状態',
+      ],
+      [hbId, routeIds, '(Zone3で変換)', '', '', '', '登録済み']
+    );
+  }
 
   const diffSummary = hasDiff
     ? `画面のみ=${diff.onlyInA.join('/') || 'なし'}, レーンBのみ=${diff.onlyInB.join('/') || 'なし'}`
@@ -310,6 +445,7 @@ function runScreenMode(cwd, args) {
 
   report.status = 'passed';
   report.hbId = hbId;
+  report.hbReused = reused;
   if (forceDecision) report.forceDecision = forceDecision;
   console.log(JSON.stringify(report, null, 2));
 }
@@ -329,20 +465,47 @@ function runBatchMode(cwd, args) {
   // 03文書3.2.3節（版1.4）: 「経由HB-ID」列は登録時点で判明している場合に限り一度だけ記入
   // する（同一操作内の追記であり競合しない）。正式ID列（F-BAT-{連番}）はZone3の
   // traceability-reverseが変換するため、登録時点では空欄のままにする。
-  const batId = 'BAT-' + nextIdFromFiles('BAT', [ledger0003Path(cwd)]);
-  appendRow(
-    ledger0003Path(cwd),
-    [
-      'BAT-ID',
-      'ジョブ名',
-      '入出力仕様参照（decisions/配下）',
-      '経由HB-ID（画面経由の場合）',
-      '正式ID（F-BAT-{連番}）',
-      '状態',
-      '登録日時',
-    ],
-    [batId, args['job-name'], relSpec, args['hb-id'] || '', '', '登録済み', nowIso()]
-  );
+  // 【M-dup2】ジョブ名を同一性キーに、既存行があれば再採番せず既存BAT-IDを再利用する
+  // （ファイル冒頭コメント「同一性キーの設計」参照）。
+  const BAT_HEADER = [
+    'BAT-ID',
+    'ジョブ名',
+    '入出力仕様参照（decisions/配下）',
+    '経由HB-ID（画面経由の場合）',
+    '正式ID（F-BAT-{連番}）',
+    '状態',
+    '登録日時',
+  ];
+  const existingBatRows = readTableAsObjects(ledger0003Path(cwd));
+  const existingBatRow = findExistingBatRowByJobName(existingBatRows, args['job-name']);
+  let batId;
+  let reused = false;
+  if (existingBatRow) {
+    batId = existingBatRow['BAT-ID'];
+    reused = true;
+    // 3.2.3節の列定義は「入出力仕様参照」列の記入・更新タイミングを「入出力仕様の変更時」
+    // としており（3.2.1節のHB-ID本体行のMUST NOT書き換えとは異なり）更新を許容する設計
+    // である。ジョブ名は同一のまま入出力仕様参照が変わった場合、新規BAT-IDを追記せず
+    // 既存行を更新する（M-dup2、CT-0006）。
+    if ((existingBatRow['入出力仕様参照（decisions/配下）'] || '') !== relSpec) {
+      upsertRow(ledger0003Path(cwd), BAT_HEADER, 'BAT-ID', batId, [
+        batId,
+        args['job-name'],
+        relSpec,
+        existingBatRow['経由HB-ID（画面経由の場合）'] || args['hb-id'] || '',
+        existingBatRow['正式ID（F-BAT-{連番}）'] || '',
+        existingBatRow['状態'] || '登録済み',
+        existingBatRow['登録日時'] || nowIso(),
+      ]);
+    }
+  } else {
+    batId = 'BAT-' + nextIdFromFiles('BAT', [ledger0003Path(cwd)]);
+    appendRow(
+      ledger0003Path(cwd),
+      BAT_HEADER,
+      [batId, args['job-name'], relSpec, args['hb-id'] || '', '', '登録済み', nowIso()]
+    );
+  }
 
   if (args['hb-id']) {
     // 【03文書3.2.3節の役割分担】ここでの`--hb-id`指定は「登録時点で判明している」場合
@@ -352,11 +515,12 @@ function runBatchMode(cwd, args) {
     // （3.2.2節）へ追記する。ここでは「登録時点判明」でも、Mode Bの逆引き（9.1.1節）が
     // 00-02側からもBAT-IDを辿れるよう、経路追加ログにも同時記録する（追記のみで完結し
     // 00-02本体行は書き換えないため、02文書10.1.4節の競合回避原則を破らない）。
+    // 【M-dup2】同一入力での再実行を冪等にするため、既に同じ組が記録済みなら追記しない。
     const rows = readTableAsObjects(ledger0002Path(cwd));
     const target = rows.find((r) => r['HB-ID'] === args['hb-id']);
     if (!target) {
       console.error(`[sync-check] 警告: 指定された HB-ID (${args['hb-id']}) が00-02台帳に見つかりません。`);
-    } else {
+    } else if (!routeLogHasEntry(cwd, args['hb-id'], batId)) {
       appendRowUnderHeading(
         ledger0002Path(cwd),
         ROUTE_LOG_HEADING,
@@ -373,7 +537,9 @@ function runBatchMode(cwd, args) {
     relatedIds: [batId, args['hb-id']].filter(Boolean),
   });
 
-  console.log(JSON.stringify({ status: 'passed', batId, spec: relSpec, jobName: args['job-name'] }, null, 2));
+  console.log(
+    JSON.stringify({ status: 'passed', batId, batReused: reused, spec: relSpec, jobName: args['job-name'] }, null, 2)
+  );
 }
 
 function main() {

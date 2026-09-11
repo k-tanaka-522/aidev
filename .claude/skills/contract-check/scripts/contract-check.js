@@ -138,18 +138,70 @@ function scanContractTag(filePath) {
 }
 
 /**
- * 【契約】欄の走査結果を、16.5.2節が要求する3分類に振り分ける。
+ * 【契約】欄の走査結果を、16.5.2節が要求する分類に振り分ける。
  * - `noTag`: 欄そのものが無い（新規実装がMUSTに追随していない）
+ * - `covered`: MANIFESTの`target.module`がこのファイルに一致する契約を持つ（対象内・
+ *   契約化済み）
+ * - `outOfScope`: 本文冒頭が対象外判定の決まり文句で始まる（明示的に対象外と判定済み）
  * - `unregisteredRef`: CT-IDを参照しているがMANIFESTのactive契約に存在しない
- * - `unevaluated`: 「対象外」宣言もCT-ID参照も無い（契約化するかどうかの判定が
+ *   （ダングリング参照。存在するがこのファイルを対象としていないだけのCT-IDは
+ *   含まない。後述のM-ctcheck修正参照）
+ * - `unevaluated`: `covered`でも`outOfScope`でもない（契約化するかどうかの判定が
  *   まだ行われていない。16.10節が明記する限界の可視化そのもの）
+ *
+ * 【M-ctcheck修正（正規表現による偽陽性バグ、PMからの委譲）】
+ * 旧実装は「本文中に`CT-\d{4}`が1件でも出現すれば、このファイルは契約を持つ」と
+ * 判定していた。しかし`.claude/lib`・`.claude/hooks`配下の多くのファイルは【契約】欄に
+ * 「M7（16.9節）時点では既存の登録済み契約4件（`CT-0001`〜`CT-0004`）のみが契約化
+ * 済みである」という**定型の説明文**を持ち、これが正規表現に誤ってマッチしていた
+ * （実測: 32ファイルがこの定型文だけで「契約あり」と誤判定され、未評価リストから
+ * 除外されていた）。CT-0001・CT-0004はMANIFESTに実在する契約IDであるため、旧実装の
+ * `missing`（MANIFEST未登録かどうか）チェックでも弾けず、可視化機構そのものが
+ * 偽りの安心を与えていた。
+ * 本修正は「このファイルに契約があるか」を**MANIFEST.jsonの`target.module`を正本として
+ * 判定する**方式に変更する（正規表現で本文を舐めない）。`unregisteredRef`
+ * （ダングリング参照、typo等でMANIFEST自体に存在しないCT-IDを自己言及している場合の
+ * 検出）は引き続き正規表現でCT-ID候補を抽出するが、それが**MANIFEST全体にも存在しない**
+ * 場合に限り報告する（「他ファイルの契約数についての説明文」で実在するCT-IDに言及して
+ * いるだけのケースを誤検出しないため）。
+ *
+ * 【関連する二次的な偽陽性（同一原因・同一バグクラス、あわせて修正）】
+ * 上記のMANIFEST module判定に切り替えた後も、`/対象外/.test(body)`（部分一致）が
+ * 別の偽陽性を生んでいた。未判定ファイルの定型文は「本ファイルは**対象内・対象外**
+ * いずれの判定もまだ行われていない」という**否定文**だが、この文字列にも部分文字列
+ * 「対象外」が含まれるため、旧来の部分一致では「明示的に対象外と判定済み」と誤認して
+ * `unevaluated`から除外してしまう（実測確認済み・設計側からの追加報告により判明。
+ * 判定の意味が真逆になる）。`.claude/lib`・`.claude/hooks`配下の約28ファイルがこの
+ * 定型文のみで「対象外判定済み」と誤分類されていた。
+ * `/CT-\d{4}/g`と同じ「本文を正規表現で舐める」バグクラスであるため、同じ方針
+ * （本文の自由な部分一致をやめ、構造的な位置に限定する）で是正する。本コードベースの
+ * 【契約】欄の書式には`判定: 対象外`のようなkey:value構造化フィールドは存在しない
+ * （issue-ledger.js等の真の対象外判定を実地調査した結果、いずれも本文の**先頭**が
+ * `対象外。`または`対象外と判定した`という決まった言い回しで始まり、未判定ファイルは
+ * 必ず`未設定。`で始まるという一貫した書式差があることを確認した）。この「本文冒頭の
+ * 決まり文句」を判定を表す構造的フィールドとして扱い、`OUT_OF_SCOPE_PATTERN`
+ * （先頭一致、`対象外。`／`対象外と判定した`の2パターンのみ）でのみ「対象外判定済み」と
+ * 認定する。将来、この2パターンのいずれにも一致しない新しい言い回しで対象外を宣言する
+ * ファイルが現れた場合は、判定が構造的に読み取れない＝**未判定として扱う（fail closed）**
+ * （`unevaluated`側に残る。「対象外のつもりで書いたのに検出されない」場合はファイル側の
+ * 表現を上記2パターンに合わせるか、本関数の`OUT_OF_SCOPE_PATTERN`をapp-architect経由で
+ * 拡張する）。
+ * 可視化の透明性を上げるため、「対象外判定済み」（`outOfScope`）も内訳として返す
+ * （旧実装は対象外判定済みを暗黙にドロップし件数を報告しなかった。16.10節「契約が無い
+ * ことを隠さない」の精神から、対象外の判定件数自体も可視化する）。
  */
+const OUT_OF_SCOPE_PATTERN = /^対象外(?:。|と判定した)/;
+
 function buildVisibilityReport(cwd) {
-  const manifestIds = new Set(activeContracts(cwd).map((c) => c.id));
+  const active = activeContracts(cwd);
+  const manifestIds = new Set(active.map((c) => c.id));
+  const manifestModules = new Set(active.map((c) => c.target && c.target.module).filter(Boolean));
   const files = collectTargetFiles(cwd);
   const noTag = [];
   const unregisteredRef = [];
   const unevaluated = [];
+  const outOfScope = [];
+  const covered = [];
 
   for (const file of files) {
     const rel = path.relative(cwd, file).replace(/\\/g, '/');
@@ -158,21 +210,35 @@ function buildVisibilityReport(cwd) {
       noTag.push(rel);
       continue;
     }
-    const ctIds = Array.from(new Set((body.match(/CT-\d{4}/g) || [])));
-    if (ctIds.length > 0) {
-      const missing = ctIds.filter((id) => !manifestIds.has(id));
-      if (missing.length > 0) {
-        unregisteredRef.push({ file: rel, missing, body });
-      }
+
+    // MANIFESTを正本として「このファイルを対象とする契約が実在するか」を判定する
+    // （本文中のCT-ID出現有無ではない）。
+    if (manifestModules.has(rel)) {
+      covered.push(rel);
       continue;
     }
-    if (/対象外/.test(body)) {
-      continue; // 明示的に対象外と判定済み。見える化の対象にしない。
+
+    // このファイルを対象とする契約はMANIFESTに無い。本文が具体的なCT-IDを自己言及して
+    // いる場合、そのID自体がMANIFESTに存在するかを確認する（存在しなければダングリング
+    // 参照として報告する。存在するが対象moduleが一致しないだけの場合は他ファイルの
+    // 契約数についての説明文である可能性が高く、ダングリング参照とは呼ばない）。
+    const ctIds = Array.from(new Set((body.match(/CT-\d{4}/g) || [])));
+    const dangling = ctIds.filter((id) => !manifestIds.has(id));
+    if (dangling.length > 0) {
+      unregisteredRef.push({ file: rel, missing: dangling, body });
+      continue;
+    }
+
+    if (OUT_OF_SCOPE_PATTERN.test(body)) {
+      // 本文冒頭が「対象外」判定の決まり文句で始まる場合のみ除外する（構造的マッチ、
+      // 本文中のどこかに「対象外」という文字列が現れるだけでは除外しない）。
+      outOfScope.push(rel);
+      continue;
     }
     unevaluated.push({ file: rel, body });
   }
 
-  return { noTag, unregisteredRef, unevaluated };
+  return { noTag, unregisteredRef, unevaluated, outOfScope, covered };
 }
 
 /** `--target=<path>`向け: 指定パスに関連する契約を絞り込む（16.5.2節）。 */
@@ -240,6 +306,8 @@ function main() {
     if (output.visibility) {
       console.log(
         `[contract-check] 見える化: タグ無し=${output.visibility.noTag.length}件, ` +
+          `契約あり（MANIFEST一致）=${output.visibility.covered.length}件, ` +
+          `対象外判定済み=${output.visibility.outOfScope.length}件, ` +
           `MANIFEST未登録参照=${output.visibility.unregisteredRef.length}件, ` +
           `未評価（対象内外いずれの判定も未了）=${output.visibility.unevaluated.length}件`
       );
