@@ -1,383 +1,143 @@
-# Init Command - プロジェクト初期化
+# Init Command — プロジェクト初期化（v2: ゾーン/レーン型）
 
 ## 概要
 
-このコマンドは、AI開発ファシリテーターのプロジェクトを初期化します。
-新規プロジェクト開始時、または既存プロジェクトの再開時に実行してください。
+このコマンドは、aiDev v2（ゾーン/レーン型、ハリボテ駆動＋ローンチ時リバース）のプロジェクトを
+初期化・再開準備する。新規プロジェクト開始時、または既存プロジェクトのセッション開始時に実行する。
+
+v2はフェーズ順次型（企画→要件定義→設計→実装→テスト→納品）ではなく、**Zone 0〜4** と
+**レーンA/B/C**（Zone1・2）で進行する。詳細は `docs/v2/01_プロセス定義書.md` 3〜4章、
+`docs/v2/02_実行基盤アーキテクチャ.md` 4〜5章を正本とする。本コマンドはそれらの要約・索引のみを扱う。
 
 ## 実行タイミング
 
-- **新規プロジェクト**: 最初に必ず実行
+- **新規プロジェクト**: `scripts/init-new-project.sh`（Windowsは`.bat`）の実行直後、Claude Codeで最初に実行
 - **既存プロジェクト**: セッション開始時に実行（任意だが推奨）
 
 ## 処理内容
 
-### 1. 必須ドキュメントの読み込み
+### 1. 必須ファイルの存在確認
 
-以下のファイルを**必ず**読み込んでください：
+以下を確認する（**必ず実在を確認してから先に進むこと**。読み込み内容を仮定しない）。
 
-#### コア原則
-\`\`\`
-.claude/docs/00_core-principles.md                              # 基本原則（最重要）
-\`\`\`
+```
+.claude/CLAUDE.md                     # PMの主体定義（3層原則、ゾーンマップ索引、Skill索引）
+.claude/docs/00_core-principles.md    # 全体原則（PM＋全サブエージェント共通）
+```
 
-#### ファシリテーション（フェーズ別INDEX）
-\`\`\`
-.claude/docs/10_facilitation/2.1_企画フェーズ/INDEX.md          # 企画プロセス
-.claude/docs/10_facilitation/2.2_要件定義フェーズ/INDEX.md      # 要件定義プロセス
-.claude/docs/10_facilitation/2.3_設計フェーズ/INDEX.md          # 設計プロセス
-.claude/docs/10_facilitation/2.4_実装フェーズ/INDEX.md          # 実装プロセス
-.claude/docs/10_facilitation/2.5_テストフェーズ/INDEX.md        # テストプロセス
-.claude/docs/10_facilitation/2.6_納品フェーズ/INDEX.md          # 納品プロセス
-\`\`\`
+**存在しない場合**:
+```
+❌ エラー: .claude/CLAUDE.md または .claude/docs/00_core-principles.md が見つかりません。
 
-#### ヘルパー
-\`\`\`
-.claude/helpers/state-manager.md                        # 状態管理方法
-.claude/helpers/review-task-generator.md                # レビュータスク生成方法
-.claude/helpers/directory-structure-helper.md           # ディレクトリ構成決定方法
-.claude/helpers/implementation-checker.md               # 実装チェッカー
-\`\`\`
+このディレクトリが aiDev v2 のプロジェクトルートであるか確認してください。
+```
 
-#### 技術標準（PMは読まない - サブエージェント専用）
+**注意（v1との違い）**: v1にあった技術標準の一括読み込み（`.claude/docs/40_standards/`）は
+v2では行わない。技術標準は `.claude/skills/code-style-guide/`・`iac-style-guide/`・
+`ui-style-guide/`・`security-style-guide/`・契約モックの `contract-design/` に集約されており、
+各サブエージェントが対象ディレクトリ（`src/**`・`infra/**`・`prototypes/**`等）を読み書きした
+時点で `paths` により自動参照される。PM（本コマンド実行者）がこれらを手動で読み込む必要はない。
 
-**IMPORTANT: PMは技術標準を一切読みません**
+同様に、v1の `.claude/docs/10_facilitation/`（フェーズ別ヒアリング項目）・`.claude/helpers/`
+（状態管理・レビュー生成ヘルパー）は削除済みであり、v2では存在しない。ゾーン遷移の統制は
+`.claude/skills/orchestrate/SKILL.md`、決定ログのヒアリングは `.claude/skills/decide/SKILL.md`
+が担う。
 
-\`\`\`
-# PMは技術標準を読みません（サブエージェント専用）
-# サブエージェント（Coder, Architect, SRE等）が必要に応じて読み込みます
-#
-# 参考: 技術標準ファイル一覧
-# - .claude/docs/40_standards/41_app/ （アプリケーション標準）
-# - .claude/docs/40_standards/42_infra/ （インフラ標準）
-# - .claude/docs/40_standards/49_common/ （共通標準）
-\`\`\`
+### 2. プロジェクト状態の確認
 
-**PMの責務**: 技術的な判断はサブエージェントに委譲し、PMは要件整理とオーケストレーションに専念します。
+`.claude-state/current-zone.json` の存在を確認する。
 
-### 2. CLAUDE.md の確認とセットアップ
+**存在しない場合（新規プロジェクト、または `scripts/init-new-project.sh` 直後）**:
 
-プロジェクトルートの \`CLAUDE.md\` の存在を確認：
+このファイルが無い状態は「Zone 0 未着手」を意味する既定値として扱う（`zone: 0`,
+`src_unlocked: false`）。`.claude-state/` 配下の他の状態ファイル（`process-option.json`、
+`decision-warnings.json`、`zone-gate-retry.json` 等）も同様に、各Skill・hookが初回実行時に
+生成する設計であり、事前に空ファイルを用意する必要はない。
 
-**存在しない場合:**
-- テンプレートからのコピーを提案:
-  \`\`\`
-  ⚠️ CLAUDE.md が見つかりません。
+ユーザーに次のとおり報告する。
 
-  CLAUDE.mdはプロジェクトメモリのエントリーポイントです。
-  テンプレートからコピーしますか？
+```
+🆕 新規プロジェクトです（Zone 0: 不可逆決定 から開始します）
 
-  【Windowsの場合】
-  copy .claude\templates\CLAUDE.md.template CLAUDE.md
+aiDev v2 はハリボテ駆動＋ローンチ時リバースで進みます。まず Zone 0（後戻りコストが
+非線形に跳ねる事項だけを先に決める）のヒアリングから始めます。
 
-  【Mac/Linuxの場合】
-  cp .claude/templates/CLAUDE.md.template CLAUDE.md
+何を作りたいですか？
+```
 
-  コピー後、以下を編集してください：
-  1. {PROJECT_NAME} を実際のプロジェクト名に置換
-  2. プロジェクトの目的と背景を記述
-  3. 必要に応じて技術スタック情報を追加
-  \`\`\`
+その後、ユーザーとの一問一答（ビジネス背景優先）を経て、`.claude/skills/decide/SKILL.md`
+（`zone0` 引数）に委譲し、不可逆決定の起票を進める。Zone 0 で決めてよい対象・決めてはいけない
+対象（「念のため今決めておく」の禁止）は `docs/v2/01_プロセス定義書.md` 4.3節を参照する
+（本コマンドには転記しない）。
 
-**存在する場合:**
-- 確認メッセージのみ表示:
-  \`\`\`
-  ✅ CLAUDE.md を確認しました
-  \`\`\`
+**存在する場合（継続プロジェクト）**:
 
-### 3. プロジェクト状態の確認
+`.claude-state/current-zone.json` を読み、`zone`（0/1/3/4。**`2`は値として存在しない**、
+`docs/v2/02_実行基盤アーキテクチャ.md` 10.2.1節）を確認する。あわせて
+`.claude-state/process-option.json`（存在すれば。標準`prototype-driven`/例外
+`requirements-first`）を確認する。
 
-\`.claude-state/project-state.json\` の存在を確認：
+```
+📂 既存プロジェクトを検出しました
 
-**存在する場合（継続プロジェクト）:**
-- ファイルを読み込み
-- 現在のフェーズを確認
-- 前回の続きから再開準備
-- ユーザーに状況を報告:
-  \`\`\`
-  📂 既存プロジェクトを検出しました
+現在のゾーン: Zone {zone}（{ゾーン名}）
+プロセス・オプション: {mode、未選択なら「未選択」}
 
-  プロジェクト名: {name}
-  現在のフェーズ: {phase}
-  最終更新: {updated_at}
+続きから始めますか？ `/status` で詳細な状況（ゲート判定・台帳の状態）を確認できます。
+```
 
-  前回の続きから始めますか？
-  それとも \`/status\` で状況を確認しますか？
-  \`\`\`
+ゾーン名の対応: `0`=不可逆決定、`1`=探索・収束ループ（Zone2実装・硬化と機能単位で重なる期間を含む）、
+`3`=ローンチ時リバース、`4`=Mode B（稼働後チケット駆動）。
 
-**存在しない場合（新規プロジェクト）:**
-- \`.claude-state/\` ディレクトリを作成
-- 初期状態の \`project-state.json\` を生成
-- \`tasks.json\` を生成
-- \`decisions.json\` を生成
-- ユーザーに報告:
-  \`\`\`
-  🆕 新規プロジェクトを初期化しました
+### 3. 初期化完了メッセージ
 
-  .claude-state/ ディレクトリを作成しました。
-  プロジェクト状態の記録を開始します。
-
-  何を作りたいですか？
-  \`\`\`
-
-### 4. プロジェクト構造の検出と設定生成
-
-\`.claude/project-structure.json\` の存在を確認：
-
-**存在しない場合（初回 or 既存プロダクト）:**
-
-1. **プロジェクト構造をスキャン**
-
-以下のコマンドでディレクトリを検出：
-
-\`\`\`bash
-# Windowsの場合
-dir /b /ad | findstr /i "^src$ ^app$ ^backend$ ^frontend$ ^infra$ ^infrastructure$ ^tests$ ^test$"
-
-# macOS/Linuxの場合
-find . -maxdepth 1 -type d \( -name "src" -o -name "app" -o -name "backend" -o -name "frontend" -o -name "infra" -o -name "infrastructure" -o -name "tests" -o -name "test" \)
-\`\`\`
-
-設計書ディレクトリの検出：
-\`\`\`bash
-# docs/ 配下をスキャン
-find docs -maxdepth 2 -type d 2>/dev/null | grep -iE "(design|設計|基本設計|詳細設計)"
-\`\`\`
-
-2. **\`.claude/project-structure.json\` を生成**
-
-検出結果に基づいて設定ファイルを生成：
-
-\`\`\`json
-{
-  "detected_at": "{現在時刻}",
-  "pm_policy": {
-    "allow_write": [
-      "docs/requirements/**",
-      "docs/要件定義/**",
-      ".claude-state/**"
-    ],
-    "deny_write": [
-      "{検出されたコードディレクトリ}/**",
-      "{検出されたインフラディレクトリ}/**",
-      "{検出されたテストディレクトリ}/**",
-      "{検出された設計書ディレクトリ}/**",
-      ".claude/docs/40_standards/**"
-    ],
-    "labels": {
-      "{検出されたコードディレクトリ}/**": "Coder",
-      "{検出されたインフラディレクトリ}/**": "Infra-Architect / SRE",
-      "{検出されたテストディレクトリ}/**": "QA",
-      "{検出された設計書ディレクトリ}/**": "App-Architect / Infra-Architect"
-    }
-  }
-}
-\`\`\`
-
-3. **ユーザーに確認**
-
-\`\`\`
-📂 プロジェクト構造を検出しました
-
-検出されたディレクトリ:
-- コード: src/
-- インフラ: infra/
-- テスト: tests/
-- 設計書: docs/design/
-
-PMの編集禁止ディレクトリとして設定します。
-.claude/project-structure.json を生成しました。
-
-内容を確認して、必要に応じて編集してください。
-\`\`\`
-
-**存在する場合:**
-- 既存設定を読み込み
-- 確認メッセージのみ表示:
-  \`\`\`
-  ✅ プロジェクト構造設定を確認しました
-
-  PMの編集禁止ディレクトリ: {deny_write の数}個
-  \`\`\`
-
-**検出されなかった場合:**
-- デフォルト設定で \`.claude/project-structure.json\` を生成
-- aiDev標準のディレクトリ構成を使用:
-  \`\`\`json
-  {
-    "detected_at": "{現在時刻}",
-    "pm_policy": {
-      "allow_write": [
-        "docs/requirements/**",
-        ".claude-state/**"
-      ],
-      "deny_write": [
-        "src/**",
-        "infra/**",
-        "tests/**",
-        "docs/design/**",
-        ".claude/docs/40_standards/**"
-      ],
-      "labels": {
-        "src/**": "Coder",
-        "infra/**": "Infra-Architect / SRE",
-        "tests/**": "QA",
-        "docs/design/**": "App-Architect / Infra-Architect"
-      }
-    }
-  }
-  \`\`\`
-
-### 5. 初期化完了メッセージ
-
-\`\`\`
+```
 ✅ 初期化完了
-
-AI開発ファシリテーターの準備ができました。
-システム開発プロセス全体をサポートします。
 
 【対話の基本】
 - 一問一答形式で進めます
 - ビジネス背景を最優先で伺います
-- 技術標準に従ったコードを生成します
-- 安全性を最優先します
+- 誰がどこに書き込めるか（ロール境界）は settings.json の permissions と hooks が機械的に強制します
+- 安全性を最優先します（本番リリースは SRE 主導の dry-run → 承認 → 本番実行の3ステップ）
 
 【利用可能なコマンド】
-- \`/status\` - 現在の状況と次のアクションを確認
-- \`/next\` - 次にやるべきことを提案
-- \`/tasks\` - タスク一覧を表示
+- `/status` - 現在のゾーン・ゲート状況を確認
+- `/next` - 次にやるべきことを1つ提案
 
 さあ、始めましょう！
-\`\`\`
-
-## 実装詳細
-
-### project-state.json の初期状態
-
-\`\`\`json
-{
-  "project": {
-    "name": null,
-    "type": null,
-    "phase": "planning",
-    "created_at": "{現在時刻}",
-    "updated_at": "{現在時刻}"
-  },
-  "phases": {
-    "planning": {
-      "status": "pending",
-      "started_at": null,
-      "completed_at": null,
-      "document": null
-    },
-    "requirements": {
-      "status": "pending",
-      "started_at": null,
-      "completed_at": null,
-      "document": null
-    },
-    "design": {
-      "status": "pending",
-      "started_at": null,
-      "completed_at": null,
-      "document": null
-    },
-    "implementation": {
-      "status": "pending",
-      "started_at": null,
-      "completed_at": null,
-      "document": null
-    },
-    "testing": {
-      "status": "pending",
-      "started_at": null,
-      "completed_at": null,
-      "document": null
-    },
-    "deployment": {
-      "status": "pending",
-      "started_at": null,
-      "completed_at": null,
-      "document": null
-    }
-  },
-  "requirements": {
-    "business_background": {},
-    "tech_stack": {},
-    "functional_requirements": [],
-    "non_functional_requirements": {},
-    "constraints": {}
-  },
-  "design": {
-    "architecture": null,
-    "tech_stack": {},
-    "infrastructure": {},
-    "cicd_strategy": {}
-  },
-  "implementation": {
-    "directory_structure": null,
-    "coding_standards_applied": false
-  },
-  "metadata": {
-    "version": "1.0.0",
-    "last_command": "/init"
-  }
-}
-\`\`\`
-
-### tasks.json の初期状態
-
-\`\`\`json
-{
-  "tasks": [],
-  "issues": []
-}
-\`\`\`
-
-### decisions.json の初期状態
-
-\`\`\`json
-{
-  "decisions": []
-}
-\`\`\`
+```
 
 ## エラーハンドリング
 
-### ケース1: .claude/docs/ が存在しない
+### ケース1: `.claude/CLAUDE.md` が存在しない
 
-\`\`\`
-❌ エラー: .claude/docs/ ディレクトリが見つかりません。
+```
+❌ エラー: .claude/CLAUDE.md が見つかりません。
 
-このプロジェクトはAI開発ファシリテーター用に設定されていない可能性があります。
-以下を確認してください:
-1. 正しいディレクトリにいるか
-2. .claude/ ディレクトリが存在するか
-\`\`\`
+このプロジェクトは aiDev v2 用に設定されていない可能性があります。
+正しいディレクトリにいるか、`.claude/` ディレクトリが存在するか確認してください。
+```
 
 ### ケース2: 権限エラー
 
-\`\`\`
-❌ エラー: .claude-state/ の作成に失敗しました。
+```
+❌ エラー: .claude-state/ への書き込みに失敗しました。
 
 書き込み権限を確認してください。
-\`\`\`
+```
 
 ## 注意事項
 
-1. **このコマンドは必須ではありません**
-   - 実行しなくても対話は可能
-   - ただし、実行することで最適な動作が保証されます
+1. **このコマンドは必須ではない**
+   - 実行しなくても対話は可能。ただし実行することで現在のゾーンを正確に把握した状態で始められる
 
 2. **複数回実行可能**
-   - 既存の状態は上書きされません
-   - 安全に再実行できます
+   - 既存の状態ファイルを書き換えない（読み取りのみ）。安全に再実行できる
 
-3. **\`.claude-state/\` はGit管理外**
-   - \`.gitignore\` で除外されています
-   - プロジェクト固有の状態を保存します
+3. **`.claude-state/` はGit管理外**
+   - `.gitignore` で除外されている。プロジェクト固有の実行時状態（ゾーン・決定ログ警告・
+     ゲート差し戻し回数等）を保存する
 
-4. **技術標準は段階的に読み込む**
-   - 初期化時: フェーズ別INDEXのみ
-   - 設計フェーズ: 技術スタックに応じた標準を読み込む
-   - 理由: コンテキストの肥大化を防ぐため
+4. **v1からの移行は提供しない**
+   - v2は新規案件立ち上げ時のみ選択可能である（`docs/v2/02_実行基盤アーキテクチャ.md` 14.3節）。
+     v1（フェーズ順次型）で進行中の案件をこのコマンドでv2へ引き継ぐことはできない
