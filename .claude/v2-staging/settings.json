@@ -1,5 +1,5 @@
 {
-  "_note": "M0雛形。docs/v2/02_実行基盤アーキテクチャ.md 7.1節・7.3節に基づく。M3で .claude/settings.json へ昇格するまでは効力を持たない（.claude/v2-staging/README.md 参照）。",
+  "_note": "M6完全版（M3更新）。docs/v2/02_実行基盤アーキテクチャ.md 7.1節・7.3節に基づく完全形。.claude/settings.json（実配置）はM3時点では意図的に不完全な『安全な有効化』版のみを置いており、本ファイルへの全面差し替えはM6（旧資産削除・CLAUDE.md差し替えと同時）まで行わない（.claude/v2-staging/README.md 参照）。M3で.claude/hooks/*.jsの本実装（role-boundary-guard.js・gate-transition-guard.js・doc-header-guard.js・lint-guard.js・artifact-emptiness-guard.js・ops-item-guard.jsの判定ロジック）は完了させたが、これらは02文書14.2節が定めるとおりartifact-emptiness-guard.js/ops-item-guard.jsはM4完了後に、他はM3完了後に実配置settings.jsonへ登録する計画のため、本ファイル（M6完全版のプレビュー）に先行して記載している。",
   "permissions": {
     "allow": [
       "Bash(terraform plan*)",
@@ -23,7 +23,7 @@
     ]
   },
   "hooks": {
-    "_note": "各command配下のパス条件（例: docs/0[2-7]_**、.claude-state/current-zone.json）はmatcherではなくhookスクリプト内部で判定する（02文書7.3節の各行を参照）。M0段階の全hookはprocess.exit(0)で素通りする骨格のみ。artifact-emptiness-guard.jsは『定期実行（Routine）またはPostToolUse』が起動契機（7.3節#8）だが、Routines機構自体がM5実装対象であり、ここでは登録トリガーを確定させず未登録とした（PMへの確認事項）。",
+    "_note": "各command配下のパス条件（例: docs/0[2-7]_**、.claude-state/current-zone.json）はmatcherではなくhookスクリプト内部で判定する（02文書7.3節の各行を参照）。role-boundary-guard.js・gate-transition-guard.js・doc-header-guard.js・lint-guard.js・artifact-emptiness-guard.js・ops-item-guard.jsはM3で判定ロジックを本実装済み（動作確認はecho経由の疑似payloadで実施。settings.json未登録のため本セッションでは無害）。task-payload-observer.js（M3新設の観測専用フックで、実配置の.claude/settings.jsonにのみ一時的に登録している診断用フック）は7.3節の正式な10 hookに含まれないため、本M6完全版には含めない。task-boundary-guard.jsは、observer経由で実機確認したフィールド名を反映した最終実装をここに登録する（M3完了条件）。",
     "PreToolUse": [
       {
         "matcher": "Edit|Write",
@@ -41,7 +41,8 @@
           { "type": "command", "command": ".claude/hooks/doc-header-guard.js" },
           { "type": "command", "command": ".claude/hooks/decision-log-guard.js" },
           { "type": "command", "command": ".claude/hooks/ops-item-guard.js" },
-          { "type": "command", "command": ".claude/hooks/sync-ledger-guard.js" }
+          { "type": "command", "command": ".claude/hooks/sync-ledger-guard.js" },
+          { "type": "command", "command": ".claude/hooks/artifact-emptiness-guard.js" }
         ]
       },
       {

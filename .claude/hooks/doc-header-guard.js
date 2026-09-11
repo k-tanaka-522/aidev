@@ -7,9 +7,9 @@
  * 設計書: docs/v2/02_実行基盤アーキテクチャ.md 7.3節#4・9.2節、
  * `.claude/skills/doc-style-guide/SKILL.md`（文書ヘッダー仕様、M1実装済み）
  *
- * 【イベント】PostToolUse（Write, `docs/0[2-7]_**/*.md`）
+ * 【イベント】PostToolUse（Write, `docs/0[2-7]_**` 配下の `.md` ファイル）
  * 【検知内容】doc-style-guide必須ヘッダーの欠落、`生成区分`フィールドの欠落・不正値。
- *   検査対象は`docs/0[2-7]_**`に限定する（`docs/00`・`decisions/**`・`docs/v2/*`は対象外）。
+ *   検査対象は`docs/0[2-7]_**`に限定する（`docs/00`・`decisions/**`・`docs/v2`配下は対象外）。
  * 【動作】exit 2（ブロック）
  *
  * 【PMへの報告事項（設計書間の不整合）】
