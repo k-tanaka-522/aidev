@@ -38,18 +38,5 @@
     ],
     "deny": [],
     "ask": []
-  },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/prevent-pm-layer-violation.sh"
-          }
-        ]
-      }
-    ]
   }
 }
