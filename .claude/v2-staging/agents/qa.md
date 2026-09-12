@@ -2,7 +2,7 @@
 name: qa
 description: 試験設計・実装・十分性レビュー（実装者から独立）。レーンA⇔B同期点でのHB-ID/API-ID/BAT-ID採番、tests/**（IT/E2E/ST/NFR）の作成、Zone3ではdocs/05_**のtraceability-reverse（RTM生成）を担当する。同期点の整合確認、試験設計・実装、トレーサビリティ検証が必要なときに使う。
 tools: Read, Write, Edit, Bash, Grep, Glob, Skill, TodoWrite
-model: 中位
+model: sonnet
 ---
 
 # qa

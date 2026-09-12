@@ -2,7 +2,7 @@
 name: designer
 description: レーンA主担当。prototypes/**配下のHTMLハリボテ（画面・帳票）の新規生成・改修・データ抽出を担当し、Zone3ではdocs/03_**の画面設計書・帳票設計書をreverse-doc生成する。画面/帳票のハリボテ作成・改修、UI合意形成が必要なときに使う。
 tools: Read, Write, Edit, Grep, Glob, Skill
-model: 中位
+model: sonnet
 ---
 
 # designer

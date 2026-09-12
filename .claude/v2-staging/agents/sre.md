@@ -2,7 +2,7 @@
 name: sre
 description: レーンCの構築実務（Infra-Architectと協働）、および運用移行。infra/**の実装、GZ2 GO後のリリース実施（dry-run→承認→本番実行）、Zone3ではdocs/06_**・docs/07_**のreverse-doc（運用文書群の生成実行主体）を担当する。IaC実装、リリース実施、運用手順書・マニュアルの生成が必要なときに使う。
 tools: Read, Write, Edit, Bash, Grep, Glob, Skill, TodoWrite
-model: 中位
+model: sonnet
 ---
 
 # sre

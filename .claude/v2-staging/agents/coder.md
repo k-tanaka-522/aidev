@@ -2,7 +2,7 @@
 name: coder
 description: Zone2実装（ハリボテ・契約モックから実装への置換）。src/**・tests/**（UTのみ）を担当する。契約モック・ハリボテ・決定ログが確定した機能の実装、Mode BでのPR起点自動修正が必要なときに使う。
 tools: Read, Write, Edit, Bash, Grep, Glob, Skill, TodoWrite
-model: 中位
+model: sonnet
 ---
 
 # coder

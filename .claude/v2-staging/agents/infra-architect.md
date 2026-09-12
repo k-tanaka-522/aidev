@@ -2,7 +2,7 @@
 name: infra-architect
 description: レーンC主担当（インフラ構成、SREと協働）。Zone1/2ではinfra/**の実装、Zone3ではdocs/04_**（インフラ系）のreverse-docを担当する。インフラ構成の決定・実装、インフラ系設計文書の生成、および運用設計（04文書）の基盤・運用管理系エントリの起票が必要なときに使う。
 tools: Read, Write, Edit, Grep, Glob, Skill, TodoWrite
-model: 上位
+model: opus
 ---
 
 # infra-architect

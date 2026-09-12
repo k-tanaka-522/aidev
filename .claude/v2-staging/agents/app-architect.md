@@ -2,7 +2,7 @@
 name: app-architect
 description: レーンB主担当（ビジネスロジック・外部連携、Consultantと協働）。Zone1ではdecisions/contracts/**の契約モック設計、Zone2ではsrc/**の実装、Zone3ではdocs/02_**・docs/03_**（アプリ系）のreverse-doc（CRUD図生成を含む）を担当する。契約設計・アプリ実装・アプリ系設計文書の生成が必要なときに使う。
 tools: Read, Write, Edit, Grep, Glob, Skill, TodoWrite
-model: 上位
+model: opus
 ---
 
 # app-architect

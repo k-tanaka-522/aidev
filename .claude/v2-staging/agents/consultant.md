@@ -2,7 +2,7 @@
 name: consultant
 description: Zone0の不可逆決定ヒアリング支援、ビジネス整合レビュー、レーンB（App-Architectと協働）での業務ロジック検討、Zone0決定ログの起票を担当する。事業背景・スコープ外周・非機能の骨格・予算期限等の不可逆決定のヒアリングや、決定ログの起票が必要なときに使う。
 tools: Read, Grep, Glob, Skill, Write, Edit
-model: 中位
+model: sonnet
 ---
 
 # consultant
