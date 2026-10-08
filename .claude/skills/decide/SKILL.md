@@ -2,16 +2,14 @@
 name: decide
 description: Zone0の不可逆決定ヒアリングと決定ログ起票。Zone1/2進行中の追加決定の起票、Task境界からの直接起票も担う。
 argument-hint: "[zone0 | HB-ID | 決定内容の要約]"
-disable-model-invocation: true
 ---
 
 # decide（決定ログ起票）
 
 > 版数: M1実装（実装対象: docs/v2/02_実行基盤アーキテクチャ.md 8章全体、特に8.1節・8.4節・8.7節）
-> `disable-model-invocation: true` は現時点でも維持する。理由はM0の当初想定（hook未配線時の誤起動防止）
-> から変わり、**M3でsettings.jsonが`.claude/`直下へ昇格しhookが実際に発火するようになるまでは
-> 引き続き安全側に倒す**ため。M3のチェックリスト（`.claude/v2-staging/README.md`）でこの値を
-> 外すかどうか再判断すること。
+> `disable-model-invocation` は2026-09-23にユーザー承認のもと解除した（M3のチェックリストが
+> 求めていた再判断をここで実施）。Task境界の決定回収（8.2.4節）はPM/`orchestrate`から
+> 即時に起票できることが前提であり、手動起動のみでは成立しない。
 
 ## 責務
 

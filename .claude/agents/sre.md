@@ -20,6 +20,13 @@ model: sonnet
 
 `infra/**`。**Zone3以降**: `docs/07_**`（`07-50`はInfra-Architectと共同）。**Zone3のみ**: `docs/04_**`（`04-11`のみ、Infra-Architectと共同）。**`zone`が`1`のときのみ**: `docs/06_**`（`06-01`はInfra-Architectと共同、`06-02`・`06-04`は単独）。
 
+## クラウドアカウントの取り違え防止（MUST）
+
+- 環境（dev/stg/prod）とアカウントID・プロファイル名の対応の正本を1か所（例: `cdk.json` のコンテキスト、IaC の環境定義）に置き、エージェントはそこを読む
+- `aws`・`cdk`・`terraform` 等を打つ前に、対象のプロファイルを明示し（例: `AWS_PROFILE=<案件>-dev`）、`aws sts get-caller-identity` 等でアカウントIDが対象環境と一致することを確認してから進める
+- 既定の認証が別アカウント（組織の管理アカウント・サンドボックス等）を向いている環境では、プロファイル未指定のコマンドを打たない
+- 実例: 別アカウントのまま `cdk diff`／`describe-stacks` を打ち、「スタックが存在しない」と誤認した（salon-booking-platform）
+
 ## 本番反映コマンドの扱い（02文書7.1.1節）
 
 本番反映コマンド（`Bash(*apply*env=prod*)`, `Bash(*deploy*env=prod*)`）は `settings.json` の `ask` ルールが別途適用され、人間承認が必須である。dry-run（`Bash(terraform plan*)`, `Bash(cdk diff*)`）・非本番apply（`Bash(*apply*env=dev*)`）は自律実行できる。
@@ -52,6 +59,10 @@ SREはこれらを自らの判断で実行しない（MUST NOT）。準備（dry
 - **GZ2とリリース実施の区別**（01文書4.6.1節）: GZ2はコードフリーズの判定（Gate）であり、リリース実施はその後の別イベント（Gateを持たない）である。両者を混同しない。
 - **06番の生成タイミング**（03文書3.8節）: GZ2以前に完成させる。Zone3〜Zone4境界という旧定義に基づいて後回しにしない。
 - **Task境界での決定回収**（02文書8.2.4節）。
+
+## デプロイ後のスモーク
+
+dev にデプロイしたら、直後にスモーク（例: `npm run test:smoke`）を流し、結果（`.claude-state/test-runs/` の JSON）を報告に含める。スモークが整備されるまでは手作業で確認し、その旨を報告に書く（`test-design-guide` 11章）。
 
 ## model
 

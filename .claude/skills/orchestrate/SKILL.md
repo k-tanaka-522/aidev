@@ -1,13 +1,13 @@
 ---
 name: orchestrate
 description: ゾーン/レーン型プロセス（Zone0〜4）の遷移統制とTask境界の決定回収を行うオーケストレーター。PMがサブエージェント・横断Skillへ委譲する際の唯一の起動口。
-disable-model-invocation: true
 ---
 
 # ゾーン/レーン オーケストレーター
 
 > 版数: M0雛形（実装対象: docs/v2/02_実行基盤アーキテクチャ.md 3.1節・5.1節・6章・8.2.4節・9.4.1節）
-> `disable-model-invocation: true` は設計書5.1節が定める既定値であり、PMが明示的に呼び出したときのみ起動する。
+> `disable-model-invocation` は2026-09-23にユーザー承認のもと解除した。PM（主スレッド）から
+> 直接起動できなければ「委譲の唯一の起動口」として機能しないため。
 
 `orchestrate` は PM（主スレッド）がサブエージェント・横断Skillへ処理を委譲する際の唯一の起動口である。01文書のゾーン/レーンモデル（Zone0〜4、レーンA/B/C）をClaude Codeの実行機構（Task, Skill, Hooks, 台帳ファイル）に写像し、遷移を統制する。
 
@@ -18,11 +18,12 @@ disable-model-invocation: true
 3. **Task境界の決定回収プロトコル（8.2.4節、最優先）**: 各Subagentへの委譲プロンプトに下記フォーマットでの報告を必須指示として含め、戻り値の「決定ブロック」が「決定なし」以外を含む場合は次のTaskを起動する前に `decide` Skillを呼び出す（MUST）
 4. Zone3着手時、生成DAG（9.4.1節）に従って `reverse-doc` 系Taskの起動順序を決定する
 5. Mode B（Zone4）では `ticket-triage` → `impact-analysis` → 各レーンの `execute` の順で起動する
+6. **ユーザーに出す前の内部レビュー（MUST）**: 案・成果物をユーザーに見せて判断を求める前に、作成者と別のエージェントにレビューさせる（画面の案・ハリボテ → `ux-reviewer`（`prototypes:ux-review`）、設計・契約・実装 → `review-dispatch`）。レビュアーには作成者の推奨を伝えない（偏らせない）。作成者とレビュアーの意見が割れたら PM が整理し、ユーザーには「推奨・反対意見・残った論点」を添えて1問で聞く
 
 ## 呼び出し元・連携先（5.1節）
 
 - 呼び出し元: PM
-- 連携先: 各レーンSkill、`decide`、`gate-check`、`review-dispatch`、`sync-check`
+- 連携先: 各レーンSkill、`decide`、`gate-check`、`review-dispatch`、`sync-check`、`ux-reviewer`
 
 ## ネストスキルの呼び出し方（ウォームアップ、1.4節）
 

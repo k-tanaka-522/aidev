@@ -71,6 +71,38 @@ node .claude/skills/sync-check/scripts/sync-check.js --kind=batch \
 
 Zone2に入り`src/backend/`に実装が生じた後は、突合対象を契約モックから実装（`src/backend/models/`）へ切り替える運用パラメータ（`--source=contract|impl`）を持たせ、`.claude-state/current-zone.json`を参照して自動選択する（MUST）。`current-zone.json`の具体的なJSONスキーマは設計書のどの節にも明記が無いため、`.claude/lib/zone-state.js`が暫定スキーマ`{zone, updated_at, updated_by}`を定義した（PMへ報告）。
 
+## API-IDの紐づけ
+
+HB-IDへ紐づける`API-ID`は、ハリボテHTMLのヘッダーコメント内に置く`使用API:`宣言行を正とする。
+
+```html
+<!--
+  画面: 設定画面
+  使用API: API-0014, API-0015, API-0016
+-->
+```
+
+- 半角/全角コロンのどちらでもよい。複数行に分けて書いた場合は全行を合算する（`extractDeclaredApiIds`）
+- **宣言行に無い`API-ID`は、同じ契約ファイルに定義されていてもその画面は呼ばないと解釈する**。
+  宣言行以外の本文に現れる`API-ID`への言及（説明文など）は拾わない
+- 宣言行を持たない画面は、従来どおり契約ファイル内の全`API-ID`を紐づける（後方互換）
+- 画面が宣言した`API-ID`が契約側に無い場合は報告の`apiIdsNotInContract`に出すが、採番はブロックしない
+
+この方式にした理由は、契約ファイル内の全`API-ID`を無条件にコピーすると、1契約が複数画面を
+カバーする構成（例: 1契約24本で6画面分）で1画面あたり24本が付き、
+Zone3のRTMとMode Bの`impact-analysis`が実態と乖離するためである（salon-booking-platform での実例）。
+
+## 既知の制約: `--source=impl` はTypeScriptを読めない
+
+実装からのフィールド抽出はクオート付きキー（`'foo':`）のみを対象とする正規表現であり、
+TypeScriptの非クオートキー（`foo:`）に当たらない（実例: 実装全体から2語しか拾えなかった）ため、
+Zone2以降も当面は`--source=contract`を明示して契約モックと突合すること。
+Zone3の`traceability-reverse`（9.1.1節の静的解析）までに対応が要る。
+
+実装ディレクトリの自動判定は「存在する」ではなく「ソースファイルを実際に含む」を条件とする
+（`resolveImplRoots`）。候補は`src/backend`・`services`の順。`src/backend/`は空の雛形として
+残っているため、存在チェックだけだと実装ゼロ件をレーンB側の正しい抽出結果と取り違える。
+
 ## バッチ版（`--kind=batch`、10.1.4節、M2で実装）
 
 `BAT-ID`は画面を持たないため通常の突合（HTML入力項目とORMフィールドの突合）は適用できない。レーンB（App-Architect）が確定した入出力仕様書（決定ログのサブフォーマット）とサンプルデータを入力に、QAが`BAT-ID`を採番し`00-03_バッチトレーサビリティ台帳.md`へ登録する。画面を経由するバッチ（`--hb-id`指定時）は`00-02`台帳の経路欄にも追記する**べきだが、既存行の書き換えロジックはM2では未実装**（`markdown-table.js`が単純追記のみをサポートするため）。この場合は警告を出し、手動確認を促す（既知の制約としてPMへ報告）。

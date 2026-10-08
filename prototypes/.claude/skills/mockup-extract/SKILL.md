@@ -2,12 +2,13 @@
 name: mockup-extract
 description: 確定したハリボテからデータ項目（入力フィールド名・型のヒント）・画面遷移条件を抽出し、レーンB向けの構造化データ（決定ログのサブフォーマット）として出力する。
 argument-hint: "[画面名 or all]"
-disable-model-invocation: true
 ---
 
 # mockup-extract（データ項目抽出・レーンB連携）
 
 > 版数: M2実装（実装対象: docs/v2/02_実行基盤アーキテクチャ.md 5.2節）
+> `disable-model-invocation` は2026-09-23にユーザー承認のもと解除した（designer等の
+> Subagentへの委譲経由で起動できなければレーンAが回らないため）。
 
 ## 責務
 

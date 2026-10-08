@@ -18,6 +18,10 @@
  * 【前提条件・制約】
  * - **整合が確認できるまでHB-ID/BAT-IDは採番しない**（02文書10.3節「整合が確認できた
  *   時点で」という文言を、差分ゼロ（または`--force`指定）を採番の前提条件として実装した。
+ *   この前提条件は片方向に改めた。ブロックするのは「画面にあって
+ *   レーンB側に無い項目」のみであり、「レーンB側にあって画面に無い項目」は報告するが
+ *   採番を止めない。1契約ファイルが複数画面をカバーする構成では後者が構造的に
+ *   ゼロにならず、双方向完全一致では恒常的に --force が必要になるため。
  *   この解釈は設計書に明記が無いため、PMへ報告する設計上の判断事項として扱う）。
  * - 命名ゆらぎ（snake_case⇔camelCase）の正規化は`field-extract.js`の
  *   `canonicalizeFieldName`に委ねる。意味的対応までは検出できない（02文書10.3節の限界）。
@@ -303,15 +307,21 @@ function runScreenMode(cwd, args) {
   // これは常にfalseになり実装切替が機能しなくなる（過去の判定ロジックが02文書の
   // スキーマ確定によって無効化された箇所。PMへの報告事項）。10.3節「`--source=impl`の
   // 切替は`src_unlocked`を参照して自動選択する」の記述どおり、`src_unlocked`で判定する。
+  // 実装ディレクトリは「存在する」だけでなく「ソースファイルを実際に含む」ことを条件にする。
+  // src/backend/ は雛形として空のまま残っており、存在チェックだけだと実装ゼロ件を
+  // レーンB側の正しい抽出結果と取り違える（画面項目が全件 onlyInScreen として出る）。
+  // 実装を services/ に置く構成（Lambda 等）もあるため候補に含める。
+  const implRoots = resolveImplRoots(cwd);
   const effectiveSource =
     explicitSource ||
-    (zoneState.src_unlocked && fs.existsSync(path.join(cwd, 'src', 'backend')) ? 'impl' : 'contract');
+    (zoneState.src_unlocked && implRoots.length > 0 ? 'impl' : 'contract');
 
   if (effectiveSource === 'impl') {
     // Zone2以降: src/backend配下の素朴なフィールド抽出（本格的なORM静的解析は9.1.1節がZone3向けに別途定める）。
-    laneBSource = { type: 'impl', path: 'src/backend' };
-    const backendDir = path.join(cwd, 'src', 'backend');
+    const roots = implRoots.length > 0 ? implRoots : ['src/backend'];
+    laneBSource = { type: 'impl', path: roots.join(', ') };
     const collected = new Set();
+    for (const root of roots) {
     (function walk(dir) {
       let entries;
       try {
@@ -321,7 +331,11 @@ function runScreenMode(cwd, args) {
       }
       for (const e of entries) {
         const full = path.join(dir, e.name);
-        if (e.isDirectory()) walk(full);
+        if (e.isDirectory()) {
+          // node_modules・ディレクトリスコープSkillの .claude 等はレーンBの実装ではない。
+          if (IMPL_SKIP_DIRS.has(e.name)) continue;
+          walk(full);
+        }
         else if (/\.(ts|js|py)$/.test(e.name)) {
           const text = fs.readFileSync(full, 'utf-8');
           const re = /["'`]([a-zA-Z_][a-zA-Z0-9_]*)["'`]\s*:/g;
@@ -329,7 +343,8 @@ function runScreenMode(cwd, args) {
           while ((m = re.exec(text))) collected.add(m[1]);
         }
       }
-    })(backendDir);
+      })(path.join(cwd, root));
+    }
     laneBFields = Array.from(collected);
   } else if (args.contract) {
     const absContract = path.isAbsolute(args.contract) ? args.contract : path.resolve(cwd, args.contract);
@@ -355,8 +370,31 @@ function runScreenMode(cwd, args) {
     laneBSource = { type: 'screen-data-memo', path: memo.file };
   }
 
+  // 【API-ID紐づけ】契約ファイル内の全API-IDを無条件に紐づけると、1契約が複数画面を
+  // カバーする構成（例: 1契約24本で6画面分）では1画面あたり24本が付き、
+  // Zone3のRTMが過剰リンクになる。画面側のヘッダーコメントに「使用API:」宣言がある
+  // 場合はそれを正とし、無い場合のみ従来どおり契約ファイル全体から拾う。
+  const declaredApiIds = extractDeclaredApiIds(screenHtml);
+  let apiIdSource = 'contract';
+  let apiIdsNotInContract = [];
+  if (declaredApiIds.length > 0) {
+    const contractApiIds = new Set(apiIds);
+    // 契約側にそのIDが無い場合は「画面が存在しないAPIを宣言している」ことを意味するため
+    // 握りつぶさず報告に載せる（採番はブロックしない。契約未採番の段階もありうるため）。
+    apiIdsNotInContract = contractApiIds.size > 0
+      ? declaredApiIds.filter((id) => !contractApiIds.has(id))
+      : [];
+    apiIds = declaredApiIds;
+    apiIdSource = 'screen-declaration';
+  }
+
   const diff = diffFieldNames(screenFields, laneBFields);
-  const hasDiff = diff.onlyInA.length > 0 || diff.onlyInB.length > 0;
+  // 【片方向判定】採番のブロック条件は「画面にあってレーンB側に無い項目」の片方向のみとする。
+  // 画面にあって契約に無い = その画面が呼ぶAPIが存在しない（本物の欠落）。
+  // 契約にあって画面に無い = 他画面が使う項目、またはレスポンス専用の項目（正常）。
+  // 1つの契約ファイルが複数画面をカバーする構成では後者は構造的にゼロにならない。
+  const blockingDiff = diff.onlyInA.length > 0;
+  const hasDiff = blockingDiff;
 
   const report = {
     screen: relScreen,
@@ -368,11 +406,14 @@ function runScreenMode(cwd, args) {
     onlyInLaneB: diff.onlyInB,
     matched: diff.matched.length,
     hasDiff,
+    apiIds,
+    apiIdSource,
+    apiIdsNotInContract,
   };
 
   if (hasDiff && !args.force) {
     report.status = 'diff_detected';
-    report.message = '差分が検出されました。整合を取ってから再実行するか --force を指定してください。';
+    report.message = '画面にあってレーンB側に無い項目が検出されました。整合を取ってから再実行するか --force を指定してください。';
     console.log(JSON.stringify(report, null, 2));
     process.exit(0);
   }
@@ -419,13 +460,16 @@ function runScreenMode(cwd, args) {
   const diffSummary = hasDiff
     ? `画面のみ=${diff.onlyInA.join('/') || 'なし'}, レーンBのみ=${diff.onlyInB.join('/') || 'なし'}`
     : '';
+  const laneBOnlyNote = diff.onlyInB.length > 0
+    ? `（レーンB側のみの項目 ${diff.onlyInB.length} 件は他画面・レスポンス専用のため非ブロッキング）`
+    : '';
 
   appendSyncLedger(cwd, {
     kind: 'A⇔B',
     participants: 'designer, app-architect, qa',
     confirmationSummary: hasDiff
       ? `--force指定により差分ありで通過（残差分: ${diffSummary}）`
-      : '画面項目とレーンB項目の完全一致を確認',
+      : `画面項目がすべてレーンB側に存在することを確認${laneBOnlyNote}`,
     relatedIds: [hbId, scrId, ...apiIds].filter(Boolean),
     override: hasDiff,
     diffSummary,
@@ -540,6 +584,66 @@ function runBatchMode(cwd, args) {
   console.log(
     JSON.stringify({ status: 'passed', batId, batReused: reused, spec: relSpec, jobName: args['job-name'] }, null, 2)
   );
+}
+
+/**
+ * レーンB側の突合対象になりうる実装ディレクトリを返す。
+ * 候補ディレクトリのうち、node_modules/.claude/dist を除いて実際に .ts/.js/.py を含むものだけを
+ * 採用する。空の雛形ディレクトリを「実装あり」と誤認しないための条件（10.3節の自動選択）。
+ */
+/**
+ * ハリボテHTMLのコメント内に置かれた「使用API:」宣言行から API-ID を抽出する。
+ * 例:   使用API: API-0014, API-0015, API-0016
+ * 複数行に分けて書かれていても全行を合算する。重複は除去し昇順で返す。
+ * 宣言行以外の本文に現れる API-ID への言及（説明文など）は拾わない。
+ */
+function extractDeclaredApiIds(html) {
+  const ids = new Set();
+  const LF = String.fromCharCode(10);
+  const MARKER = '使用API';
+  for (const rawLine of html.split(LF)) {
+    const line = rawLine.trim();
+    const at = line.indexOf(MARKER);
+    if (at < 0) continue;
+    const head = line.slice(at + MARKER.length).replace(/^[ 　]*/, '');
+    // 直後がコロン（半角/全角）でない場合は宣言行ではないため拾わない
+    if (head[0] !== ':' && head[0] !== '：') continue;
+    const m = head.match(/API-[0-9]{4}/g);
+    if (m) for (const id of m) ids.add(id);
+  }
+  return Array.from(ids).sort();
+}
+
+function resolveImplRoots(cwd) {
+  const candidates = ['src/backend', 'services'];
+  const found = [];
+  for (const rel of candidates) {
+    const abs = path.join(cwd, rel);
+    if (!fs.existsSync(abs)) continue;
+    if (containsSourceFile(abs)) found.push(rel);
+  }
+  return found;
+}
+
+const IMPL_SKIP_DIRS = new Set(['node_modules', '.claude', 'dist', 'cdk.out', '.git']);
+
+/** ディレクトリ配下に .ts/.js/.py が1つでもあるかを返す（除外ディレクトリはたどらない）。 */
+function containsSourceFile(dir) {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (_err) {
+    return false;
+  }
+  for (const e of entries) {
+    if (e.isDirectory()) {
+      if (IMPL_SKIP_DIRS.has(e.name)) continue;
+      if (containsSourceFile(path.join(dir, e.name))) return true;
+    } else if (/\.(ts|js|py)$/.test(e.name)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function main() {

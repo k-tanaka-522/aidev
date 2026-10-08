@@ -3,7 +3,6 @@ name: gate-check
 description: ミニゲート/ゾーンゲート(GZ0/GZ2/GZ3)、およびMode Bチケット/Zone3内ミニチケットのGate(--kind=ticket|zone3-hotfix)の機械判定。ゾーンに応じて判定基準を切り替える。PM・作成者から独立したコンテキストで実行する。
 context: fork
 allowed-tools: Read, Grep, Glob, Bash
-disable-model-invocation: true
 ---
 
 # gate-check（ゲート機械判定）
@@ -13,10 +12,9 @@ disable-model-invocation: true
 > 10.1.5節・10.4節・12章、01文書6.5節・7.2節・7.4節・7.6節）
 > `context: fork` と `allowed-tools` は設計書5.1節・10.2節が定める本来の値
 > （`Bash`はM5で`node scripts/gate-check.js`を実行するために追加）。
-> `disable-model-invocation: true` はM0限定の安全策として維持している。`.claude/settings.json`
-> は現時点で「M3安全な有効化」版（`_note`参照）であり、`role-boundary-guard.js`・
-> `gate-transition-guard.js`等のブロック系hookはM6の本切替まで実際には登録されていない。
-> したがって本フラグはM6でHooks/Permissionsが本切替されるまで維持する（本タスクでは変更しない）。
+> `disable-model-invocation` は2026-09-23にユーザー承認のもと解除した。判定の独立性は
+> `context: fork` が担保しており、PMが「起動できる」ことと「自分で判定する」ことは別である
+> （PMがGO/NGを自ら下してはならない、というCLAUDE.mdの制約は従来どおり有効）。
 >
 > **経緯（重要）**: `GZ0`/`GZ2`/`GZ3`（ゾーンゲート、Mode A側）のGO/NG/HOLD判定本体は、
 > 02文書14.2節の段階移行計画のどのマイルストーンにも実装担当が明記されておらず、M0〜M5の

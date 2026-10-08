@@ -2,12 +2,13 @@
 name: mockup-generate
 description: 対話しながら新規画面のHTMLハリボテを生成する。決定ログとdesign-system.htmlのパターンに従う。帳票（印刷物・外部提出様式）の依頼と判断した場合はprototypes/reports/配下に帳票ハリボテを生成しRPT-IDを採番する。
 argument-hint: "[画面名 or 帳票名 or all]"
-disable-model-invocation: true
 ---
 
 # mockup-generate（ハリボテ新規生成）
 
 > 版数: M2実装（実装対象: docs/v2/02_実行基盤アーキテクチャ.md 5.2節・10.1.1節・10.1.3節）
+> `disable-model-invocation` は2026-09-23にユーザー承認のもと解除した（designer等の
+> Subagentへの委譲経由で起動できなければレーンAが回らないため）。
 > レーンA（Designer主担当、01文書4.4.1節）の中核Skill。ハリボテはv2では
 > 「合意形成の主媒体」として第一級に格上げされる（02文書5.2節）。
 

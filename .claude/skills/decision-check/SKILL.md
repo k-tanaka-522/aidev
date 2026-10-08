@@ -2,14 +2,13 @@
 name: decision-check
 description: 決定ログのカバレッジ検査（Zone0分母9項目・HB-ID単位4スロット・運用系分母の機械集計）、decision-warnings.jsonの未解消件数確認、process-option.jsonとの同期検査。
 context: fork
-disable-model-invocation: true
 ---
 
 # decision-check（決定ログカバレッジ検査）
 
 > 版数: M1実装（実装対象: docs/v2/02_実行基盤アーキテクチャ.md 8.2.5節・8.3節・8.7節）
-> `context: fork` は設計書5.1節が定める本来の値。`disable-model-invocation: true` は
-> M3でsettings.jsonが昇格し`gate-check`から実際に呼ばれる配線が組まれるまでの安全策として維持する。
+> `context: fork` は設計書5.1節が定める本来の値。`disable-model-invocation` は2026-09-23に
+> ユーザー承認のもと解除した（`gate-check`・PMの双方から起動できる必要があるため）。
 
 ## 責務
 

@@ -3,7 +3,6 @@ name: contract-check
 description: 設計⇔実装の契約検証（02文書16章）。.claude/contracts/MANIFEST.json登録済みの契約（CT-ID）を一括実行し、合否・MANIFEST未登録参照・未評価（契約化するかどうかの判定が未了）のMUSTを報告する。
 context: fork
 allowed-tools: Read, Grep, Glob, Bash
-disable-model-invocation: true
 ---
 
 # contract-check（設計⇔実装の契約検証）
@@ -12,8 +11,8 @@ disable-model-invocation: true
 > `context: fork` と `allowed-tools`（`Bash`を含む）は設計書5.1節・16.5.2節が定める本来の値。
 > `Bash`は`gate-check`・`decision-check`には無いが、契約テストという**コードを実行して
 > 結果を得る**必要があるため本Skillにのみ追加されている（16.5.2節「`Bash`が必要な理由」）。
-> `disable-model-invocation: true` は他の横断Skill（`gate-check`・`decision-check`）と同じく
-> `.claude/settings.json`がM6本切替されるまでの安全策として維持する（M3の既存慣行を踏襲）。
+> `disable-model-invocation` は他の横断Skill（`gate-check`・`decision-check`）と同じく
+> 2026-09-23にユーザー承認のもと解除した。
 
 ## 責務
 

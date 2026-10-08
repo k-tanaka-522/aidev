@@ -23,11 +23,14 @@
  *   - infra-architect: infra/**、decisions/**、Zone3のみdocs/04_インフラ設計/**。
  *     Zone3のみdocs/02_要件定義/02-03_*（非機能要件一覧、App-Architectと共同生成）。
  *     Zone1またはZone3でdocs/06_移行・導入/06-01_*（移行計画書、SREと共同生成）
- *   - coder: src/**, tests/**（Zone2以降）
- *   - qa: tests/**、docs/00_.../00-02〜00-03（台帳）、Zone3のみdocs/05_テスト/**。
+ *   - coder: src/**, tests/**（Zone2以降。tests/integration・e2e・smoke を除く＝UTのみ）
+ *   - qa: tests/**、docs/00_.../00-02〜00-03（台帳）、00-12〜00-14（欠陥・先送り・差分の起票）、Zone3のみdocs/05_テスト/**。
  *     Zone3のみdocs/02_要件定義/02-02_*（機能要件一覧、App-Architectと共同生成）。
  *     Zone1またはZone3でdocs/06_移行・導入/06-03_*（受入テスト結果報告書）
- *   - sre: infra/**、Zone3以降docs/07_運用・保守/**、Zone1またはZone3でdocs/06_移行・導入/**
+ *   - pmo: docs/00_.../00-12〜00-14、.claude-state/progress*.md（台帳の清書・整理のみ。判断はPM）
+ *   - ux-reviewer: .claude-state/ux-review/**（読むだけの役。書き込みは同梱 save-report.js 経由、Bash は role-bash-guard.js が制限）
+ *   - product-validator: .claude-state/validation/**（妥当性確認の記録のみ。起票はPM経由）
+ *   - sre: infra/**、.github/workflows/**、Zone3以降docs/07_運用・保守/**、Zone1またはZone3でdocs/06_移行・導入/**
  *
  * 【PMへの報告事項・判断の根拠】
  * 1. 【coderの`src_unlocked`適用】02文書7.1.2節は版1.8でapp-architectの行のみ
@@ -91,11 +94,12 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { matchGlob } = require('../lib/path-glob');
 const { readZoneState } = require('../lib/zone-state');
 const { ledger0002Path, ledger0003Path } = require('../lib/ledger-paths');
 
-const KNOWN_ROLES = ['consultant', 'designer', 'app-architect', 'infra-architect', 'coder', 'qa', 'sre'];
+const KNOWN_ROLES = ['consultant', 'designer', 'app-architect', 'infra-architect', 'coder', 'qa', 'sre', 'pmo', 'ux-reviewer', 'product-validator'];
 
 const DECISIONS_GLOB = 'docs/00_プロジェクト管理・ガバナンス/decisions/**';
 const GOV_GLOB = 'docs/00_プロジェクト管理・ガバナンス/**';
@@ -120,6 +124,22 @@ const ROLE_RULES = {
   __pm__: [
     { pattern: GOV_GLOB, exclude: [DECISIONS_GLOB] },
     { pattern: '.claude-state/**' },
+    // PMが自分の対話ルール（CLAUDE.md）・エージェント定義・Skill定義・Skill共通ライブラリを直せるようにする
+    // （案件運用中に手順・規約の不備が判明した際、その場で反映するため。ユーザー承認、salon-booking-platform での運用実績より）。
+    // hooks・settings.json は対象外（強制機構そのものを PM が緩められないようにする）。
+    { pattern: '.claude/CLAUDE.md' },
+    { pattern: '.claude/agents/**' },
+    { pattern: '.claude/skills/**' },
+    { pattern: '.claude/lib/**' },
+    // Claude Code の自動メモリ（~/.claude/projects/<project>/memory/**）。
+    {
+      predicate: (relPath) => {
+        const norm = (p) => p.replace(/\\/g, '/').toLowerCase();
+        const abs = norm(path.resolve(process.cwd(), relPath));
+        const dir = norm(path.join(os.homedir(), '.claude', 'projects')) + '/';
+        return abs.startsWith(dir) && abs.slice(dir.length).split('/')[1] === 'memory';
+      },
+    },
   ],
   consultant: [{ pattern: DECISIONS_GLOB }],
   designer: [
@@ -148,19 +168,41 @@ const ROLE_RULES = {
   coder: [
     // 上部コメント#1: 02文書7.1.2節の表記「Zone2以降」を`src_unlocked`で近似する（要報告）。
     { pattern: 'src/**', when: (zoneState) => zoneState.src_unlocked === true },
-    { pattern: 'tests/**', when: (zoneState) => zoneState.src_unlocked === true },
+    // coder は UT のみ。IT・E2E・スモークは実装者から独立した qa が書く（01文書7.3節を機構で守る）。
+    {
+      pattern: 'tests/**',
+      exclude: ['tests/integration/**', 'tests/e2e/**', 'tests/smoke/**'],
+      when: (zoneState) => zoneState.src_unlocked === true,
+    },
   ],
   qa: [
     { pattern: 'tests/**' },
     { exactPathFns: [(cwd) => ledger0002Path(cwd), (cwd) => ledger0003Path(cwd)] },
+    // 欠陥（00-13）・未カバーの先送り（00-12）・設計と実装の差分（00-14）を qa が直接起票できるようにする。
+    { pattern: 'docs/00_プロジェクト管理・ガバナンス/00-12_*' },
+    { pattern: 'docs/00_プロジェクト管理・ガバナンス/00-13_*' },
+    { pattern: 'docs/00_プロジェクト管理・ガバナンス/00-14_*' },
     { pattern: 'docs/05_テスト/**', when: isZone3 },
     // 03文書3.4節: 02-02（機能要件一覧）はQA/App-Architectの共同生成主体（上部コメント#3）。
     { pattern: 'docs/02_要件定義/02-02_*', when: isZone3 },
     // 03文書3.8節: 06-03（受入テスト結果報告書）はQAが生成主体、生成ゾーンはGZ2以前=zone1（上部コメント#4）。
     { pattern: 'docs/06_移行・導入/06-03_*', when: isZone1or3 },
   ],
+  // PMO は課題・リスク・変更管理の台帳と progress.md の清書・整理だけを受け持つ（判断は PM）。
+  pmo: [
+    { pattern: 'docs/00_プロジェクト管理・ガバナンス/00-12_*' },
+    { pattern: 'docs/00_プロジェクト管理・ガバナンス/00-13_*' },
+    { pattern: 'docs/00_プロジェクト管理・ガバナンス/00-14_*' },
+    { pattern: '.claude-state/progress*.md' },
+  ],
+  // UX レビュアーはハリボテを読むだけ。書いてよいのはレビューの結果だけ。
+  'ux-reviewer': [{ pattern: '.claude-state/ux-review/**' }],
+  // 妥当性確認はプロダクトコードを直さない。書いてよいのは確認の記録だけ。
+  'product-validator': [{ pattern: '.claude-state/validation/**' }],
   sre: [
     { pattern: 'infra/**' },
+    // デプロイ用の CI/CD ワークフローは SRE が作成・保守する。
+    { pattern: '.github/workflows/**' },
     { pattern: 'docs/07_運用・保守/**', when: isZone3or4 },
     // 03文書3.8節: 06番（移行・導入）はSREが主要な生成主体、生成ゾーンはGZ2以前=zone1（上部コメント#4）。
     { pattern: 'docs/06_移行・導入/**', when: isZone1or3 },

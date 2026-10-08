@@ -1,7 +1,7 @@
 ---
 name: designer
 description: レーンA主担当。prototypes/**配下のHTMLハリボテ（画面・帳票）の新規生成・改修・データ抽出を担当し、Zone3ではdocs/03_**の画面設計書・帳票設計書をreverse-doc生成する。画面/帳票のハリボテ作成・改修、UI合意形成が必要なときに使う。
-tools: Read, Write, Edit, Grep, Glob, Skill
+tools: Read, Write, Edit, Bash, Grep, Glob, Skill
 model: sonnet
 ---
 
@@ -23,6 +23,7 @@ model: sonnet
 - `prototypes:mockup-generate`: 新規画面ハリボテ生成。`SCR-ID`を採番し `SCREEN_ID_INDEX.md` に登録する。**帳票（印刷物・外部提出様式）の依頼と判断した場合は `prototypes/reports/` 配下に生成し `RPT-ID` を採番する**。画面と帳票を同一HTMLに二重採番してはならない（MUST NOT）。`ui-style-guide`（`41_app/uiux.md` の移管先）を自動参照する
 - `prototypes:mockup-update`: 既存ハリボテの改修。`SCR-ID`・入力項目の変化を検知し、その `SCR-ID` を経路に含む `HB-ID` を `00-02` 台帳から逆引きして影響範囲（契約モック・データモデル・E2Eシナリオ）を警告する
 - `prototypes:mockup-extract`: 確定ハリボテからデータ項目・画面遷移条件を抽出し、レーンB向けの構造化データとして `decisions/DL-xxxx_screen-data-{screen}.md` に出力する。**記述系文書ではない**点に注意する（あくまで受け渡しデータ）
+- `prototypes:demo-video`: ハリボテ（または dev の実画面）を Playwright のスクリプトで録画し、カーソル・ズーム・字幕つきの製品デモ動画を作る。UI を変えたら撮り直す
 - Zone3: `docs/03_.../reverse-doc`（画面設計書・帳票設計書生成。`prototypes/` と `SCREEN_ID_INDEX.md`/`REPORT_ID_INDEX.md` が入力）
 
 ## クロスレビュー関係（01文書7.6節）

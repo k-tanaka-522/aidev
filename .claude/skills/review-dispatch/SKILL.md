@@ -1,13 +1,13 @@
 ---
 name: review-dispatch
 description: クロスレビューの並列ファンアウトと指摘検証。各ゾーン/レーンのreview Skillをcontext:forkで並列起動し、指摘をfile:line単位で個別検証する。
-disable-model-invocation: true
 ---
 
 # review-dispatch（クロスレビュー統制）
 
 > 版数: M0雛形（実装対象: docs/v2/02_実行基盤アーキテクチャ.md 5.1節・11章）
-> `disable-model-invocation: true` は設計書5.1節が定める本来の値。
+> `disable-model-invocation` は2026-09-23にユーザー承認のもと解除した（`orchestrate` から
+> 起動できる必要があるため）。
 
 ## 責務
 

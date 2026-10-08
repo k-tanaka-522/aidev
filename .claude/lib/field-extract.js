@@ -131,6 +131,15 @@ function extractExistingApiIds(yamlText) {
  * 平坦なフィールド名一覧として返す（02文書10.3節が要求するのはフィールド名突合のみのため、
  * ネスト構造そのものの再現はしない）。
  */
+const SCHEMA_KEYWORDS = [
+  'type', 'format', 'items', 'required', 'description', 'example', 'examples', 'enum',
+  'default', 'properties', 'nullable', 'pattern', 'minimum', 'maximum', 'multipleOf',
+  'exclusiveMinimum', 'exclusiveMaximum', 'minLength', 'maxLength', 'minItems', 'maxItems',
+  'uniqueItems', 'minProperties', 'maxProperties', 'additionalProperties', 'readOnly',
+  'writeOnly', 'deprecated', 'title', 'oneOf', 'anyOf', 'allOf', 'not', 'discriminator',
+  'xml', 'externalDocs',
+];
+
 function extractSchemaPropertyNames(yamlText) {
   const lines = yamlText.split(/\r?\n/);
   const names = [];
@@ -139,17 +148,31 @@ function extractSchemaPropertyNames(yamlText) {
     const m = /^(\s*)properties:\s*$/.exec(lines[i]);
     if (!m) continue;
     const baseIndent = m[1].length;
+    // properties直下の子キーのインデントは、最初に現れたキーの深さで確定する。
+    // 固定値（baseIndent+2 / +4）で判定すると、各プロパティ配下のスキーマキーワード
+    // （minimum・nullable・pattern 等）まで「フィールド名」として拾ってしまう。
+    let childIndent = null;
     for (let j = i + 1; j < lines.length; j++) {
       const line = lines[j];
       if (!line.trim()) continue;
       const keyMatch = /^(\s*)([A-Za-z0-9_.\-]+):/.exec(line);
-      if (!keyMatch) break;
+      // 「key:」の形でない行（複数行 description のブロックスカラー本文、not/enum のリスト項目
+      // など）は走査を打ち切らずに読み飛ばす。ここで break していると、最初のプロパティの
+      // description 本文へ到達した時点で以降のプロパティを取りこぼす（実測: TenantCreateRequest
+      // の7項目のうち slug 1件しか拾えない）。ブロックスカラーの本文は親キーより必ず深く
+      // インデントされるため、下の `indent === childIndent` の判定に誤って引っかかることはない。
+      if (!keyMatch) continue;
       const indent = keyMatch[1].length;
       if (indent <= baseIndent) break;
       // properties直下の子キーのみを対象とする（1段深いキーだけ、孫階層はスキップ）。
-      if (indent === baseIndent + 2 || indent === baseIndent + 4) {
+      if (childIndent === null) childIndent = indent;
+      if (indent === childIndent) {
         const key = keyMatch[2];
-        if (!seen.has(key) && !['type', 'format', 'items', 'required', 'description', 'example', 'enum', 'default', 'properties'].includes(key)) {
+        // childIndent の位置にあるキーは、キーワードと同名でも必ずフィールド名として扱う
+        // （例: CreateJobBody.type）。スキーマキーワード（type・minimum・nullable 等）は各プロパティの
+        // 配下＝childIndent より深い位置にしか現れず、上の indent === childIndent で既に除外済みのため、
+        // ここで SCHEMA_KEYWORDS により弾くと実在フィールドを落とすだけになる。
+        if (!seen.has(key)) {
           seen.add(key);
           names.push(key);
         }
