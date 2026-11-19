@@ -23,17 +23,20 @@
       "Bash(git clean*)",
       "Bash(*&& git clean*)",
       "Bash(*; git clean*)",
-      "PowerShell(*git clean*)",
+      "PowerShell(git clean*)",
+      "PowerShell(*; git clean*)",
       "Bash(rm -rf*.claude-state*)",
       "PowerShell(*Remove-Item*.claude-state*)",
       "Bash(git worktree remove*)",
-      "Bash(*git worktree remove*)",
-      "PowerShell(*git worktree remove*)",
+      "Bash(*&& git worktree remove*)",
+      "Bash(*; git worktree remove*)",
+      "PowerShell(git worktree remove*)",
+      "PowerShell(*; git worktree remove*)",
       "Bash(rm -rf*.claude/worktrees*)",
       "PowerShell(*Remove-Item*.claude*worktrees*)"
     ]
   },
-  "_note_worktree": "worktree の運用（orchestrate SKILL.md「worktree の運用」）。baseRef=fresh で worktree を origin/main から作る（手元の古い main から作らない）。git clean・.claude-state の削除・素の git worktree remove・.claude/worktrees の手での削除は、worktree の中のジャンクションの先の記録フォルダ（.claude-state）まで消すので禁止し、worktree は ExitWorktree か orchestrate/scripts/worktree-status.js --prune で消す。",
+  "_note_worktree": "worktree の運用（orchestrate SKILL.md「worktree の運用」）。baseRef=fresh で worktree を origin/main から作る（手元の古い main から作らない）。git clean・.claude-state の削除・素の git worktree remove・.claude/worktrees の手での削除は、記録フォルダ（.claude-state）を消す・消し方や git の版によっては worktree の中のジャンクションの先まで消えることがあるので禁止し、worktree は ExitWorktree か orchestrate/scripts/worktree-status.js --prune で消す。",
   "worktree": {
     "baseRef": "fresh"
   },

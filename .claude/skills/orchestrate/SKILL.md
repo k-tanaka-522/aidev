@@ -122,7 +122,7 @@ PM・サブエージェントは git worktree の中で動く。決まりと、�
 - **main の正本は GitHub 側**: main への取り込みは PR で行う。手元の main は写しなので放っておくと遅れ、遅れた main のまま台帳を読むと説明が食い違う。hook（`origin-sync-guard.js`）が会話の始めに本体の main を origin/main に早送りし、worktree を作る前にも fetch する（`settings.json` の `worktree.baseRef: "fresh"` で worktree は origin/main から作られる）
 - **サブエージェントの成果物**: Task の `isolation: "worktree"` で委譲する。worktree は GitHub の main から作られるので、作業に要る変更は先に main へ入れておく。成果はそのブランチを PR にするか、自分のブランチへ `git merge <そのブランチ名>` で取り込む
 - **記録フォルダ**（`.claude-state/`）: 実体は本体の `.claude-state`（またはその先のリポジトリの外のフォルダ）の1か所。各 worktree の `.claude-state` は hook（`state-link-guard.js`）が最初のツールの実行で張る入口（ジャンクション）で、プログラム・Bash は相対パスのまま書ける。Write/Edit ツールだけは入口を通る書き込みを Claude Code が拒否するので、記録フォルダの実体のパスに絶対パスで書く（間違えると `role-boundary-guard.js` が正しいパスを返す）
-- **worktree の消し方**: 自分の worktree は merge したら ExitWorktree（remove）で消す。それ以外は routines の `worktree-prune`（`scripts/worktree-status.js --prune`）が、動きの無い日数で消す。素の `git worktree remove`・`.claude/worktrees` の手での削除・`git clean` は、入口の先の記録フォルダの中身まで消すので `settings.json` で禁止している
+- **worktree の消し方**: 自分の worktree は merge したら ExitWorktree（remove）で消す。それ以外は routines の `worktree-prune`（`scripts/worktree-status.js --prune`）が、動きの無い日数で消す。素の `git worktree remove`・`.claude/worktrees` の手での削除・`git clean` は、消し方や git の版によっては入口の先の記録フォルダの中身まで消えることがあるので `settings.json` で禁止している。`--prune` は、状態を読めない物・既定のブランチの物・git が無視している作り直せないファイル（.env 等）がある物は消さず「手で確認」と出す
 - **漏れの確認**: 会話の始め（引数なしの `orchestrate`）に `node .claude/skills/orchestrate/scripts/worktree-status.js` を流し、未コミット・未 push・開いた PR が残った worktree があれば担当に確かめる
 
 ## モデルティアの参照（13章）

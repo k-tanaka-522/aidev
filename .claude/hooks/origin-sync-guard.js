@@ -16,7 +16,8 @@
  *   ときと、worktree のブランチが遅れているときは、遅れのコミット数を文脈に出す。
  * - PreToolUse（新しく作る EnterWorktree・isolation: "worktree" の Agent）: fetch してから通す。
  *   worktree は settings.json の worktree.baseRef=fresh で origin/main から作られるので、
- *   fetch に失敗したら古い origin/main から作らないよう止める（exit 2）。
+ *   fetch に失敗したら古い origin/main から作らないよう止める（exit 2）。ただし手元に origin/main が
+ *   あれば（オフライン・VPN 等）、古いかもしれないと知らせて通す（作業そのものを止めないため）。
  * 【判定不能時】止めない（exit 0）。origin の無いリポジトリ（作ったばかり）でも止めない。
  *
  * 【契約】
@@ -65,6 +66,14 @@ function onPreToolUse(payload, cwd) {
   try {
     git(['fetch', '-q', 'origin', 'main'], cwd);
   } catch (e) {
+    let hasLocal = false;
+    try { git(['rev-parse', '--verify', '-q', 'refs/remotes/origin/main'], cwd); hasLocal = true; } catch (_e) { /* 無い */ }
+    if (hasLocal) {
+      console.log(JSON.stringify({
+        systemMessage: '[origin-sync-guard] git fetch origin main に失敗した。手元の origin/main（古いかもしれない）から worktree を作る。つながったら取り込み直すこと。',
+      }));
+      return 0;
+    }
     console.error(
       '[origin-sync-guard] git fetch origin main に失敗した。古い origin/main から worktree を作らないよう止めた。' +
         `ネットワークを確かめてやり直すこと。（${String(e.message).split('\n')[0]}）`

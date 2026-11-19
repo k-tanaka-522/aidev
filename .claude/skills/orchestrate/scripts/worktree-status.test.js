@@ -62,6 +62,8 @@ function main() {
     git(['config', 'core.autocrlf', 'true'], proj);
     fs.copyFileSync(path.join(REPO, '.gitignore'), path.join(proj, '.gitignore'));
     fs.writeFileSync(path.join(proj, 'README.md'), 'line1\nline2\n');
+    fs.mkdirSync(path.join(proj, 'docs'));
+    fs.writeFileSync(path.join(proj, 'docs', '台帳.md'), '# 台帳\n');
     git(['add', '-A'], proj);
     git(['commit', '-q', '-m', 'init'], proj, dateEnv(now - 20 * DAY));
     git(['push', '-q', 'origin', 'main'], proj);
@@ -120,6 +122,65 @@ function main() {
     setMtime(path.join(eolOnly, 'README.md'), now - 10 * DAY);
     age(eolOnly, 10);
 
+    // 守る: 日本語の名前のファイルを今日触った・20日前に作った worktree（引用符に化けて更新時刻を見落とさない）
+    const jp = mk('wt-jp');
+    fs.writeFileSync(path.join(jp, 'docs', '台帳.md'), '# 台帳\n今日の追記\n');
+    fs.writeFileSync(path.join(jp, 'docs', '新規.md'), '今日\n');
+    age(jp, 20);
+
+    // 守る: フォルダが無くなった worktree（状態を読めない）。ブランチには push していないコミットがある
+    const lost = mk('wt-lost');
+    fs.writeFileSync(path.join(lost, 'x.txt'), 'x\n');
+    git(['add', 'x.txt'], lost);
+    git(['commit', '-q', '-m', 'unpushed'], lost, dateEnv(now - 20 * DAY));
+    const lostSha = git(['rev-parse', 'HEAD'], lost);
+    fs.unlinkSync(path.join(lost, '.claude-state'));
+    fs.renameSync(lost, path.join(tmp, 'moved-away'));
+
+    // 守る: 既定のブランチ（master）の worktree・空・10日前
+    git(['branch', 'master', initSha], proj);
+    const onMaster = path.join(wtRoot, 'wt-master');
+    git(['worktree', 'add', '-q', onMaster, 'master'], proj);
+    sh(process.execPath, [LINK_GUARD], onMaster);
+    junctions.push(path.join(onMaster, '.claude-state'));
+    age(onMaster, 10);
+
+    // 消すがブランチは残す: push していないコミットがあり20日動きが無い
+    const unpushed = mk('wt-unpushed');
+    fs.writeFileSync(path.join(unpushed, 'y.txt'), 'y\n');
+    git(['add', 'y.txt'], unpushed);
+    git(['commit', '-q', '-m', 'unpushed'], unpushed, dateEnv(now - 20 * DAY));
+    const unpushedSha = git(['rev-parse', 'HEAD'], unpushed);
+    age(unpushed, 20);
+
+    // 守る: git が無視している作り直せないファイル（.env）がある空の worktree・10日前
+    const withEnv = mk('wt-env');
+    fs.writeFileSync(path.join(withEnv, '.env'), 'SECRET=1\n');
+    setMtime(path.join(withEnv, '.env'), now - 10 * DAY);
+    age(withEnv, 10);
+
+    // 消す: 作り直せる無視ファイル（node_modules）だけの空の worktree・10日前
+    const withModules = mk('wt-modules');
+    fs.mkdirSync(path.join(withModules, 'node_modules', 'pkg'), { recursive: true });
+    fs.writeFileSync(path.join(withModules, 'node_modules', 'pkg', 'index.js'), '');
+    age(withModules, 10);
+
+    // 移し替え: 普通のフォルダの .claude-state がある worktree（入口を張る前に書かれた）
+    const plainState = path.join(wtRoot, 'wt-plain-state');
+    git(['worktree', 'add', '-q', '-b', 'wt-plain-state', plainState, initSha], proj);
+    fs.mkdirSync(path.join(plainState, '.claude-state', 'sub'), { recursive: true });
+    fs.writeFileSync(path.join(plainState, '.claude-state', 'progress.md'), 'worktree 側\n');
+    fs.writeFileSync(path.join(plainState, '.claude-state', 'sub', 'note.md'), 'メモ\n');
+    const guardRun = execFileSync(process.execPath, [LINK_GUARD], { cwd: plainState, stdio: ['ignore', 'pipe', 'pipe'] });
+    junctions.push(path.join(plainState, '.claude-state'));
+    check('普通のフォルダの .claude-state は止めずに記録フォルダへ移して入口を張る', () => {
+      assert.ok(guardRun !== null);
+      assert.ok(fs.lstatSync(path.join(plainState, '.claude-state')).isSymbolicLink());
+      assert.strictEqual(fs.readFileSync(path.join(stateReal, 'progress.md'), 'utf8'), '# 進捗\n');
+      assert.strictEqual(fs.readFileSync(path.join(stateReal, 'progress.md.from-wt-plain-state'), 'utf8'), 'worktree 側\n');
+      assert.ok(fs.existsSync(path.join(stateReal, 'sub', 'note.md')));
+    });
+
     const stub = path.join(tmp, 'gh-stub.js');
     fs.writeFileSync(stub, [
       "const a = process.argv.slice(2); const head = a[a.indexOf('--head') + 1];",
@@ -146,6 +207,19 @@ function main() {
     check('改行コードだけの差分は未コミットに数えない（10日で消える）', () => assert.ok(!exists(eolOnly)));
     check('worktree の .claude-state の入口が未コミットに数えられない', () => assert.ok(/wt-empty-new\] 未コミット=0[ （]/.test(out)));
     check('記録フォルダの控えを取った', () => assert.ok(git(['log', '--oneline'], stateReal).includes('控え')));
+    check('日本語の名前のファイルを今日触った worktree が残る', () => assert.ok(exists(jp)));
+    check('フォルダが無い worktree は消さず、ブランチ（未 push のコミット）も残る', () => {
+      assert.ok(branches.includes('wt-lost'));
+      assert.strictEqual(git(['rev-parse', 'wt-lost'], proj), lostSha);
+      assert.ok(/wt-lost\].*状態を読めない/.test(out));
+    });
+    check('既定のブランチ（master）の worktree とブランチが残る', () => { assert.ok(exists(onMaster)); assert.ok(branches.includes('master')); });
+    check('未 push のコミットがある放置の worktree は消すがブランチは残す', () => {
+      assert.ok(!exists(unpushed));
+      assert.strictEqual(git(['rev-parse', 'wt-unpushed'], proj), unpushedSha);
+    });
+    check('git が無視している .env がある worktree は残す', () => assert.ok(exists(withEnv)));
+    check('作り直せる node_modules だけの worktree は消す', () => assert.ok(!exists(withModules)));
 
     // 記録フォルダがリポジトリの中の普通のフォルダ（git 無し）の時、親のリポジトリにコミットしない
     const plain = path.join(tmp, 'plain');

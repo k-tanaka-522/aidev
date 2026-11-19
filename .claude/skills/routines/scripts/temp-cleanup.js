@@ -13,10 +13,12 @@
  *   node temp-cleanup.js --apply    # 実際に消す
  *   node temp-cleanup.js --days=3   # 「古い」の境目を変える（既定は DEFAULT_DAYS）
  *
- * 消すのは %TEMP% 直下で、最終更新が境目より古い物だけ。次は消さない:
+ * 消すのは %TEMP% 直下の物のうち、中のどのファイルも境目より古い物だけ（フォルダ自体の更新時刻は
+ * 中のファイルの更新では変わらないので、中を辿っていちばん新しい時刻で見る）。次は消さない:
  * - claude（動いている Claude Code のセッションの出力・作業用フォルダ）
- * - 境目より新しい物（使っている途中の物）
+ * - 中に境目より新しい物がある物（使っている途中の物）
  * 使用中で消せない物は読み飛ばして、残った件数を出す。
+ * Windows 専用。Linux・macOS の os.tmpdir() は /tmp で、ソケット等の生きている物が置かれるため流さない。
  *
  * 【契約】
  * 対象外（PM の判断）。PC の後片付けで、設計・実装の契約・台帳の分母分子に関わらない。
@@ -51,7 +53,26 @@ function removeEntry(full, isDir) {
   return !fs.existsSync(full);
 }
 
+/** 中を辿って、cutoff より新しい物が1つでもあれば true（見つけた所で止める）。リンクの先は辿らない。 */
+function hasNewer(full, st, cutoff) {
+  if (st.mtimeMs >= cutoff) return true;
+  if (!st.isDirectory() || st.isSymbolicLink()) return false;
+  let names;
+  try { names = fs.readdirSync(full); } catch (_e) { return true; } // 読めない物は使用中とみなして残す
+  for (const name of names) {
+    const child = path.join(full, name);
+    let cst;
+    try { cst = fs.lstatSync(child); } catch (_e) { continue; }
+    if (hasNewer(child, cst, cutoff)) return true;
+  }
+  return false;
+}
+
 function main() {
+  if (process.platform !== 'win32') {
+    console.log(JSON.stringify({ mode: 'skipped', reason: 'Windows 専用（/tmp には生きているソケット等が置かれるため）' }));
+    return;
+  }
   const args = parseArgs(process.argv.slice(2));
   const apply = args.apply === true;
   const days = Number(args.days || DEFAULT_DAYS);
@@ -68,7 +89,7 @@ function main() {
     const full = path.join(root, name);
     let st;
     try { st = fs.lstatSync(full); } catch (_e) { continue; }
-    if (st.mtimeMs >= cutoff) continue;
+    if (hasNewer(full, st, cutoff)) continue;
     targets.push({ name, full, isDir: st.isDirectory() });
   }
 
