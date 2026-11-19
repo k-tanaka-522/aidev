@@ -13,24 +13,27 @@
  * 【動作】exit 2（ブロック）
  *
  * 【許可パス表（7.1.2節、版1.8時点＋M4指摘によるZone3生成主体パスの追加）】
- *   - （未設定＝メインスレッド＝PM）: docs/00_プロジェクト管理・ガバナンス/**（decisions/**を除く）、.claude-state/**
- *   - consultant: docs/00_プロジェクト管理・ガバナンス/decisions/**
- *   - designer: prototypes/**、decisions/**（decide経由の起票）。Zone3では
+ *   - （未設定＝メインスレッド＝PM）: docs/00_プロジェクト管理・ガバナンス/**（decisions/**を除く）、.claude-state/**、
+ *     .claude/CLAUDE.md・agents/**・skills/**（prototypes/.claude/skills 等のディレクトリスコープも含む）・lib/**
+ *   - consultant: docs/00_プロジェクト管理・ガバナンス/decisions/**、.claude-state/research/**
+ *   - designer: prototypes/**、decisions/**（decide経由の起票）、.claude-state/research/**。Zone3では
  *     docs/03_アプリケーション設計/03-05_*（画面設計）・03-08_*（帳票設計）も許可
- *   - app-architect: decisions/**。src_unlockedがfalseの間はdecisions/contracts/**まで、
+ *   - app-architect: decisions/**、.claude-state/research/**。src_unlockedがfalseの間はdecisions/contracts/**まで、
  *     trueになった以降はsrc/**も許可（10.2.1節で`src_unlocked`参照に更新済み）。
  *     Zone3では docs/02_要件定義/**、docs/03_アプリケーション設計/**（03-05・03-08を除く）も許可
- *   - infra-architect: infra/**、decisions/**、Zone3のみdocs/04_インフラ設計/**。
+ *   - infra-architect: infra/**、decisions/**、.claude-state/research/**、Zone3のみdocs/04_インフラ設計/**。
  *     Zone3のみdocs/02_要件定義/02-03_*（非機能要件一覧、App-Architectと共同生成）。
  *     Zone1またはZone3でdocs/06_移行・導入/06-01_*（移行計画書、SREと共同生成）
- *   - coder: src/**, tests/**（Zone2以降。tests/integration・e2e・smoke を除く＝UTのみ）
+ *   - coder: src/**, tests/**（Zone2以降。tests/integration・e2e・smoke を除く＝UTのみ）、README.md（リポジトリ直下）
  *   - qa: tests/**、docs/00_.../00-02〜00-03（台帳）、00-12〜00-14（欠陥・先送り・差分の起票）、Zone3のみdocs/05_テスト/**。
  *     Zone3のみdocs/02_要件定義/02-02_*（機能要件一覧、App-Architectと共同生成）。
- *     Zone1またはZone3でdocs/06_移行・導入/06-03_*（受入テスト結果報告書）
- *   - pmo: docs/00_.../00-12〜00-14、.claude-state/progress*.md（台帳の清書・整理のみ。判断はPM）
+ *     Zone1またはZone3でdocs/06_移行・導入/06-03_*（受入テスト結果報告書）。
+ *     .claude-state/test-plans/**・test-runs/**・features/**（試験の計画・結果・機能ごとの段の記録）
+ *   - pmo: docs/00_.../00-12〜00-14、.claude-state/progress*.md・inventory/**（台帳の清書・整理と棚卸しの報告のみ。判断はPM）
  *   - ux-reviewer: .claude-state/ux-review/**（読むだけの役。書き込みは同梱 save-report.js 経由、Bash は role-bash-guard.js が制限）
  *   - product-validator: .claude-state/validation/**（妥当性確認の記録のみ。起票はPM経由）
- *   - sre: infra/**、.github/workflows/**、Zone3以降docs/07_運用・保守/**、Zone1またはZone3でdocs/06_移行・導入/**
+ *   - sre: infra/**、.github/workflows/**・pull_request_template.md、.gitattributes、.claude-state/test-runs/**、
+ *     Zone3以降docs/07_運用・保守/**、Zone1またはZone3でdocs/06_移行・導入/**
  *
  * 【PMへの報告事項・判断の根拠】
  * 1. 【coderの`src_unlocked`適用】02文書7.1.2節は版1.8でapp-architectの行のみ
@@ -131,6 +134,9 @@ const ROLE_RULES = {
     { pattern: '.claude/CLAUDE.md' },
     { pattern: '.claude/agents/**' },
     { pattern: '.claude/skills/**' },
+    // ディレクトリスコープの Skill（prototypes/.claude/skills/ 等）も同じ Skill 定義なので PM が直せるようにする。
+    // リポジトリの外（../ で始まる・絶対パス。ユーザー全体の ~/.claude/skills 等）には当てない。
+    { predicate: (relPath) => !relPath.startsWith('..') && !path.isAbsolute(relPath) && matchGlob('**/.claude/skills/**', relPath) },
     { pattern: '.claude/lib/**' },
     // Claude Code の自動メモリ（~/.claude/projects/<project>/memory/**）。
     {
@@ -142,15 +148,21 @@ const ROLE_RULES = {
       },
     },
   ],
-  consultant: [{ pattern: DECISIONS_GLOB }],
+  consultant: [
+    { pattern: DECISIONS_GLOB },
+    // 調べ物・意見・指示書の置き場（派生案件で、書けずに PM が書き写すことが重なった）。
+    { pattern: '.claude-state/research/**' },
+  ],
   designer: [
     { pattern: 'prototypes/**' },
     { pattern: DECISIONS_GLOB },
+    { pattern: '.claude-state/research/**' },
     // 03文書3.5節: 03-05（画面設計）・03-08（帳票設計）の生成主体はDesigner（上部コメント#3・#5）。
     { predicate: (relPath, zoneState) => isZone3(zoneState) && DESIGNER_APP_DESIGN_GLOBS.some((g) => matchGlob(g, relPath)) },
   ],
   'app-architect': [
     { pattern: DECISIONS_GLOB },
+    { pattern: '.claude-state/research/**' },
     { pattern: 'src/**', when: (zoneState) => zoneState.src_unlocked === true },
     // 03文書3.4節: 02-01〜02-04（前倒し例外時の02-99含む）はApp-Architectが生成主体（上部コメント#3）。
     { pattern: 'docs/02_要件定義/**', when: isZone3 },
@@ -160,6 +172,7 @@ const ROLE_RULES = {
   'infra-architect': [
     { pattern: 'infra/**' },
     { pattern: DECISIONS_GLOB },
+    { pattern: '.claude-state/research/**' },
     { pattern: 'docs/04_インフラ設計/**', when: isZone3 },
     // 03文書3.4節: 02-03（非機能要件一覧）はApp-Architect/Infra-Architectの共同生成主体（上部コメント#3）。
     { pattern: 'docs/02_要件定義/02-03_*', when: isZone3 },
@@ -175,6 +188,8 @@ const ROLE_RULES = {
       exclude: ['tests/integration/**', 'tests/e2e/**', 'tests/smoke/**'],
       when: (zoneState) => zoneState.src_unlocked === true,
     },
+    // リポジトリ直下の README.md は開発者向けの入口として coder が保守する（どの役にも許可が無く、Bash ですり抜けられていた）。
+    { pattern: 'README.md' },
   ],
   qa: [
     { pattern: 'tests/**' },
@@ -188,6 +203,10 @@ const ROLE_RULES = {
     { pattern: 'docs/02_要件定義/02-02_*', when: isZone3 },
     // 03文書3.8節: 06-03（受入テスト結果報告書）はQAが生成主体、生成ゾーンはGZ2以前=zone1（上部コメント#4）。
     { pattern: 'docs/06_移行・導入/06-03_*', when: isZone1or3 },
+    // 試験の計画・結果・機能ごとの段の記録は qa が自分で置く（qa.md・test-design-guide が置き場として指定している）。
+    { pattern: '.claude-state/test-plans/**' },
+    { pattern: '.claude-state/test-runs/**' },
+    { pattern: '.claude-state/features/**' },
   ],
   // PMO は課題・リスク・変更管理の台帳と progress.md の清書・整理だけを受け持つ（判断は PM）。
   pmo: [
@@ -195,6 +214,8 @@ const ROLE_RULES = {
     { pattern: 'docs/00_プロジェクト管理・ガバナンス/00-13_*' },
     { pattern: 'docs/00_プロジェクト管理・ガバナンス/00-14_*' },
     { pattern: '.claude-state/progress*.md' },
+    // 棚卸しの報告の置き場。
+    { pattern: '.claude-state/inventory/**' },
   ],
   // UX レビュアーはハリボテを読むだけ。書いてよいのはレビューの結果だけ。
   'ux-reviewer': [{ pattern: '.claude-state/ux-review/**' }],
@@ -204,6 +225,11 @@ const ROLE_RULES = {
     { pattern: 'infra/**' },
     // デプロイ用の CI/CD ワークフローは SRE が作成・保守する。
     { pattern: '.github/workflows/**' },
+    // デプロイ後のスモークの結果（sre.md「デプロイ後のスモーク」）。
+    { pattern: '.claude-state/test-runs/**' },
+    // PR テンプレートと、リポジトリ全体の改行・バイナリの扱い（どの役の許可パスにも無かった）。
+    { pattern: '.github/pull_request_template.md' },
+    { pattern: '.gitattributes' },
     { pattern: 'docs/07_運用・保守/**', when: isZone3or4 },
     // 03文書3.8節: 06番（移行・導入）はSREが主要な生成主体、生成ゾーンはGZ2以前=zone1（上部コメント#4）。
     { pattern: 'docs/06_移行・導入/**', when: isZone1or3 },

@@ -1,14 +1,14 @@
 ---
 name: infra-architect
 description: レーンC主担当（インフラ構成、SREと協働）。Zone1/2ではinfra/**の実装、Zone3ではdocs/04_**（インフラ系）のreverse-docを担当する。インフラ構成の決定・実装、インフラ系設計文書の生成、および運用設計（04文書）の基盤・運用管理系エントリの起票が必要なときに使う。
-tools: Read, Write, Edit, Grep, Glob, Skill, TodoWrite
+tools: Read, Write, Edit, Grep, Glob, Skill, TodoWrite, WebSearch, WebFetch
 model: opus
 ---
 
 # infra-architect
 
 > 設計根拠: docs/v2/02_実行基盤アーキテクチャ.md 6.1節・5.3節・7.1.2節、docs/v2/03_成果物体系定義書.md 3.6節・3.8〜3.9節、docs/v2/04_運用設計体系定義書.md 9.1節
-> v2実配置: `.claude/agents/infra-architect.md`（`scripts/cutover-v2.sh` によりM6で本ファイルと入れ替わる）
+> 配置: v2 への切替（M6）は済み。このファイルが実配置である。`scripts/cutover-v2.sh` を再実行しない（案件で育てた定義が雛形で上書きされる）
 
 ## 役割
 
@@ -18,7 +18,7 @@ model: opus
 
 ## Write/Edit の許可パス（02文書7.1.2節、hook強制）
 
-`infra/**`、`decisions/**`。**Zone3のみ**: `docs/04_**`（04-01〜04-10。04-11はSREと共同）、`docs/02_**`（02-03のみ、App-Architectと共同）。**随時**: `docs/00_プロジェクト管理・ガバナンス/00-04_運用項目一覧.md`（基盤・運用管理エントリのみ、App-Architectと共同）。**`zone`が`1`のときのみ**: `docs/06_移行・導入/06-01_移行計画書*.md`（SREと共同）。**`zone`が`4`のときのみ**: `docs/07_運用・保守/07-50_*`（SREと共同）。
+`infra/**`、`decisions/**`、`.claude-state/research/**`（調べ物・意見の置き場）。**Zone3のみ**: `docs/04_**`（04-01〜04-10。04-11はSREと共同）、`docs/02_**`（02-03のみ、App-Architectと共同）。**随時**: `docs/00_プロジェクト管理・ガバナンス/00-04_運用項目一覧.md`（基盤・運用管理エントリのみ、App-Architectと共同）。**`zone`が`1`のときのみ**: `docs/06_移行・導入/06-01_移行計画書*.md`（SREと共同）。**`zone`が`4`のときのみ**: `docs/07_運用・保守/07-50_*`（SREと共同）。
 
 `docs/04_**`・`docs/02_**` への書込は `zone` が3以上であることも条件になる。06-01・07-50は上記のとおりゾーン限定条件が異なる点に注意する（02文書7.1.2節が版2.2で確定）。
 
