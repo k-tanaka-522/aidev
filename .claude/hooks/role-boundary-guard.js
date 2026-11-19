@@ -21,7 +21,7 @@
  *   - app-architect: decisions/**、.claude-state/research/**。src_unlockedがfalseの間はdecisions/contracts/**まで、
  *     trueになった以降はsrc/**も許可（10.2.1節で`src_unlocked`参照に更新済み）。
  *     Zone3では docs/02_要件定義/**、docs/03_アプリケーション設計/**（03-05・03-08を除く）も許可
- *   - infra-architect: infra/**、decisions/**、Zone3のみdocs/04_インフラ設計/**。
+ *   - infra-architect: infra/**、decisions/**、.claude-state/research/**、Zone3のみdocs/04_インフラ設計/**。
  *     Zone3のみdocs/02_要件定義/02-03_*（非機能要件一覧、App-Architectと共同生成）。
  *     Zone1またはZone3でdocs/06_移行・導入/06-01_*（移行計画書、SREと共同生成）
  *   - coder: src/**, tests/**（Zone2以降。tests/integration・e2e・smoke を除く＝UTのみ）、README.md（リポジトリ直下）
@@ -135,7 +135,8 @@ const ROLE_RULES = {
     { pattern: '.claude/agents/**' },
     { pattern: '.claude/skills/**' },
     // ディレクトリスコープの Skill（prototypes/.claude/skills/ 等）も同じ Skill 定義なので PM が直せるようにする。
-    { pattern: '**/.claude/skills/**' },
+    // リポジトリの外（../ で始まる・絶対パス。ユーザー全体の ~/.claude/skills 等）には当てない。
+    { predicate: (relPath) => !relPath.startsWith('..') && !path.isAbsolute(relPath) && matchGlob('**/.claude/skills/**', relPath) },
     { pattern: '.claude/lib/**' },
     // Claude Code の自動メモリ（~/.claude/projects/<project>/memory/**）。
     {
@@ -171,6 +172,7 @@ const ROLE_RULES = {
   'infra-architect': [
     { pattern: 'infra/**' },
     { pattern: DECISIONS_GLOB },
+    { pattern: '.claude-state/research/**' },
     { pattern: 'docs/04_インフラ設計/**', when: isZone3 },
     // 03文書3.4節: 02-03（非機能要件一覧）はApp-Architect/Infra-Architectの共同生成主体（上部コメント#3）。
     { pattern: 'docs/02_要件定義/02-03_*', when: isZone3 },
