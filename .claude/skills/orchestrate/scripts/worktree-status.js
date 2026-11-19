@@ -284,6 +284,11 @@ function main() {
       console.log(abandoned ? `  → --prune で消す候補（${ABANDONED_IDLE_DAYS}日動きが無いので中身ごと）` : '  → --prune で消す候補');
       continue;
     }
+    // detached の worktree はブランチで守れないので、origin に無いコミットがあれば消さない
+    if (abandoned && !hasBranch && ahead !== '0') {
+      console.log('  → detached で origin/main に無いコミットがあるので残す（手で確認）');
+      continue;
+    }
     // ブランチは、そのコミットが origin/main（merge 済み・空）か origin のどこかに入っている時だけ消す
     const safeBranch = hasBranch && (!abandoned || tipOnOrigin(wt.branch, mainRoot));
     removeWorktree(wt, p, mainRoot, {

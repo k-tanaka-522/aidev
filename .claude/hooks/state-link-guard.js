@@ -38,7 +38,10 @@ function mergeMove(src, dst, suffix) {
       fs.rmdirSync(from);
       continue;
     }
-    if (fs.existsSync(to)) to = `${to}.from-${suffix}`;
+    if (fs.existsSync(to)) {
+      to = `${to}.from-${suffix}`;
+      for (let i = 2; fs.existsSync(to); i += 1) to = `${path.join(dst, name)}.from-${suffix}-${i}`;
+    }
     try {
       fs.renameSync(from, to);
     } catch (_e) {
@@ -63,8 +66,19 @@ function main() {
   try {
     fs.mkdirSync(target, { recursive: true });
     if (st) {
-      mergeMove(link, target, path.basename(cwd));
-      fs.rmdirSync(link);
+      // 同じメッセージの複数のツールで hook が同時に走ることがある。先に自分だけの名前へ1回で移し、
+      // 負けた方は ENOENT で何もしない（入口を張った後の .claude-state を「移す元」と取り違えて、
+      // 記録フォルダの中身を自分自身と衝突させて改名しないため）
+      if (fs.realpathSync(link) === fs.realpathSync(target)) process.exit(0);
+      const work = `${link}.migrating-${process.pid}`;
+      try {
+        fs.renameSync(link, work);
+      } catch (e) {
+        if (e.code === 'ENOENT' || e.code === 'EPERM' || e.code === 'EBUSY') process.exit(0);
+        throw e;
+      }
+      mergeMove(work, target, path.basename(cwd));
+      fs.rmdirSync(work);
       console.error(`[state-link-guard] この worktree の普通のフォルダの .claude-state の中身を記録フォルダ ${target} へ移した。`);
     }
     fs.symlinkSync(target, link, 'junction');

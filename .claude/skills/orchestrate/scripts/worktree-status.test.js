@@ -165,6 +165,36 @@ function main() {
     fs.writeFileSync(path.join(withModules, 'node_modules', 'pkg', 'index.js'), '');
     age(withModules, 10);
 
+    // 守る: detached で origin に無いコミットがあり20日動きが無い（ブランチで守れない）
+    const detached = path.join(wtRoot, 'wt-detached');
+    git(['worktree', 'add', '-q', '--detach', detached, initSha], proj);
+    sh(process.execPath, [LINK_GUARD], detached);
+    junctions.push(path.join(detached, '.claude-state'));
+    fs.writeFileSync(path.join(detached, 'z.txt'), 'z\n');
+    git(['add', 'z.txt'], detached);
+    git(['commit', '-q', '-m', 'detached work'], detached, dateEnv(now - 20 * DAY));
+    age(detached, 20);
+
+    // 同時に走る hook: 普通のフォルダの .claude-state を2つの hook が同時に移しても、記録フォルダの物を改名しない
+    const racy = path.join(wtRoot, 'wt-racy');
+    git(['worktree', 'add', '-q', '-b', 'wt-racy', racy, initSha], proj);
+    fs.mkdirSync(path.join(racy, '.claude-state'));
+    fs.writeFileSync(path.join(racy, '.claude-state', 'racy.md'), 'r\n');
+    const racer = [
+      "const { spawn } = require('child_process');",
+      `const ps = [0, 1, 2, 3].map(() => spawn(process.execPath, [${JSON.stringify(LINK_GUARD)}], { cwd: ${JSON.stringify(racy)}, stdio: 'ignore' }));`,
+      "let n = 0; ps.forEach((p) => p.on('exit', () => { n += 1; }));",
+      'const t = setInterval(() => { if (n === ps.length) clearInterval(t); }, 20);',
+    ].join('\n');
+    sh(process.execPath, ['-e', racer], tmp);
+    junctions.push(path.join(racy, '.claude-state'));
+    check('同時に走った hook が記録フォルダの物を改名しない', () => {
+      assert.ok(fs.lstatSync(path.join(racy, '.claude-state')).isSymbolicLink());
+      assert.ok(fs.existsSync(path.join(stateReal, 'progress.md')));
+      assert.ok(fs.existsSync(path.join(stateReal, 'racy.md')));
+      assert.deepStrictEqual(fs.readdirSync(stateReal).filter((f) => f.includes('.from-wt-racy')), []);
+    });
+
     // 移し替え: 普通のフォルダの .claude-state がある worktree（入口を張る前に書かれた）
     const plainState = path.join(wtRoot, 'wt-plain-state');
     git(['worktree', 'add', '-q', '-b', 'wt-plain-state', plainState, initSha], proj);
@@ -219,6 +249,7 @@ function main() {
       assert.strictEqual(git(['rev-parse', 'wt-unpushed'], proj), unpushedSha);
     });
     check('git が無視している .env がある worktree は残す', () => assert.ok(exists(withEnv)));
+    check('detached で origin に無いコミットがある放置の worktree は残す', () => assert.ok(exists(detached)));
     check('作り直せる node_modules だけの worktree は消す', () => assert.ok(!exists(withModules)));
 
     // 記録フォルダがリポジトリの中の普通のフォルダ（git 無し）の時、親のリポジトリにコミットしない
