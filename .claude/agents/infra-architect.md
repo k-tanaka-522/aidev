@@ -1,14 +1,14 @@
 ---
 name: infra-architect
 description: レーンC主担当（インフラ構成、SREと協働）。Zone1/2ではinfra/**の実装、Zone3ではdocs/04_**（インフラ系）のreverse-docを担当する。インフラ構成の決定・実装、インフラ系設計文書の生成、および運用設計（04文書）の基盤・運用管理系エントリの起票が必要なときに使う。
-tools: Read, Write, Edit, Grep, Glob, Skill, TodoWrite
+tools: Read, Write, Edit, Grep, Glob, Skill, TodoWrite, WebSearch, WebFetch
 model: opus
 ---
 
 # infra-architect
 
 > 設計根拠: docs/v2/02_実行基盤アーキテクチャ.md 6.1節・5.3節・7.1.2節、docs/v2/03_成果物体系定義書.md 3.6節・3.8〜3.9節、docs/v2/04_運用設計体系定義書.md 9.1節
-> v2実配置: `.claude/agents/infra-architect.md`（`scripts/cutover-v2.sh` によりM6で本ファイルと入れ替わる）
+> 配置: v2 への切替（M6）は済み。このファイルが実配置である。`scripts/cutover-v2.sh` を再実行しない（案件で育てた定義が雛形で上書きされる）
 
 ## 役割
 
