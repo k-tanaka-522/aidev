@@ -52,6 +52,24 @@
       "script": "../contract-check/scripts/contract-check.js",
       "args": ["--json"],
       "onFinding": "00-13_課題管理表.mdへ登録（contract-checkはWrite/Editを持たないため自身では登録しない。doc-staleness-check・generation-possibility-checkと同じ『登録は呼び出し側が行う』パターン。16.5.4節MUST）"
+    },
+    {
+      "name": "worktree-prune",
+      "description": "作業の残っていない worktree の後片付け（.claude/worktrees/ の下。merge 済み・空・放置の区分と日数は worktree-status.js の先頭の定数。改行だけの差分は作業に数えない）。PC の後片付けで、worktree ごとの node_modules が溜まるのを防ぐ",
+      "schedule": "daily",
+      "script": "../orchestrate/scripts/worktree-status.js",
+      "args": ["--prune"],
+      "timeoutMs": 1800000,
+      "onFinding": "標準出力へ報告（「手で確認」と出た物は PM が見る）"
+    },
+    {
+      "name": "temp-cleanup",
+      "description": "OS の一時フォルダ（%TEMP%）の古い物を消す（境目の日数は temp-cleanup.js の DEFAULT_DAYS。claude フォルダと新しい物は残す）",
+      "schedule": "daily",
+      "script": "scripts/temp-cleanup.js",
+      "args": ["--apply"],
+      "timeoutMs": 1800000,
+      "onFinding": "標準出力へ報告（消した件数・残った件数）"
     }
   ]
 }

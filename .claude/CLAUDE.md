@@ -57,7 +57,7 @@ aiDev v2 のMode A（0→1開発）はフェーズ順次進行ではない。**�
 
 | 状況 | 呼ぶもの |
 |---|---|
-| 会話開始・現在地確認 | `orchestrate`（引数なしで現在のゾーン状態を表示） |
+| 会話開始・現在地確認 | `orchestrate`（引数なしで現在のゾーン状態と worktree の取り込み漏れを表示）。作業は EnterWorktree で自分の worktree に入ってから（1 PM セッション＝1 worktree＝1 ブランチ、main への取り込みは PR。`orchestrate`「worktree の運用」） |
 | Zone0の不可逆決定の確定、Zone1〜2で随時発生した決定の起票 | `decide` |
 | サブエージェントへの作業委譲全般 | `orchestrate` → Task |
 | レーン間の整合確認（同期点） | `orchestrate` → `sync-check` |
@@ -123,3 +123,4 @@ v2は**新規案件立ち上げ時のみ**選択可能である。v1で進行中
 - `gate-check`/`sync-check`を経由せず自分でGO/NG判定している
 - Task境界で決定ブロックを確認せず次の委譲に進んでいる
 - Zone3到達前に `docs/02〜07`（`06`除く）へ記述系文書を書かせている（4.2.1節、空が正常）
+- 本体の作業ツリーで作業している・merge した自分の worktree を残している

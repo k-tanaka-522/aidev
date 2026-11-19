@@ -61,6 +61,7 @@
 const fs = require('fs');
 const path = require('path');
 const { readZoneState, zoneStatePath, VALID_ZONE_VALUES } = require('../lib/zone-state');
+const { relInMainState } = require('../lib/repo-root');
 const {
   GATE_BOUNDARIES,
   latestGateJudgement,
@@ -132,7 +133,8 @@ function main() {
   }
   const absTarget = path.isAbsolute(filePath) ? filePath : path.resolve(cwd, filePath);
   const relPath = path.relative(cwd, absTarget).replace(/\\/g, '/');
-  if (relPath !== '.claude-state/current-zone.json') {
+  // worktree から記録フォルダの実体（本体の .claude-state の先）へ絶対パスで書かれても素通りさせない
+  if (relPath !== '.claude-state/current-zone.json' && relInMainState(absTarget, cwd) !== 'current-zone.json') {
     process.exit(0);
   }
 

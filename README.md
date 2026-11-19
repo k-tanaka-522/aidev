@@ -185,6 +185,38 @@ PM（プロジェクトマネージャー）が `orchestrate` Skill 経由で7�
 - Mode A（0→1開発）: ゾーン/レーン型（本README上部参照）
 - Mode B（稼働後）: チケット駆動アジャイル（Zone4、`ticket-triage`→`impact-analysis`）
 
+## worktree と後片付け
+
+PM・サブエージェントは git worktree（`.claude/worktrees/<名前>`）の中で動く。決まりの中身と理由は `.claude/skills/orchestrate/SKILL.md`「worktree の運用」。
+
+- 1つの PM セッション＝1 worktree＝1 ブランチ。main の正本は GitHub 側で、取り込みは PR
+- `.claude-state/`（記録フォルダ）は本体に1か所。各 worktree の `.claude-state` は hook が張る入口（ジャンクション）
+- worktree はエージェントに頼むたびに1個でき、試験を流した物は node_modules を持つ。放っておくとディスクを食うので、routines の `worktree-prune`（worktree）と `temp-cleanup`（%TEMP%）で消す
+
+### 記録フォルダをリポジトリの外に置く（任意）
+
+`git clean -x` や本体の作り直しでも記録が残るよう、本体の `.claude-state` をリポジトリの外のフォルダへのジャンクションにできる。控え（記録フォルダの中のローカルの git）を取っておくと、消えた・上書きした記録を `git log` から戻せる（`worktree-status.js` が流れるたびにコミットする）。
+
+```bat
+rem 本体の作業ツリーで（.claude-state の中身を先に退避してから）
+mkdir ..\<プロジェクト名>-state
+mklink /J .claude-state ..\<プロジェクト名>-state
+git -C ..\<プロジェクト名>-state init
+```
+
+### 定期の後片付け（PC 側）
+
+スケジューラは PC 側の仕組みなので、このリポジトリには入れない。Windows ならタスク スケジューラから、毎日1回 cmd を呼ぶ（例: `%USERPROFILE%\Documents\claude\_cleanup\weekly-cleanup.cmd`）。
+
+**新しいプロジェクトを作ったら、この cmd にそのプロジェクトの `worktree-prune` を足す**（`temp-cleanup` は PC に1つあればよいので足さない）:
+
+```bat
+cd /d <新しいプロジェクトのパス>
+"C:\Program Files\nodejs\node.exe" .claude\skills\routines\scripts\run-routine.js --name=worktree-prune >> <ログのパス> 2>&1
+```
+
+消す前の一覧だけ見るには `node .claude/skills/orchestrate/scripts/worktree-status.js`（`--prune` を付けない）。
+
 ## トラブルシューティング
 
 ### AIが設定を読み込まない / 期待通りに動作しない

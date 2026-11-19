@@ -98,6 +98,7 @@ const os = require('os');
 const { matchGlob } = require('../lib/path-glob');
 const { readZoneState } = require('../lib/zone-state');
 const { ledger0002Path, ledger0003Path } = require('../lib/ledger-paths');
+const { relInMainState, stateRealDir, isLinkedWorktree } = require('../lib/repo-root');
 
 const KNOWN_ROLES = ['consultant', 'designer', 'app-architect', 'infra-architect', 'coder', 'qa', 'sre', 'pmo', 'ux-reviewer', 'product-validator'];
 
@@ -269,7 +270,22 @@ function main() {
     process.exit(0);
   }
   const absTarget = path.isAbsolute(filePath) ? filePath : path.resolve(cwd, filePath);
-  const relPath = path.relative(cwd, absTarget).replace(/\\/g, '/');
+  let relPath = path.relative(cwd, absTarget).replace(/\\/g, '/');
+  // worktree の中の .claude-state は記録フォルダへの入口（state-link-guard.js が張るジャンクション）。
+  // プログラム・Bash は相対パスで書けるが、Write/Edit がジャンクションを通ると Claude Code が作業ツリーの外への
+  // 書き込みとして拒否するので、記録フォルダの実体のパスへ案内する。
+  const localState = path.resolve(cwd, '.claude-state');
+  const relToLocal = path.relative(localState, absTarget).replace(/\\/g, '/');
+  if (isLinkedWorktree(cwd) && relToLocal && !relToLocal.startsWith('..') && !path.isAbsolute(relToLocal)) {
+    console.error(
+      '[role-boundary-guard] worktree の中では Write/Edit で .claude-state/ に書けません（Claude Code が拒否します）。' +
+        `記録フォルダの実体 ${path.join(stateRealDir(cwd), relToLocal)} に絶対パスで書いてください。`
+    );
+    process.exit(2);
+  }
+  // 記録フォルダ（本体の .claude-state・その実体）の下への書き込みは、絶対パスでも「.claude-state/…」として同じ規則で判定する。
+  const inMainState = relInMainState(absTarget, cwd);
+  if (inMainState) relPath = '.claude-state/' + inMainState;
 
   const agentType = payload.agent_type;
   const agentId = payload.agent_id;

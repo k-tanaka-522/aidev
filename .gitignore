@@ -3,6 +3,9 @@
 # 状態ファイル（セッション情報）
 .claude-state/
 
+# Claude Code の worktree（1 PM セッション＝1 worktree。後片付けは routines の worktree-prune）
+.claude/worktrees/
+
 # Claude Code 個人設定
 .claude/settings.local.json
 
