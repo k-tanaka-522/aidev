@@ -1,6 +1,6 @@
 ---
 name: routines
-description: 02文書12章が定めるRoutines(依存更新チェック/IaCドリフト検知/文書陳腐化チェック/文書間リンク検査/生成可能性検査/成果物カタログ全件走査)のスケジュール定義と手動実行ランナー。この環境にスケジューラが無くても個々のRoutineを手動実行できる。
+description: 02文書12章が定めるRoutines(依存更新チェック/IaCドリフト検知/文書陳腐化チェック/文書間リンク検査/生成可能性検査/成果物カタログ全件走査)と、PC の後片付け(worktree と %TEMP%)のスケジュール定義と手動実行ランナー。この環境にスケジューラが無くても個々のRoutineを手動実行できる。
 argument-hint: "[--list | --name=<routine名> | --all]"
 ---
 
@@ -24,6 +24,10 @@ argument-hint: "[--list | --name=<routine名> | --all]"
 | `generation-possibility-check` | 生成可能性検査（`reverse-doc`差分検査モード、03文書5.4節） | 四半期 | `scripts/doc-generation-drift-check.js`（`doc-staleness-check`とスクリプト共用。9.1.1節・10.3節が確立した「抽出基盤は共有してよい」方針を踏襲） |
 | `doc-link-check` | 文書間リンク検査（03文書8.2節） | 四半期 | `../doc-link-check/scripts/check-links.js`（M4実装済みSkillをそのまま呼ぶ） |
 | `artifact-emptiness-fullscan` | IPA成果物カタログ未生成項目の定期全件走査（`artifact-emptiness-guard.js`のPostToolUse差分検査を補助、02文書7.3節#8、MAY） | 週次 | `scripts/artifact-emptiness-fullscan.js` |
+| `worktree-prune` | 作業の残っていない worktree（`.claude/worktrees/` の下）の後片付け。merge 済み・空・放置の区分ごとに、動きの無い日数を超えた物を消す（日数は `worktree-status.js` の先頭の定数）。改行だけの差分は作業に数えない。消す前の一覧は `--prune` を外して流す | 毎日 | `../orchestrate/scripts/worktree-status.js --prune` |
+| `temp-cleanup` | OS の一時フォルダ（%TEMP%）の古い物を消す（`claude` と新しい物は残す。境目は `temp-cleanup.js` の `DEFAULT_DAYS`）。消す前の一覧は `--apply` を外して流す | 毎日 | `scripts/temp-cleanup.js --apply` |
+
+`worktree-prune` と `temp-cleanup` は PC の後片付けで、設計・実装の成果物には触らない。エージェントに1回頼むたびに worktree が1個でき、試験を流した物は node_modules を持つため、放っておくと数日で数GB〜十数GB溜まる。定期の起動は PC 側のスケジューラ（Windows のタスク スケジューラ等）から `run-routine.js --name=worktree-prune` を呼ぶ（README「worktree と後片付け」）。後片付けは数十分かかることがあるので、`routines.json` の `timeoutMs` で待ち時間を延ばしている。`worktree-status.js` の動きは同じフォルダの `worktree-status.test.js`（使い捨てのリポジトリで試す）で確かめる。
 
 ## スケジューラが無い場合の運用（既定）
 

@@ -51,7 +51,8 @@ function runOne(routine, cwd) {
   const scriptPath = path.resolve(__dirname, '..', routine.script);
   const args = routine.args || [];
   try {
-    const out = execFileSync('node', [scriptPath, ...args], { cwd, timeout: 30000 }).toString('utf-8');
+    // 後片付け（worktree-prune・temp-cleanup）は数十分かかることがあるので、routines.json の timeoutMs で延ばせるようにする
+    const out = execFileSync('node', [scriptPath, ...args], { cwd, timeout: routine.timeoutMs || 30000 }).toString('utf-8');
     let parsed;
     try {
       parsed = JSON.parse(out);
