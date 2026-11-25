@@ -33,12 +33,14 @@ argument-hint: "[zone0 | HB-ID | 決定内容の要約]"
 
 ```
 .claude/skills/decide/scripts/
-├── new-decision.js      # 通常の決定ログ1件を起票する（DL-0001以降を自動採番）
-└── process-option.js    # プロセス・オプション選択専用（DL-0000を起票し、
-                          #  .claude-state/process-option.json を同一操作内で同期）
+├── new-decision.js      # 通常の決定ログ1件を起票する（DL-0000 を除く連番で自動採番）
+├── process-option.js    # プロセス・オプション選択専用（DL-0000を起票し、
+│                         #  .claude-state/process-option.json を同一操作内で同期）
+├── mark-superseded.js   # 起票済みの DL どうしで、古い DL に置き換えの印を付ける
+└── stale-scan.js        # 印の付いていない置き換えと、覆った DL を指す毎回読む資料の候補を出す（読むだけ）
 ```
 
-両スクリプトの引数仕様は各ファイル冒頭のコメントに詳細を記載しているため、実行前に
+各スクリプトの引数仕様は各ファイル冒頭のコメントに詳細を記載しているため、実行前に
 `.claude/skills/decide/scripts/new-decision.js` を読むこと。要点のみ以下に示す。
 
 ### new-decision.js の呼び出し例
@@ -67,6 +69,22 @@ node .claude/skills/decide/scripts/new-decision.js \
 - 指定が無い場合は自動の近接一致（生成した決定ログ本文にwarningのファイル名basenameが
   含まれるか、またはwarningの`agent_type`が今回の`--roles`に含まれるか、かつ検知から
   24時間以内）で消し込みを試みる。一致しなかった警告は`decision-check`実行時に一覧化される。
+- `--supersedes` は状態が「確定」の決定でだけ使える（仮の決定で古い DL に印を付けると、取り下げたときに外せないため）。
+
+### 古い決定を覆すとき（由来: salon-booking-platform）
+
+新しいセッションは前の会話を覚えておらず、毎回読む資料（CLAUDE.md・エージェント定義・Skill・メモの目次）と
+決定ログから状況をつかむ。古い DL に印が無いと、古い方を今の決定と思い込む（salon-booking-platform で、
+AI の呼び先を替えた後も CLAUDE.md が旧い呼び先のままで、別セッションが思い込んだ）。
+
+- 決定が古い DL を覆す・改めるなら、`supersedes`（JSON の配列か `--supersedes=DL-xxxx,DL-yyyy(3)`）で渡す。
+  古い DL の `状態` が `覆った`（項の番号付きなら `一部覆った`）になり、`置き換え先` に新しい DL が入る。
+  本文は当時の記録として変えない。起票済みの DL どうしなら `mark-superseded.js --old=DL-xxxx --by=DL-zzzz`
+- 起票したら `node .claude/skills/decide/scripts/stale-scan.js --since=<起票した DL の1つ前>` を流し、
+  覆った DL を指している毎回読む資料を確かめる。名指しされていなくても、覆った値・呼び名が書かれていないかは
+  目で見る（DL を引かずに書かれた値はスキャンに掛からない）
+- 毎回読む資料を直すのは PM。PM 以外が起票したときは、直すべき箇所を報告に書いて PM に返す
+- 毎回読む資料の中で DL 番号を例示に使わない（`DL-xxxx` と書く）。実在の番号と重なると stale-scan の偽陽性になる
 
 ### process-option.js の呼び出し例（8.7節）
 
@@ -93,7 +111,7 @@ node .claude/skills/decide/scripts/process-option.js \
 ## ファイル形式とID体系（8.1節）
 
 - 配置: `docs/00_プロジェクト管理・ガバナンス/decisions/DL-{4桁連番}_{タイトルkebab}.md`
-- ID体系: `DL-0001`通し番号。画面データ抽出等の中間データ（`mockup-extract`出力）も同一体系のサブタイプとして採番する（例: `DL-0032_screen-data-upload.md`。M2で`mockup-extract`実装時に対応）
+- ID体系: `DL-{4桁}`の通し番号。画面データ抽出等の中間データ（`mockup-extract`出力）も同一体系のサブタイプとして採番する（例: `DL-xxxx_screen-data-upload.md`。M2で`mockup-extract`実装時に対応）
 - `SCR-ID`・`HB-ID`・`API-ID`・`NFR-ID`・`RPT-ID`・`BAT-ID`は別体系であり混同しない
 - `slug`（ファイル名のkebab部分）は英数字ハイフンのみの短い識別子を別途指定する（MUST）。タイトルの自動翻字は行わない（日本語タイトルをASCIIスラグへ機械変換すると可読性の低い文字列になるため、著者が短い英語スラグを明示する運用とした。実装上の判断）
 
@@ -104,7 +122,8 @@ node .claude/skills/decide/scripts/process-option.js \
 | `決定ID` | 決定ID |
 | `決定内容` | 決定内容 |
 | `不可逆度` | 不可逆度（高/中/低。01文書4.7.2節が正本） |
-| `状態` | 状態（確定/仮/覆った） |
+| `状態` | 状態（確定/仮/覆った/一部覆った） |
+| `置き換え先` | 覆った・一部覆った DL だけに付く。置き換えた新しい DL（`supersedes` か `mark-superseded.js` が書く） |
 | `決定日時` | 決定日時 |
 | `決定者` | （01文書4.7.2節の「決定者」相当） |
 | `決定に関与したロール` | 決定に関与したロール |

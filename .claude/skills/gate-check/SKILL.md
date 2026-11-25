@@ -163,7 +163,7 @@ PMへ報告する）。HOLD中は再判定要求そのものを`exit 2`でブロ
 **HOLD解除（10.2.2節の手順、本タスクで実装）**:
 
 ```bash
-node .claude/skills/gate-check/scripts/gate-check.js --reset-hold=GZ2 --decision=DL-0050
+node .claude/skills/gate-check/scripts/gate-check.js --reset-hold=GZ2 --decision=DL-xxxx
 ```
 
 `RESET`エントリを`GZ{0,2,3}-99_ゲート記録.md`へ追記し、差し戻し累積回数を`0`にリセットする。
