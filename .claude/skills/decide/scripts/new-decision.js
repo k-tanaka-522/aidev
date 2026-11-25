@@ -47,6 +47,8 @@
  *   opsHearing ({escalation, businessImpactCriteria, externalReporting,
  *                prodChangeApprover, disposalTrigger}. 条件B相当決定時、04文書6.3節の5項目)
  *   resolve (配列。明示的に消し込む decision-warnings.json の警告ID)
+ *   supersedes (配列。この決定が置き換える古い DL。"DL-0697"（全部）／"DL-0154(3)"（その項だけ）。
+ *               古い DL の 状態 を 覆った／一部覆った にし、置き換え先 に新しい DL を書く)
  *
  * 【契約】
  * 対象外と判定した（coderの一次判定、PMへ報告。02文書16.3.3節の対象拡張に伴う
@@ -62,7 +64,7 @@
 const fs = require('fs');
 const path = require('path');
 const { stringifyFrontmatter } = require('../../../lib/frontmatter');
-const { decisionsDir, nextDecisionId } = require('../../../lib/decisions');
+const { decisionsDir, nextDecisionId, parseSupersedeRef, markSuperseded } = require('../../../lib/decisions');
 const { readWarnings, writeWarnings } = require('../../../lib/warnings-store');
 
 function parseArgs(argv) {
@@ -91,6 +93,7 @@ function loadInput(args) {
     json.lanes = toArray(json.lanes);
     json.relatedHb = toArray(json.relatedHb);
     json.resolve = toArray(json.resolve);
+    json.supersedes = toArray(json.supersedes);
     return json;
   }
   return {
@@ -114,6 +117,7 @@ function loadInput(args) {
     opsCode: args['ops-code'],
     opsHearing: args['ops-hearing'] ? JSON.parse(args['ops-hearing']) : undefined,
     resolve: toArray(args.resolve),
+    supersedes: toArray(args.supersedes),
   };
 }
 
@@ -176,6 +180,8 @@ function slugify(raw) {
  *      本文に含まれ、かつ検知から24時間以内であれば一致とみなす
  *    - task_boundary_missing / task_boundary_unrecorded: 警告のagent_typeが
  *      今回の「決定に関与したロール」に含まれ、かつ検知から24時間以内であれば一致とみなす
+ *      （salon-booking-platform は無関係な委譲の警告まで消えるとしてこれを外したが、aiDev では
+ *      hook が decide より先に動き正しい手順でも unrecorded が出るうえ、警告IDを PM に渡す経路が無いため残す）
  * この近接一致は完全ではない（02文書15章が要検証とする領域と同種の限界を持つ）。
  * 一致しなかった警告は decision-check 実行時に一覧化され、手動解消を促す（8.2.5節）。
  */
@@ -232,6 +238,24 @@ function main() {
   }
 
   const cwd = process.cwd();
+  // 番号を取る前に、読めない置き換えの指定と見つからない置き換え元で落とす（番号の欠けを作らない）
+  // 仮の決定では古い DL に印を付けない（取り下げたときに印を外す手段が無いため。確定後に mark-superseded.js）
+  if ((input.supersedes || []).length && (input.status || '確定') !== '確定') {
+    console.error('[new-decision] supersedes は状態が「確定」の決定でだけ使う。仮なら確定後に mark-superseded.js で印を付けること');
+    process.exit(1);
+  }
+  for (const ref of input.supersedes || []) {
+    try {
+      const { id: oldId } = parseSupersedeRef(ref);
+      if (!fs.existsSync(decisionsDir(cwd)) || !fs.readdirSync(decisionsDir(cwd)).some((f) => f.startsWith(`${oldId}_`))) {
+        throw new Error(`置き換え元の決定ログが見つかりません: ${oldId}`);
+      }
+    } catch (e) {
+      console.error(`[new-decision] ${e.message}`);
+      process.exit(1);
+    }
+  }
+
   const id = 'DL-' + nextDecisionId(cwd);
   input.decisionId = id;
 
@@ -267,6 +291,7 @@ function main() {
   fs.writeFileSync(filePath, fileContent, 'utf-8');
 
   const resolvedWarnings = resolveWarnings(cwd, input, fileContent, id);
+  const superseded = (input.supersedes || []).map((ref) => markSuperseded(cwd, ref, id));
 
   console.log(
     JSON.stringify(
@@ -274,6 +299,7 @@ function main() {
         file: path.relative(cwd, filePath),
         id,
         resolvedWarnings,
+        superseded,
       },
       null,
       2

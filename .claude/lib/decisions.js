@@ -27,7 +27,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { parseFrontmatter, stringifyFrontmatter } = require('./frontmatter');
+const { parseFrontmatter, stringifyFrontmatter, splitList } = require('./frontmatter');
 
 const DECISIONS_DIR_SEGMENTS = ['docs', '00_プロジェクト管理・ガバナンス', 'decisions'];
 
@@ -129,10 +129,44 @@ function createDecisionFile(cwd, { category, title, slug, content, rationale, ir
   return { id, file: path.relative(cwd, filePath) };
 }
 
+/**
+ * 置き換えの指定（"DL-0697" または一部だけの "DL-0154(3)"）を分解する。
+ * 番号付きの項だけを改める指定は「一部覆った」として扱う。
+ */
+function parseSupersedeRef(ref) {
+  // 日本語の文で書かれがちな全角かっこ・全角数字も受け付け、半角に揃える
+  const norm = String(ref).replace(/（/g, '(').replace(/）/g, ')').replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+  const m = /^\s*(DL-\d{4})(\(\d+\))?\s*$/.exec(norm);
+  if (!m) throw new Error(`置き換えの指定が読めません: ${ref}（例: DL-0697 / DL-0154(3)）`);
+  return { id: m[1], item: m[2] || '', partial: Boolean(m[2]) };
+}
+
+/**
+ * 古い決定ログに「置き換えられた」印を付ける（由来: salon-booking-platform。毎回読む資料が
+ * 古い DL を信じて新しいセッションが誤解した件の再発防止）。frontmatter の `状態` を
+ * `覆った`／`一部覆った` にし、`置き換え先` に新しい DL を足す。本文は変えない（当時の決定の記録として残す）。
+ * 既に `覆った` の物を `一部覆った` に戻さない。同じ置き換え先は二重に足さない。
+ */
+function markSuperseded(cwd, ref, byId) {
+  const { id, item, partial } = parseSupersedeRef(ref);
+  const target = listDecisionFiles(cwd).find((d) => d.file.startsWith(`${id}_`));
+  if (!target) throw new Error(`置き換え元の決定ログが見つかりません: ${id}`);
+  const data = { ...target.data };
+  if (!(partial && data['状態'] === '覆った')) data['状態'] = partial ? '一部覆った' : '覆った';
+  const entry = `${byId}${item}`;
+  const current = splitList(data['置き換え先']);
+  if (!current.includes(entry)) current.push(entry);
+  data['置き換え先'] = current.join(', ');
+  fs.writeFileSync(target.path, stringifyFrontmatter(data, target.body), 'utf-8');
+  return { id, status: data['状態'], file: path.relative(cwd, target.path) };
+}
+
 module.exports = {
   DECISIONS_DIR_SEGMENTS,
   decisionsDir,
   listDecisionFiles,
   nextDecisionId,
   createDecisionFile,
+  parseSupersedeRef,
+  markSuperseded,
 };

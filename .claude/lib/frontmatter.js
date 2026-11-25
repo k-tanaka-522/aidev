@@ -72,7 +72,9 @@ function parseFrontmatter(text) {
 function stringifyFrontmatter(data, body) {
   const lines = ['---'];
   for (const [k, v] of Object.entries(data)) {
-    const value = v === undefined || v === null ? '' : String(v);
+    // 1行1キーの書式のため、値の改行は空白に畳む（改行のまま書くと次の行が別のキーとして読まれ、
+    // supersedes 等で書き直したときに値が欠けたり本物のキーを上書きしたりする。全文は本文側に残る）
+    const value = v === undefined || v === null ? '' : String(v).replace(/\s*\r?\n\s*/g, ' ');
     lines.push(`${k}: ${value}`);
   }
   lines.push('---', '');

@@ -46,7 +46,7 @@ node .claude/skills/sync-check/scripts/sync-check.js \
 
 ```bash
 node .claude/skills/sync-check/scripts/sync-check.js --kind=batch \
-  --job-name=nightly-batch --spec=decisions/DL-0010_batch-spec-nightly.md [--hb-id=HB-0001]
+  --job-name=nightly-batch --spec=decisions/DL-xxxx_batch-spec-nightly.md [--hb-id=HB-0001]
 ```
 
 ## 突合手順（10.3節、M2で実装）
